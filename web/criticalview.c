@@ -191,21 +191,21 @@ void print_colheaders(FILE *output, void * rbcolumns)
 	colcount = 1;	/* Remember the hostname column */
 
 	/* Group column headings */
-	fprintf(output, "<TR>");
-	fprintf(output, "<TD ROWSPAN=2>&nbsp;</TD>\n");	/* For the prio column - in both row headers+dash rows */
-	fprintf(output, "<TD ROWSPAN=2>&nbsp;</TD>\n");	/* For the host column - in both row headers+dash rows */
+	fprintf(output, "<tr>");
+	fprintf(output, "<td rowspan=\"2\">&nbsp;</td>\n");	/* For the prio column - in both row headers+dash rows */
+	fprintf(output, "<td rowspan=\"2\">&nbsp;</td>\n");	/* For the host column - in both row headers+dash rows */
 	for (colhandle = xtreeFirst(rbcolumns); (colhandle != xtreeEnd(rbcolumns)); colhandle = xtreeNext(rbcolumns, colhandle)) {
 		char *colname;
 
 		colname = (char *)xtreeKey(rbcolumns, colhandle);
 		colcount++;
 
-		fprintf(output, " <TD ALIGN=CENTER VALIGN=BOTTOM WIDTH=45>\n");
-		fprintf(output, " <A HREF=\"%s\"><FONT %s><B>%s</B></FONT></A> </TD>\n",
-			columnlink(colname), xgetenv("XYMONPAGECOLFONT"), colname);
+		fprintf(output, "<td class=\"text-center\">\n");
+		fprintf(output, "<a href=\"%s\"><strong class=\"critical-col-label\">%s</strong></a></td>\n",
+			columnlink(colname), colname);
 	}
-	fprintf(output, "</TR>\n");
-	fprintf(output, "<TR><TD COLSPAN=%d><HR WIDTH=\"100%%\"></TD></TR>\n\n", colcount);
+	fprintf(output, "</tr>\n");
+	fprintf(output, "<tr><td colspan=\"%d\"><hr></td></tr>\n\n", colcount);
 }
 
 void print_hoststatus(FILE *output, hstatus_t *itm, void * statetree, void * columns, int prio, int firsthost, int firsthostever)
@@ -216,35 +216,35 @@ void print_hoststatus(FILE *output, hstatus_t *itm, void * statetree, void * col
 
 	now = getcurrenttime(NULL);
 
-	fprintf(output, "<TR>\n");
+	fprintf(output, "<tr>\n");
 
 	/* Print the priority */
-	fprintf(output, "<TD ALIGN=LEFT VALIGN=TOP WIDTH=10%% NOWRAP>");
-	if (firsthost) 
+	fprintf(output, "<td class=\"text-nowrap\">");
+	if (firsthost)
 		if (prio == 99) {
 			if (firsthostever)
 				/* Only non-prioritised hosts, so just drop that text */
 				fprintf(output, "&nbsp;");
 			else
-				fprintf(output, "<FONT %s>No priority</FONT>", xgetenv("XYMONPAGEROWFONT"));
+				fprintf(output, "<span class=\"critical-prio-label\">No priority</span>");
 		}
 		else {
-			fprintf(output, "<FONT %s>PRIO %d</FONT>", xgetenv("XYMONPAGEROWFONT"), prio);
+			fprintf(output, "<span class=\"critical-prio-label\">PRIO %d</span>", prio);
 		}
 
-	else 
+	else
 		fprintf(output, "&nbsp;");
-	fprintf(output, "</TD>\n");
+	fprintf(output, "</td>\n");
 
 	/* Print the hostname with a link to the critical systems info page */
-	fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", hostnamehtml(itm->hostname, NULL, usetooltips));
+	fprintf(output, "<td>%s</td>\n", hostnamehtml(itm->hostname, NULL, usetooltips));
 
 	SBUF_MALLOC(key, 1024);
 	for (colhandle = xtreeFirst(columns); (colhandle != xtreeEnd(columns)); colhandle = xtreeNext(columns, colhandle)) {
 		char *colname;
 		xtreePos_t sthandle;
 
-		fprintf(output, "<TD ALIGN=CENTER>");
+		fprintf(output, "<td class=\"text-center\">");
 
 		colname = (char *)xtreeKey(columns, colhandle);
 		SBUF_REALLOC(key, 2 + strlen(itm->hostname) + strlen(colname));
@@ -274,21 +274,18 @@ void print_hoststatus(FILE *output, hstatus_t *itm, void * statetree, void * col
 					hostsvcurl(itm->hostname, colname, 1),
 					prio, 
 					htmlgroupstr, htmlextrastr);
-				fprintf(output, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s %s\" HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0></A>",
-					xgetenv("XYMONSKIN"), 
-					dotgiffilename(column->color, (column->acktime > 0), (age > oldlimit)),
-					colorname(column->color), htmlalttag, htmlackstr,
-					xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
+				fprintf(output, "%s</A>",
+					coloricon(column->color, (column->acktime > 0), (age > oldlimit)));
 				xfree(htmlgroupstr);
 				xfree(htmlextrastr);
 			}
 		}
 
-		fprintf(output, "</TD>\n");
+		fprintf(output, "</td>\n");
 	}
 	xfree(key);
 
-	fprintf(output, "</TR>\n");
+	fprintf(output, "</tr>\n");
 }
 
 
@@ -316,7 +313,7 @@ void print_oneprio(FILE *output, void * statetree, void * hoptree, void * rbcolu
 	}
 
 	/* If we did output any hosts, make some room for the next priority */
-	if (!firsthostthisprio) fprintf(output, "<TR><TD>&nbsp;</TD></TR>\n");
+	if (!firsthostthisprio) fprintf(output, "<tr><td>&nbsp;</td></tr>\n");
 }
 
 
@@ -333,22 +330,20 @@ static int ev_included(char *hostname)
 void generate_critpage(void * statetree, void * hoptree, FILE *output, char *header, char *footer, int color, int maxprio)
 {
         headfoot(output, header, "", "header", pagecolor);	/* Use PAGE color here, not the part color */
-        fprintf(output, "<center>\n");
-
         if (color != COL_GREEN) {
 		void * rbcolumns;
 		int prio;
 
 		rbcolumns = columnlist(statetree);
 
-		fprintf(output, "<TABLE BORDER=0 CELLPADDING=4 SUMMARY=\"Critical status display\">\n");
+		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm critical-grid\">\n");
 		print_colheaders(output, rbcolumns);
 
 		for (prio = 1; (prio <= maxprio); prio++) {
 			print_oneprio(output, statetree, hoptree, rbcolumns, prio);
 		}
 
-		fprintf(output, "</TABLE>\n");
+		fprintf(output, "</table></div>\n");
 		xtreeDestroy(rbcolumns);
         }
         else {
@@ -359,14 +354,11 @@ void generate_critpage(void * statetree, void * hoptree, FILE *output, char *hea
 	if (evcount > 0) {
 		/* Include the eventlog */
 		evhopfilter = hoptree;
-		do_eventlog(output, evcount, maxage/60, 
+		do_eventlog(output, evcount, maxage/60,
 			    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0,
 			    ev_included,
 			    NULL, NULL, NULL, XYMON_COUNT_NONE, XYMON_S_NONE, NULL);
-		fprintf(output, "<br><br><br>\n");
 	}
-
-        fprintf(output, "</center>\n");
 
         headfoot(output, footer, "", "footer", color);
 }

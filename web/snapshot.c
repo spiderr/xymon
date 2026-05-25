@@ -219,10 +219,8 @@ int main(int argc, char *argv[])
 		headfoot(stdout, "snapshot", "", "header", COL_BLUE);
 
 		strftime(startstr, sizeof(startstr), "%b %d %Y", localtime(&starttime));
-		printf("<CENTER><A NAME=begindata>&nbsp;</A>\n");
-		printf("<BR><BR><BR><BR>\n");
-		printf("<H3>Generating snapshot: %s<BR>\n", htmlquoted(startstr));
-		printf("<P><P>\n");
+		printf("<span id=\"begindata\"></span>\n");
+		printf("<h3>Generating snapshot: %s</h3>\n", htmlquoted(startstr));
 		fflush(stdout);
 	}
 
@@ -246,15 +244,15 @@ int main(int argc, char *argv[])
 		else {
 			/* Send the browser off to the report */
 			if (usemultipart) {
-				printf("Done...<P></BODY></HTML>\n");
+				printf("Done.</body></html>\n");
 				fflush(stdout);
 				printf("%s\n\n", htmldelim);
 			}
 			printf("Content-Type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
-			printf("<HTML><HEAD>\n");
-			printf("<META HTTP-EQUIV=\"REFRESH\" CONTENT=\"0; URL=%s/%s/\"\n", 
+			printf("<html><head>\n");
+			printf("<meta http-equiv=\"refresh\" content=\"0; url=%s/%s/\">\n",
 					xgetenv("XYMONSNAPURL"), dirid);
-			printf("</HEAD><BODY BGCOLOR=\"000000\"></BODY></HTML>\n");
+			printf("</head><body></body></html>\n");
 			if (usemultipart) printf("\n%s\n", htmldelim);
 			fflush(stdout);
 		}

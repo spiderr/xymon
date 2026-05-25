@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 	if (adduser_name && !issimpleword(adduser_name)) {
 		event = ACT_NONE;
 		adduser_name = strdup("");
-		infomsg = "<strong><big><font color='#FF0000'>Invalid USERNAME. Letters, numbers, dashes, and periods only.</font></big></strong>\n";
+		infomsg = "<span class=\"text-danger form-error-msg\">Invalid USERNAME. Letters, numbers, dashes, and periods only.</span>\n";
 	}
 
 	switch (event) {

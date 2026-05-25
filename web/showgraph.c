@@ -679,33 +679,33 @@ void graph_link(FILE *output, char *uri, char *grtype, time_t seconds)
 	time_t gstart, gend;
 	char *grtype_s;
 
-	fprintf(output, "<tr>\n");
+	fprintf(output, "<div class=\"graph-item d-flex align-items-center gap-2\">\n");
 	grtype_s = htmlquoted(grtype);
 
 	switch (action) {
 	  case ACT_MENU:
-		fprintf(output, "  <td align=\"left\"><img src=\"%s&amp;action=view&amp;graph=%s\" alt=\"%s graph\"></td>\n",
+		fprintf(output, "  <div><img class=\"img-fluid\" src=\"%s&amp;action=view&amp;graph=%s\" alt=\"%s graph\"></div>\n",
 			uri, grtype_s, grtype_s);
-		fprintf(output, "  <td align=\"left\" valign=\"top\"> <a href=\"%s&amp;graph=%s&amp;action=selzoom&amp;color=%s\"> <img src=\"%s/zoom.%s\" border=0 alt=\"Zoom graph\" style='padding: 3px'> </a> </td>\n",
-			uri, grtype_s, colorname(bgcolor), xgetenv("XYMONSKIN"), xgetenv("IMAGEFILETYPE"));
+		fprintf(output, "  <div><a href=\"%s&amp;graph=%s&amp;action=selzoom&amp;color=%s\"><i class=\"fa-solid fa-magnifying-glass-plus\"></i></a></div>\n",
+			uri, grtype_s, colorname(bgcolor));
 		break;
 
 	  case ACT_SELZOOM:
 		if (graphend == 0) gend = getcurrenttime(NULL); else gend = graphend;
 		if (graphstart == 0) gstart = gend - persecs; else gstart = graphstart;
 
-		fprintf(output, "  <td align=\"left\"><img id='zoomGraphImage' src=\"%s&amp;graph=%s&amp;action=view&amp;graph_start=%u&amp;graph_end=%u&amp;graph_height=%d&amp;graph_width=%d&amp;",
+		fprintf(output, "  <div><img class=\"img-fluid\" id='zoomGraphImage' src=\"%s&amp;graph=%s&amp;action=view&amp;graph_start=%u&amp;graph_end=%u&amp;graph_height=%d&amp;graph_width=%d&amp;",
 			uri, grtype_s, (int) gstart, (int) gend, graphheight, graphwidth);
 		if (haveupperlimit) fprintf(output, "&amp;upper=%f", upperlimit);
 		if (havelowerlimit) fprintf(output, "&amp;lower=%f", lowerlimit);
-		fprintf(output, "\" alt=\"Zoom source image\"></td>\n");
+		fprintf(output, "\" alt=\"Zoom source image\"></div>\n");
 		break;
 
 	  case ACT_VIEW:
 		break;
 	}
 
-	fprintf(output, "</tr>\n");
+	fprintf(output, "</div>\n");
 }
 
 char *build_selfURI(void)
@@ -778,14 +778,14 @@ void build_menu_page(char *selfURI, int backsecs)
 
 	headfoot(stdout, "graphs", "", "header", bgcolor);
 
-	fprintf(stdout, "<table align=\"center\" summary=\"Graphs\">\n");
+	fprintf(stdout, "<div class=\"graphs-menu\">\n");
 
 	graph_link(stdout, selfURI, "hourly",      48*60*60);
 	graph_link(stdout, selfURI, "daily",    12*24*60*60);
 	graph_link(stdout, selfURI, "weekly",   48*24*60*60);
 	graph_link(stdout, selfURI, "monthly", 576*24*60*60);
 
-	fprintf(stdout, "</table>\n");
+	fprintf(stdout, "</div>\n");
 
 	headfoot(stdout, "graphs", "", "footer", bgcolor);
 }
@@ -1266,9 +1266,9 @@ void generate_zoompage(char *selfURI)
 	fprintf(stdout, "  <div id='zoomBox' style='position:absolute; overflow:none; left:0px; top:0px; width:0px; height:0px; visibility:visible; background:red; filter:alpha(opacity=50); -moz-opacity:0.5; opacity:0.5; -khtml-opacity:0.5'></div>\n");
 	fprintf(stdout, "  <div id='zoomSensitiveZone' style='position:absolute; overflow:none; left:0px; top:0px; width:0px; height:0px; visibility:visible; cursor:crosshair; background:blue; filter:alpha(opacity=0); opacity:0; -moz-opacity:0; -khtml-opacity:0'></div>\n");
 
-	fprintf(stdout, "<table align=\"center\" summary=\"Graphs\">\n");
+	fprintf(stdout, "<div class=\"graphs-menu\">\n");
 	graph_link(stdout, selfURI, gtype, 0);
-	fprintf(stdout, "</table>\n");
+	fprintf(stdout, "</div>\n");
 
 	{
 		char zoomjsfn[PATH_MAX];

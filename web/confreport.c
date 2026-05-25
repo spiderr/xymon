@@ -182,7 +182,7 @@ static void print_host(hostlist_t *host, htnames_t *testnames[], int testcount)
 	strbuffer_t *buf = newstrbuffer(0); 
 
 	fprintf(stdout, "<p style=\"page-break-before: always\">\n"); 
-	fprintf(stdout, "<table width=\"100%%\" border=1 summary=\"%s configuration\">\n", host->hostname);
+	fprintf(stdout, "<div class=\"table-responsive\"><table class=\"table table-sm table-bordered confreport-host\">\n");
 
 	pagepathtitle = xmh_item(hinfo, XMH_PAGEPATHTITLE);
 	if (!pagepathtitle || (strlen(pagepathtitle) == 0)) pagepathtitle = "Top page";
@@ -208,8 +208,8 @@ static void print_host(hostlist_t *host, htnames_t *testnames[], int testcount)
 	if (reporttime) rowcount++;
 
 	fprintf(stdout, "<tr>\n");
-	fprintf(stdout, "<th rowspan=%d align=left width=\"25%%\" valign=top>Basics</th>\n", rowcount);
-	fprintf(stdout, "<th align=center>%s (%s)</th>\n", 
+	fprintf(stdout, "<th rowspan=\"%d\">Basics</th>\n", rowcount);
+	fprintf(stdout, "<th class=\"text-center\">%s (%s)</th>\n",
 		(dispname ? dispname : host->hostname), xmh_item(hinfo, XMH_IP));
 	fprintf(stdout, "</tr>\n");
 
@@ -365,12 +365,12 @@ addtolist:
 
 	if (taghead) {
 		fprintf(stdout, "<tr>\n");
-		fprintf(stdout, "<th align=left valign=top>Network tests");
+		fprintf(stdout, "<th>Network tests");
 		if (net) fprintf(stdout, "<br>(from %s)", net);
 		fprintf(stdout, "</th>\n");
 
-		fprintf(stdout, "<td><table border=0 cellpadding=\"3\" cellspacing=\"5\" summary=\"%s network tests\">\n", host->hostname);
-		fprintf(stdout, "<tr><th align=left valign=top>Service</th><th align=left valign=top>Critical</th><th align=left valign=top>C/Y/R limits</th><th align=left valign=top>Specifics</th></tr>\n");
+		fprintf(stdout, "<td><table class=\"table table-sm confreport-tests\">\n");
+		fprintf(stdout, "<tr><th>Service</th><th>Critical</th><th>C/Y/R limits</th><th>Specifics</th></tr>\n");
 	}
 	for (testi = 0, netcount = 0; (testi < testcount); testi++) {
 		tag_t *twalk;
@@ -380,10 +380,10 @@ addtolist:
 
 		use_columndoc(testnames[testi]->name);
 		fprintf(stdout, "<tr>");
-		fprintf(stdout, "<td valign=top>%s</td>", testnames[testi]->name);
-		fprintf(stdout, "<td valign=top>%s</td>", criticalval(host->hostname, testnames[testi]->name, alerts));
+		fprintf(stdout, "<td>%s</td>", testnames[testi]->name);
+		fprintf(stdout, "<td>%s</td>", criticalval(host->hostname, testnames[testi]->name, alerts));
 
-		fprintf(stdout, "<td valign=top>");
+		fprintf(stdout, "<td>");
 		if (twalk->b1 || twalk->b2 || twalk->b3) {
 			fprintf(stdout, "%d/%d/%d", twalk->b1, twalk->b2, twalk->b3);
 		}
@@ -392,7 +392,7 @@ addtolist:
 		}
 		fprintf(stdout, "</td>");
 
-		fprintf(stdout, "<td valign=top>");
+		fprintf(stdout, "<td>");
 		fprintf(stdout, "<i>%s</i>", (twalk->visualdata ? twalk->visualdata : "&nbsp;"));
 		if (twalk->expdata) fprintf(stdout, " must return <i>'%s'</i>", twalk->expdata);
 		fprintf(stdout, "</td>");
@@ -408,9 +408,9 @@ addtolist:
 
 	if (netcount != testcount) {
 		fprintf(stdout, "<tr>\n");
-		fprintf(stdout, "<th align=left valign=top>Local tests</th>\n");
-		fprintf(stdout, "<td><table border=0 cellpadding=\"3\" cellspacing=\"5\" summary=\"%s local tests\">\n", host->hostname);
-		fprintf(stdout, "<tr><th align=left valign=top>Service</th><th align=left valign=top>Critical</th><th align=left valign=top>C/Y/R limits</th><th align=left valign=top>Configuration <i>(NB: Thresholds on client may differ)</i></th></tr>\n");
+		fprintf(stdout, "<th>Local tests</th>\n");
+		fprintf(stdout, "<td><table class=\"table table-sm confreport-tests\">\n");
+		fprintf(stdout, "<tr><th>Service</th><th>Critical</th><th>C/Y/R limits</th><th>Configuration <i>(NB: Thresholds on client may differ)</i></th></tr>\n");
 	}
 	for (testi = 0; (testi < testcount); testi++) {
 		tag_t *twalk;
@@ -420,12 +420,12 @@ addtolist:
 
 		use_columndoc(testnames[testi]->name);
 		fprintf(stdout, "<tr>");
-		fprintf(stdout, "<td valign=top>%s</td>", testnames[testi]->name);
-		fprintf(stdout, "<td valign=top>%s</td>", criticalval(host->hostname, testnames[testi]->name, alerts));
-		fprintf(stdout, "<td valign=top>-/-/-</td>");
+		fprintf(stdout, "<td>%s</td>", testnames[testi]->name);
+		fprintf(stdout, "<td>%s</td>", criticalval(host->hostname, testnames[testi]->name, alerts));
+		fprintf(stdout, "<td>-/-/-</td>");
 
 		/* Make up some default configuration data */
-		fprintf(stdout, "<td valign=top>");
+		fprintf(stdout, "<td>");
 		if (strcmp(testnames[testi]->name, "cpu") == 0) {
 			fprintf(stdout, "UNIX - Yellow: Load average > 1.5, Red: Load average > 3.0<br>");
 			fprintf(stdout, "Windows - Yellow: CPU utilisation > 80%%, Red: CPU utilisation > 95%%");
@@ -485,8 +485,8 @@ addtolist:
 
 	if (STRBUFLEN(buf) > 0) {
 		fprintf(stdout, "<tr>\n");
-		fprintf(stdout, "<th align=left valign=top>Alerts</th>\n");
-		fprintf(stdout, "<td><table border=0 cellpadding=\"3\" cellspacing=\"5\" summary=\"%s alerts\">\n", host->hostname);
+		fprintf(stdout, "<th>Alerts</th>\n");
+		fprintf(stdout, "<td><table class=\"table table-sm confreport-tests\">\n");
 		fprintf(stdout, "<tr><th>Service</th><th>Recipient</th><th>1st Delay</th><th>Stop after</th><th>Repeat</th><th>Time of Day</th><th>Colors</th></tr>\n");
 
 		fprintf(stdout, "%s", STRBUF(buf));
@@ -496,7 +496,7 @@ addtolist:
 	}
 
 	/* Finish off this host */
-	fprintf(stdout, "</table>\n");
+	fprintf(stdout, "</table></div>\n");
 
 	freestrbuffer(buf);
 }
@@ -555,17 +555,19 @@ void print_columndocs(void)
 	for (i=0, cwalk=chead; (cwalk); cwalk=cwalk->next,i++) clist[i] = cwalk;
 	qsort(&clist[0], ccount, sizeof(coltext_t **), coltext_compare);
 
-	fprintf(stdout, "<p style=\"page-break-before: always\">\n"); 
-	fprintf(stdout, "<table width=\"100%%\" border=1 summary=\"Column descriptions\">\n");
-	fprintf(stdout, "<tr><th colspan=2>Xymon column descriptions</th></tr>\n");
+	fprintf(stdout, "<div class=\"card mb-4\" style=\"page-break-before:always\">\n");
+	fprintf(stdout, "<div class=\"card-header fw-semibold\">Xymon column descriptions</div>\n");
+	fprintf(stdout, "<div class=\"card-body\">\n");
+	fprintf(stdout, "<dl class=\"row mb-0\">\n");
 	for (i=0; (i<ccount); i++) {
 		if (clist[i]->used) {
-			fprintf(stdout, "<tr><td align=left valign=top>%s</td><td>%s</td></tr>\n",
+			fprintf(stdout, "<dt class=\"col-sm-2\">%s</dt><dd class=\"col-sm-10\">%s</dd>\n",
 				clist[i]->colname, clist[i]->coldescr);
 		}
 	}
-
-	fprintf(stdout, "</table>\n");
+	fprintf(stdout, "</dl>\n");
+	fprintf(stdout, "</div>\n");
+	fprintf(stdout, "</div>\n");
 }
 
 htnames_t *get_proclist(char *hostname, char *statusbuf)
@@ -860,18 +862,18 @@ int main(int argc, char *argv[])
 	sethostenv("", "", "", colorname(COL_BLUE), NULL);
 	headfoot(stdout, "confreport", "", "header", COL_BLUE);
 
-	fprintf(stdout, "<table width=\"100%%\" border=0>\n");
-	fprintf(stdout, "<tr><th align=center colspan=2><font size=\"+2\">Xymon configuration Report</font></th></tr>\n");
-	fprintf(stdout, "<tr><th valign=top align=left>Date</th><td>%s</td></tr>\n", ctime(&now));
-	fprintf(stdout, "<tr><th valign=top align=left>%d hosts included</th><td>\n", hostcount);
+	fprintf(stdout, "<div class=\"table-responsive\"><table class=\"table table-sm confreport-summary\">\n");
+	fprintf(stdout, "<tr><th colspan=\"2\" class=\"confreport-title\">Xymon configuration Report</th></tr>\n");
+	fprintf(stdout, "<tr><th>Date</th><td>%s</td></tr>\n", ctime(&now));
+	fprintf(stdout, "<tr><th>%d hosts included</th><td>\n", hostcount);
 	for (hosti=0; (hosti < hostcount); hosti++) {
 		fprintf(stdout, "%s ", allhosts[hosti]->hostname);
 	}
 	fprintf(stdout, "</td></tr>\n");
 	if (criticalonly) {
-		fprintf(stdout, "<tr><th valign=top align=left>Filter</th><td>Only data for the &quot;Critical Systems&quot; view reported</td></tr>\n");
+		fprintf(stdout, "<tr><th>Filter</th><td>Only data for the &quot;Critical Systems&quot; view reported</td></tr>\n");
 	}
-	fprintf(stdout, "</table>\n");
+	fprintf(stdout, "</table></div>\n");
 
 	headfoot(stdout, "confreport", "", "front", COL_BLUE);
 

@@ -186,15 +186,15 @@ int main(int argc, char *argv[])
         sethostenv(wantedname, "", "", colorname(bgcolor), NULL);
         headfoot(stdout, hffile, "", "header", bgcolor);
 
-	printf("<table align=center border=1 summary=\"Information table\">\n");
+	printf("<div class=\"table-responsive\"><table class=\"table table-sm table-bordered csvinfo\">\n");
 
 	for (i=0; (headers[i]); i++) {
 		printf("<tr>\n");
-		printf("  <th align=left>%s</th><td align=left valign=top>%s</td>\n", headers[i], items[i]);
+		printf("  <th>%s</th><td>%s</td>\n", headers[i], items[i]);
 		printf("</tr>\n");
 	}
 
-	printf("</table>\n");
+	printf("</table></div>\n");
         headfoot(stdout, hffile, "", "footer", bgcolor);
 
 	return 0;

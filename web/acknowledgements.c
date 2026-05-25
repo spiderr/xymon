@@ -127,13 +127,11 @@ int main(int argc, char *argv[])
 
 	/* Now generate the webpage */
 	headfoot(stdout, "acknowledgements", "", "header", COL_GREEN);
-	fprintf(stdout, "<center>\n");
-	do_acknowledgementslog(stdout, maxcount, maxminutes, fromtime, totime, 
-			pageregex, expageregex, 
-			hostregex, exhostregex, 
+	do_acknowledgementslog(stdout, maxcount, maxminutes, fromtime, totime,
+			pageregex, expageregex,
+			hostregex, exhostregex,
 			testregex, extestregex,
 			rcptregex, exrcptregex);
-	fprintf(stdout, "</center>\n");
 	headfoot(stdout, "acknowledgements", "", "footer", COL_GREEN);
 
 	return 0;

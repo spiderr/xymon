@@ -105,13 +105,13 @@ void print_header(void)
         sethostenv("", "", "", colorname(COL_BLUE), NULL);
 	printf("Content-Type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
         headfoot(stdout, "findhost", "", "header", COL_BLUE);
-	printf("<br><br><CENTER><TABLE CELLPADDING=5 SUMMARY=\"Hostlist\">\n");
-	printf("<tr><th align=left>Hostname (DisplayName)</th><th align=left>IP</th><th align=left>Location (Group Name)</th></tr>\n");
+	printf("<div class=\"table-responsive\"><table class=\"table table-sm table-hover findhost-results\">\n");
+	printf("<tr><th>Hostname (DisplayName)</th><th>IP</th><th>Location (Group Name)</th></tr>\n");
 }
 
 void print_footer(void)
 {
-	printf("</TABLE></CENTER>\n");
+	printf("</table></div>\n");
         headfoot(stdout, "findhost", "", "footer", COL_BLUE);
 }
 
@@ -162,8 +162,8 @@ int main(int argc, char *argv[])
 		regerror(re_status, &re, re_errstr, BUFSIZE);
 
 		print_header();
-		printf("<tr><td align=left><font color=red>%s</font></td>\n",  htmlquoted(pSearchPat));
-		printf("<td align=left><font color=red>%s</font></td></tr>\n", re_errstr);
+		printf("<tr><td><span class=\"text-danger\">%s</span></td>\n",  htmlquoted(pSearchPat));
+		printf("<td><span class=\"text-danger\">%s</span></td></tr>\n", re_errstr);
 		print_footer();
 
 		return 0;
@@ -192,22 +192,22 @@ int main(int argc, char *argv[])
 			(comment     && regexec (&re, comment, 	   (size_t)0, NULL, 0) == 0)   ) {
 	
 			/*  match */
-			addtobuffer_many(outbuf, 
+			addtobuffer_many(outbuf,
 					"<tr>\n",
-					"<td align=left> ", (displayname ? displayname : hostname), " </td>\n",
-					"<td align=left> ", ip, " </td>\n",
+					"<td>", (displayname ? displayname : hostname), "</td>\n",
+					"<td>", ip, "</td>\n",
 					NULL);
 
 			SBUF_MALLOC(oneurl, 4 + strlen(xgetenv("XYMONWEB")) + strlen(xmh_item(hostwalk, XMH_PAGEPATH)) + strlen(hostname));
 			snprintf(oneurl, oneurl_buflen, "%s/%s/#%s",
 				xgetenv("XYMONWEB"), xmh_item(hostwalk, XMH_PAGEPATH), hostname);
 
-			addtobuffer_many(outbuf, 
-					"<td align=left> <a href=\"",
+			addtobuffer_many(outbuf,
+					"<td><a href=\"",
 					oneurl,
 					"\">",
 					xmh_item(hostwalk, XMH_PAGEPATHTITLE),
-					"</a>\n",
+					"</a>",
 					NULL);
 			gotany++;
 
@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
 
 	print_header();
 	if (!gotany) {
-		printf("<tr><td align=left>%s</td><td align=left>Not found</td></tr>\n", htmlquoted(pSearchPat));
+		printf("<tr><td>%s</td><td>Not found</td></tr>\n", htmlquoted(pSearchPat));
 	}
 	else {
 		printf("%s", grabstrbuffer(outbuf));

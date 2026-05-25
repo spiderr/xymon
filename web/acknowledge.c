@@ -170,28 +170,28 @@ void generate_ackline(FILE *output, char *hname, char *tname, char *ackcode)
 
 	fprintf(output, "<tr>\n");
 
-	fprintf(output, "    <td align=left>%s</td>\n", (hname ? htmlquoted(hname) : "&nbsp;"));
-	fprintf(output, "    <td align=left>%s</td>\n", (tname ? htmlquoted(tname) : "&nbsp;"));
-	fprintf(output, "    <TD NOWRAP><INPUT TYPE=TEXT NAME=\"DELAY_%s\" SIZE=4 MAXLENGTH=6><select NAME=\"PERIOD_%s\"><option value=\"min\" selected>min(s)</option><option value=\"hour\">hour(s)</option><option value=\"day\">day(s)</option></select></TD>\n", numstr, numstr);
+	fprintf(output, "    <td>%s</td>\n", (hname ? htmlquoted(hname) : "&nbsp;"));
+	fprintf(output, "    <td>%s</td>\n", (tname ? htmlquoted(tname) : "&nbsp;"));
+	fprintf(output, "    <td class=\"text-nowrap\"><input type=\"text\" name=\"DELAY_%s\" size=\"4\" maxlength=\"6\"><select name=\"PERIOD_%s\"><option value=\"min\" selected>min(s)</option><option value=\"hour\">hour(s)</option><option value=\"day\">day(s)</option></select></td>\n", numstr, numstr);
 
-	fprintf(output, "    <TD><INPUT TYPE=TEXT NAME=\"MESSAGE_%s\" SIZE=60 MAXLENGTH=80></TD>\n", numstr);
+	fprintf(output, "    <td><input type=\"text\" name=\"MESSAGE_%s\" size=\"60\" maxlength=\"80\"></td>\n", numstr);
 
-	fprintf(output, "    <TD>\n");
+	fprintf(output, "    <td>\n");
 	if (ackcode && hname && tname) {
-		fprintf(output, "       <INPUT TYPE=\"HIDDEN\" NAME=\"NUMBER_%d\" VALUE=\"%s\">\n", num, htmlquoted(ackcode));
-		fprintf(output, "       <INPUT TYPE=\"HIDDEN\" NAME=\"HOSTNAME_%d\" VALUE=\"%s\">\n", num, htmlquoted(hname));
-		fprintf(output, "       <INPUT TYPE=\"HIDDEN\" NAME=\"TESTNAME_%d\" VALUE=\"%s\">\n", num, htmlquoted(tname));
-		fprintf(output, "       <INPUT TYPE=\"SUBMIT\" NAME=\"Send_%d\" VALUE=\"Send\" ALT=\"Send\">\n", num);
+		fprintf(output, "       <input type=\"hidden\" name=\"NUMBER_%d\" value=\"%s\">\n", num, htmlquoted(ackcode));
+		fprintf(output, "       <input type=\"hidden\" name=\"HOSTNAME_%d\" value=\"%s\">\n", num, htmlquoted(hname));
+		fprintf(output, "       <input type=\"hidden\" name=\"TESTNAME_%d\" value=\"%s\">\n", num, htmlquoted(tname));
+		fprintf(output, "       <input type=\"submit\" name=\"Send_%d\" value=\"Send\" class=\"btn btn-sm btn-primary\">\n", num);
 	}
 	else {
 		fprintf(output, "       &nbsp;\n");
 	}
-	fprintf(output, "    </TD>\n");
+	fprintf(output, "    </td>\n");
 
-	fprintf(output, "    <TD>\n");
-	if (ackcode) fprintf(output, "       <INPUT TYPE=\"CHECKBOX\" NAME=\"CHECKED_%d\" VALUE=\"OFF\">\n", num);
-	else         fprintf(output, "       <INPUT TYPE=\"SUBMIT\" NAME=\"Send_all\" VALUE=\"Send\" ALT=\"Send\">\n");
-	fprintf(output, "    </TD>\n");
+	fprintf(output, "    <td>\n");
+	if (ackcode) fprintf(output, "       <input type=\"checkbox\" name=\"CHECKED_%d\" value=\"OFF\">\n", num);
+	else         fprintf(output, "       <input type=\"submit\" name=\"Send_all\" value=\"Send\" class=\"btn btn-sm btn-primary\">\n");
+	fprintf(output, "    </td>\n");
 
 	fprintf(output, "</tr>\n");
 }
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
 					}
 					else {
 						filtererror = 1;
-						printf("<p align=\"center\">Invalid hostname filter</p>\n");
+						printf("<p class=\"text-center\">Invalid hostname filter</p>\n");
 					}
 				}
 			}
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 					}
 					else {
 						filtererror = 1;
-						printf("<p align=\"center\">Invalid pagename filter</p>\n");
+						printf("<p class=\"text-center\">Invalid pagename filter</p>\n");
 					}
 				}
 			}
@@ -326,8 +326,8 @@ int main(int argc, char *argv[])
 					if (hname && tname && ackcode && (strcmp(hname, "summary") != 0)) {
 						if (first) {
 							fprintf(stdout, "<form method=\"POST\" ACTION=\"%s\">\n", getenv("SCRIPT_NAME"));
-							fprintf(stdout, "<center><table cellpadding=5 summary=\"Ack data\">\n");
-							fprintf(stdout, "<tr><th align=left>Host</th><th align=left>Test</th><th align=left>Duration</th><th align=left>Cause</th><th>Ack</th><th>Ack Multiple</tr>\n");
+							fprintf(stdout, "<div class=\"table-responsive\"><table class=\"table table-sm table-bordered\">\n");
+							fprintf(stdout, "<tr><th>Host</th><th>Test</th><th>Duration</th><th>Cause</th><th>Ack</th><th>Ack Multiple</th></tr>\n");
 							first = 0;
 						}
 
@@ -338,11 +338,11 @@ int main(int argc, char *argv[])
 				}
 
 				if (first) {
-					fprintf(stdout, "<center><font size=\"+1\"><b>No active alerts</b></font></center>\n");
+					fprintf(stdout, "<p class=\"ack-empty\">No active alerts</p>\n");
 				}
 				else {
 					generate_ackline(stdout, NULL, NULL, NULL);
-					fprintf(stdout, "</table></center>\n");
+					fprintf(stdout, "</table></div>\n");
 					fprintf(stdout, "</form>\n");
 				}
 			}
@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 			load_web_access_config(accessfn);
 		}
 
-		addtobuffer(response, "<center>\n");
+		addtobuffer(response, "\n");
 		for (awalk = ackhead; (awalk); awalk = awalk->next) {
 			SBUF_DEFINE(msgline);
 
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
 
 		if (count == 0) addtobuffer(response, "<b>No acks requested</b>\n");
 
-		addtobuffer(response, "</center>\n");
+		addtobuffer(response, "\n");
 
 		fprintf(stdout, "Content-type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
 	

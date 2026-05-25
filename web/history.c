@@ -48,7 +48,6 @@ static int pixels = DEFPIXELS;
 #define BARSUM_1Y 0x0008	/* 1-year bar */
 static unsigned int barsums = (BARSUM_1D|BARSUM_1W|BARSUM_4W|BARSUM_1Y);
 
-static char *barbkgcolor = "\"#000033\"";
 static char *tagcolors[COL_COUNT] = {
 	"#3AF03A",	/* A bright green */
 	"white",
@@ -70,48 +69,6 @@ static char *tagcolors[COL_COUNT] = {
 #define END_START 0
 #define END_END 1
 #define END_UNCHANGED 2
-
-static void generate_pct_summary(
-			FILE *htmlrep,			/* output file */
-			char *hostname,
-			char *service,
-			char *caption,
-			reportinfo_t *repinfo, 		/* Percent summaries for period */
-			time_t secsperpixel)
-{
-	fprintf(htmlrep, "<TABLE BORDER=0 BGCOLOR=%s CELLPADDING=3 SUMMARY=\"Percent summary\">\n", barbkgcolor);
-
-	fprintf(htmlrep, "<TR BGCOLOR=\"#333333\"><TD COLSPAN=6 ALIGN=CENTER><FONT SIZE=\"+1\">%s</FONT></TD></TR>\n", caption);
-	fprintf(htmlrep, "<TR BGCOLOR=\"#333333\"><TD COLSPAN=6 ALIGN=CENTER><FONT SIZE=\"-1\">Min. duration shown: %s</FONT></TD></TR>\n", 
-		durationstr(secsperpixel / 2));
-
-	fprintf(htmlrep, "<TR BGCOLOR=\"#000000\">\n");
-
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_GREEN, 0, 1), colorname(COL_GREEN), colorname(COL_GREEN), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_YELLOW, 0, 1), colorname(COL_YELLOW), colorname(COL_YELLOW), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_RED, 0, 1), colorname(COL_RED), colorname(COL_RED), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_PURPLE, 0, 1), colorname(COL_PURPLE), colorname(COL_PURPLE), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_CLEAR, 0, 1), colorname(COL_CLEAR), colorname(COL_CLEAR), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_BLUE, 0, 1), colorname(COL_BLUE), colorname(COL_BLUE), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "<TR BGCOLOR=\"#000033\">\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_GREEN]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_YELLOW]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_RED]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_PURPLE]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_CLEAR]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_BLUE]);
-	fprintf(htmlrep, "</TR>\n");
-
-	fprintf(htmlrep, "</TABLE>\n");
-
-}
 
 static unsigned int calc_time(time_t endtime, int change, int alignment, int endofperiod)
 {
@@ -224,22 +181,11 @@ static void generate_colorbar(
 			reportinfo_t *repinfo) 	/* Info for the percent summary */
 {
 	int secsperpixel;
-	char *pctstr = "";
 	replog_t *colorlog, *walk;
 	int changeval = 0;
 	int changealign = 0;
 
-	/*
-	 * Pixel-based charts are better, but for backwards
-	 * compatibility allow for a graph that has 100 "pixels"
-	 * and adds a "%" to the width specs.
-	 */
-	if (usepct) {
-		pixels = 100;
-		pctstr = "%";
-	}
-
-	/* How many seconds required for 1 pixel */
+	/* How many seconds required for 1 pixel (pixels stays as internal counter) */
 	secsperpixel = ((endtime - begintime) / pixels);
 
 	/* Need to re-sort the period-log to chronological order */
@@ -262,181 +208,152 @@ static void generate_colorbar(
 		case YEAR_BAR  : changeval = len1y; changealign = ALIGN_MONTH; break;
 	}
 
-	/* Beginning of page */
-	fprintf(htmlrep, "<TABLE SUMMARY=\"Bounding rectangle\" WIDTH=\"%d%s\" BORDER=0 BGCOLOR=\"#666666\">\n", pixels, pctstr);
-	fprintf(htmlrep, "<TR><TD>\n");
-
-
-	/* The date stamps, percent summaries and zoom/reset links */
-	fprintf(htmlrep, "<TABLE SUMMARY=\"%s\" WIDTH=\"100%%\" BORDER=0 FRAME=VOID CELLSPACING=0 CELLPADDING=1 BGCOLOR=\"#000033\">\n", caption);
-	fprintf(htmlrep, "<TR BGCOLOR=%s><TD>\n", barbkgcolor);
-
-	fprintf(htmlrep, "  <TABLE SUMMARY=\"Adjustment, Past navigation\" WIDTH=\"100%%\" BORDER=0 CELLSPACING=0 CELLPADDING=0>\n");
-	if (usepct) {
-		fprintf(htmlrep, "  <TR><TD ALIGN=RIGHT VALIGN=TOP><A HREF=\"%s&amp;PIXELS=%d\">Time reset</A></TD></TR>\n", 
-			selfurl, (usepct ? 0 : pixels));
-	}
-	else {
-		fprintf(htmlrep, "  <TR><TD ALIGN=RIGHT VALIGN=TOP><A HREF=\"%s&amp;ENDTIME=%u&amp;PIXELS=%d\">Zoom +</A></TD></TR>\n", 
-			selfurl, (unsigned int)endtime, pixels+200);
-		if (pixels > 200) {
-			fprintf(htmlrep, "  <TR><TD ALIGN=RIGHT VALIGN=TOP><A HREF=\"%s&amp;ENDTIME=%u&amp;PIXELS=%d\">Zoom -</A></TD></TR>\n", 
-				selfurl, (unsigned int)endtime, pixels-200);
-		}
-	}
-	fprintf(htmlrep, "  <TR><TD ALIGN=LEFT VALIGN=BOTTOM><BR>\n");
-	
-	if (colorlog && colorlog->starttime <= begintime) {
-		fprintf(htmlrep, "<A HREF=\"%s&amp;ENDTIME=%u&amp;PIXELS=%d\">", 
-			selfurl, calc_time(endtime, -changeval, changealign, END_UNCHANGED), (usepct ? 0 : pixels));
-	}
-	fprintf(htmlrep, "<B>%s</B>", ctime(&begintime));
-	if (colorlog && colorlog->starttime <= begintime) fprintf(htmlrep, "</A>");
-	fprintf(htmlrep, "\n  </TD></TR>\n");
-	fprintf(htmlrep, "  </TABLE>\n");
-	fprintf(htmlrep, "</TD>\n");
-	
-	fprintf(htmlrep, "<TD ALIGN=CENTER>\n");
-	generate_pct_summary(htmlrep, hostname, service, caption, repinfo, secsperpixel);
-	fprintf(htmlrep, "</TD>\n");
-
-	fprintf(htmlrep, "<TD>\n");
-	fprintf(htmlrep, "  <TABLE SUMMARY=\"Adjustment, Future navigation\" WIDTH=\"100%%\" BORDER=0 CELLSPACING=0 CELLPADDING=0>\n");
-	fprintf(htmlrep, "  <TR><TD ALIGN=LEFT VALIGN=TOP><A HREF=\"%s&amp;PIXELS=%d\">Time reset</A></TD></TR>\n", 
-		selfurl, (usepct ? 0 : pixels));
-	if (!usepct) {
-		fprintf(htmlrep, "  <TR><TD ALIGN=LEFT VALIGN=TOP><A HREF=\"%s&amp;ENDTIME=%u&amp;PIXELS=%d\">Zoom reset</A></TD></TR>\n", 
-			selfurl, (unsigned int)endtime, DEFPIXELS);
-	}
-
-	fprintf(htmlrep, "  <TR><TD ALIGN=RIGHT VALIGN=BOTTOM><BR>\n");
-	fprintf(htmlrep, "  <A HREF=\"%s&amp;ENDTIME=%d&amp;PIXELS=%d\">", selfurl, 
-		calc_time(endtime, +changeval, changealign, END_UNCHANGED), (usepct ? 0 : pixels));
-	fprintf(htmlrep, "<B>%s</B>", ctime(&endtime));
-	fprintf(htmlrep, "</A>\n");
-	fprintf(htmlrep, "  </TD></TR>\n");
-	fprintf(htmlrep, "  </TABLE>\n");
-	fprintf(htmlrep, "</TD>\n");
-
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "<TR BGCOLOR=%s><TD COLSPAN=5><HR></TD></TR>\n", barbkgcolor);
-	fprintf(htmlrep, "</TABLE>\n");
-
-
-	/* The period marker line */
-	fprintf(htmlrep, "<TABLE SUMMARY=\"Periods\" WIDTH=\"100%%\" BORDER=0 FRAME=VOID CELLSPACING=0 CELLPADDING=0 BGCOLOR=\"#000033\">\n");
-	fprintf(htmlrep, "<TR>\n");
-
 	{
-		time_t begininterval = begintime;
-		time_t endofinterval;
-		char tag[20];
-		char *bgcols[2] = { "\"#000000\"", "\"#555555\"" };
-		int curbg = 0;
-		int intervalpixels, tagcolor;
-		time_t minduration = 1800;
-		struct tm *tmbuf;
+		char bdate[32], edate[32];
+		struct tm *tm;
+		tm = localtime(&begintime); strftime(bdate, sizeof(bdate), "%a %b %d %H:%M %Y", tm);
+		tm = localtime(&endtime);   strftime(edate, sizeof(edate), "%a %b %d %H:%M %Y", tm);
 
-		do {
-			endofinterval = calc_time(begininterval, 0, alignment, END_END);
-			dbgprintf("Period starts %u ends %u - %s", 
-				(unsigned int)begininterval, (unsigned int)endofinterval, 
-				ctime(&endofinterval));
+		fprintf(htmlrep, "<div class=\"mb-3\">\n");
 
-			tmbuf = localtime(&begininterval);
-			switch (bartype) {
-				case DAY_BAR   : 
-					minduration = 1800;
-					strftime(tag, sizeof(tag), "%H", tmbuf);
-					break;
-				case WEEK_BAR  : 
-					minduration = 14400;
-					strftime(tag, sizeof(tag), "%a", tmbuf);
-					break;
-				case MONTH_BAR : 
-					minduration = 43200;
-					strftime(tag, sizeof(tag), "%d", tmbuf);
-					break;
-				case YEAR_BAR  : 
-					minduration = 10*86400;
-					strftime(tag, sizeof(tag), "%b", tmbuf);
-					break;
-			}
+		/* nav — full-width flex row */
+		fprintf(htmlrep, "<div class=\"d-flex align-items-center justify-content-between pb-1\">\n");
+		fprintf(htmlrep, "<div class=\"d-flex align-items-center gap-2\">\n");
+		fprintf(htmlrep, "<a href=\"%s&amp;ENDTIME=%u\" class=\"text-decoration-none\" title=\"Previous period\">",
+			selfurl, calc_time(endtime, -changeval, changealign, END_UNCHANGED));
+		fprintf(htmlrep, "<i class=\"fa-solid fa-chevron-left\"></i></a>\n");
+		fprintf(htmlrep, "<small class=\"text-muted\">%s</small>\n", bdate);
+		fprintf(htmlrep, "</div>\n");
+		fprintf(htmlrep, "<strong>%s</strong>\n", caption);
+		fprintf(htmlrep, "<div class=\"d-flex align-items-center gap-2\">\n");
+		fprintf(htmlrep, "<small class=\"text-muted\">%s</small>\n", edate);
+		fprintf(htmlrep, "<a href=\"%s&amp;ENDTIME=%u\" class=\"text-decoration-none\" title=\"Next period\">",
+			selfurl, calc_time(endtime, +changeval, changealign, END_UNCHANGED));
+		fprintf(htmlrep, "<i class=\"fa-solid fa-chevron-right\"></i></a>\n");
+		fprintf(htmlrep, "</div>\n");
+		fprintf(htmlrep, "</div>\n"); /* end nav */
 
-			intervalpixels = ((endofinterval - begininterval) / secsperpixel);
-			tagcolor = maxcolor(colorlog, begininterval, endofinterval);
+		/* Bootstrap responsive row: summary left, bars right */
+		fprintf(htmlrep, "<div class=\"row g-0\">\n");
 
-			fprintf(htmlrep, "<TD WIDTH=\"%d%s\" ALIGN=CENTER BGCOLOR=%s>", intervalpixels, pctstr, bgcols[curbg]);
-			if ((endofinterval - begininterval) > minduration) {
-				int dolink = (colorlog && endofinterval >= colorlog->starttime);
+		/* Summary column: icons row + percentages row stacked */
+		fprintf(htmlrep, "<div class=\"col-12 col-sm-4 col-md-3\">\n");
 
-				if (dolink) fprintf(htmlrep, "<A HREF=\"%s&amp;ENDTIME=%u&amp;PIXELS=%d\">",
-						    selfurl, (unsigned int)endofinterval, 
-						    (usepct ? 0 : pixels));
-				fprintf(htmlrep, "<FONT COLOR=\"%s\"><B>%s</B></FONT>", 
-					tagcolors[tagcolor], tag);
-				if (dolink) fprintf(htmlrep, "</A>");
-			}
-			fprintf(htmlrep, "</TD>\n");
+		/* icons — flex-fill cells share equal width so pcts row aligns */
+		fprintf(htmlrep, "<div class=\"d-flex\">\n");
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%s</div>\n", coloricon(COL_GREEN,  0, 1));
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%s</div>\n", coloricon(COL_YELLOW, 0, 1));
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%s</div>\n", coloricon(COL_RED,    0, 1));
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%s</div>\n", coloricon(COL_PURPLE, 0, 1));
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%s</div>\n", coloricon(COL_CLEAR,  0, 1));
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%s</div>\n", coloricon(COL_BLUE,   0, 1));
+		fprintf(htmlrep, "</div>\n");
 
-			curbg = (1 - curbg);
+		/* percentages — identical structure, aligns under icons */
+		fprintf(htmlrep, "<div class=\"d-flex\" style=\"font-size:0.75rem;\">\n");
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%.1f%%</div>\n", repinfo->fullpct[COL_GREEN]);
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%.1f%%</div>\n", repinfo->fullpct[COL_YELLOW]);
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%.1f%%</div>\n", repinfo->fullpct[COL_RED]);
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%.1f%%</div>\n", repinfo->fullpct[COL_PURPLE]);
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%.1f%%</div>\n", repinfo->fullpct[COL_CLEAR]);
+		fprintf(htmlrep, "<div class=\"flex-fill text-center\">%.1f%%</div>\n", repinfo->fullpct[COL_BLUE]);
+		fprintf(htmlrep, "</div>\n");
 
-			if ((endofinterval + 1) <= begininterval) {
-				/*
-				 * This should not happen!
-				 */
-				fprintf(htmlrep, "Time moves backwards! begintime=%u, alignment=%d, begininterval=%u\n",
-					  (unsigned int)begintime, alignment, (unsigned int)begininterval);
-				begininterval = endtime;
-			}
+		fprintf(htmlrep, "</div>\n"); /* end summary col */
 
-			begininterval = endofinterval + 1;
-		} while (begininterval < endtime);
-	}
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "</TABLE>\n");
+		/* Bar column: period labels + color bar */
+		fprintf(htmlrep, "<div class=\"col-12 col-sm-8 col-md-9\">\n");
 
+		/* period interval labels as proportional flex children */
+		fprintf(htmlrep, "<div style=\"display:flex; align-items:stretch;\">\n");
+		{
+			time_t begininterval = begintime;
+			time_t endofinterval;
+			char tag[20];
+			int curbg = 0;
+			int intervalpixels, tagcolor;
+			time_t minduration = 1800;
+			struct tm *tmbuf;
 
-	/* The actual color bar */
-	fprintf(htmlrep, "<TABLE SUMMARY=\"Color status graph\" WIDTH=\"100%%\" BORDER=0 FRAME=VOID CELLSPACING=0 CELLPADDING=0 BGCOLOR=\"#000033\">\n");
-	fprintf(htmlrep, "<TR>\n");
+			do {
+				endofinterval = calc_time(begininterval, 0, alignment, END_END);
+				dbgprintf("Period starts %u ends %u - %s",
+					(unsigned int)begininterval, (unsigned int)endofinterval,
+					ctime(&endofinterval));
 
-	/* First entry may not start at our report-start time */
-	if (colorlog == NULL) {
-		/* No data for period - all white */
-		fprintf(htmlrep, "<TD WIDTH=\"100%%\" BGCOLOR=white NOWRAP>&nbsp;</TD>\n");
-	}
-	else if (colorlog->starttime > begintime) {
-		/* Data starts after the bar does - so a white period in front */
-		int pixels = ((colorlog->starttime - begintime) / secsperpixel);
+				tmbuf = localtime(&begininterval);
+				switch (bartype) {
+					case DAY_BAR   : minduration = 1800;     strftime(tag, sizeof(tag), "%H",  tmbuf); break;
+					case WEEK_BAR  : minduration = 14400;    strftime(tag, sizeof(tag), "%a",  tmbuf); break;
+					case MONTH_BAR : minduration = 43200;    strftime(tag, sizeof(tag), "%d",  tmbuf); break;
+					case YEAR_BAR  : minduration = 10*86400; strftime(tag, sizeof(tag), "%b",  tmbuf); break;
+				}
 
-		if (((colorlog->starttime - begintime) >= (secsperpixel/2)) && (pixels == 0)) pixels = 1;
-		if (pixels > 0) {
-			fprintf(htmlrep, "<TD WIDTH=\"%d%s\" BGCOLOR=%s NOWRAP>&nbsp;</TD>\n", pixels, pctstr, "white");
+				intervalpixels = ((endofinterval - begininterval) / secsperpixel);
+				tagcolor = maxcolor(colorlog, begininterval, endofinterval);
+
+				{
+					const char *bgcss = curbg ? "#555555" : "#000000";
+					double ipct = (intervalpixels * 100.0) / pixels;
+					fprintf(htmlrep, "<div style=\"flex:0 0 %.4f%%; overflow:hidden; text-align:center; background:%s;\">",
+						ipct, bgcss);
+				}
+				if ((endofinterval - begininterval) > minduration) {
+					int dolink = (colorlog && endofinterval >= colorlog->starttime);
+					if (dolink) fprintf(htmlrep, "<a href=\"%s&amp;ENDTIME=%u\">",
+							    selfurl, (unsigned int)endofinterval);
+					fprintf(htmlrep, "<strong style=\"color:%s\">%s</strong>",
+						tagcolors[tagcolor], tag);
+					if (dolink) fprintf(htmlrep, "</a>");
+				}
+				fprintf(htmlrep, "</div>\n");
+
+				curbg = (1 - curbg);
+
+				if ((endofinterval + 1) <= begininterval) {
+					fprintf(htmlrep, "<!-- time moves backwards: begintime=%u alignment=%d begininterval=%u -->\n",
+						  (unsigned int)begintime, alignment, (unsigned int)begininterval);
+					begininterval = endtime;
+				}
+				begininterval = endofinterval + 1;
+			} while (begininterval < endtime);
 		}
-	}
+		fprintf(htmlrep, "<div style=\"flex:1;\"></div>\n"); /* absorb rounding gap */
+		fprintf(htmlrep, "</div>\n"); /* end labels */
 
-	for (walk = colorlog; (walk); walk = walk->next) {
-		/* Show each interval we have data for */
+		/* color bar */
+		fprintf(htmlrep, "<div style=\"display:flex; height:1.25rem;\">\n");
 
-		int pixels = (walk->duration / secsperpixel);
-
-		/* Intervals that give between 0.5 and 1 pixel are enlarged */
-		if ((walk->duration >= (secsperpixel/2)) && (pixels == 0)) pixels = 1;
-
-		if (pixels > 0) {
-			fprintf(htmlrep, "<TD WIDTH=\"%d%s\" BGCOLOR=%s NOWRAP>&nbsp;</TD>\n", 
-				pixels, pctstr, ((walk->color == COL_CLEAR) ? "white" : colorname(walk->color)));
+		if (colorlog == NULL) {
+			fprintf(htmlrep, "<div style=\"flex:1; background:white;\"></div>\n");
 		}
+		else {
+			if (colorlog->starttime > begintime) {
+				int leadpx = ((colorlog->starttime - begintime) / secsperpixel);
+				if (((colorlog->starttime - begintime) >= (secsperpixel/2)) && (leadpx == 0)) leadpx = 1;
+				if (leadpx > 0) {
+					fprintf(htmlrep, "<div style=\"flex:0 0 %.4f%%; background:white;\"></div>\n",
+						(leadpx * 100.0) / pixels);
+				}
+			}
+			for (walk = colorlog; (walk); walk = walk->next) {
+				int segpx = (walk->duration / secsperpixel);
+				if ((walk->duration >= (secsperpixel/2)) && (segpx == 0)) segpx = 1;
+				if (segpx > 0) {
+					const char *segcolor = (walk->color == COL_CLEAR) ? "white" : colorname(walk->color);
+					fprintf(htmlrep, "<div style=\"flex:0 0 %.4f%%; background:%s;\"></div>\n",
+						(segpx * 100.0) / pixels, segcolor);
+				}
+			}
+		}
+
+		fprintf(htmlrep, "<div style=\"flex:1;\"></div>\n"); /* absorb rounding gap */
+		fprintf(htmlrep, "</div>\n"); /* end color bar */
+
+		fprintf(htmlrep, "</div>\n"); /* end bar col */
+		fprintf(htmlrep, "</div>\n"); /* end row */
+		fprintf(htmlrep, "</div>\n"); /* end mb-3 */
 	}
-
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "</TABLE>\n");
-
-	fprintf(htmlrep, "</TD>\n");
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "</TABLE>\n");
-	fprintf(htmlrep, "<BR><BR>\n");
 
 }
 
@@ -444,46 +361,38 @@ static void generate_colorbar(
 static void generate_histlog_table(FILE *htmlrep,
 		char *hostname, char *service, int entrycount, replog_t *loghead)
 {
-	char *bgcols[2] = { "\"#000000\"", "\"#000033\"" };
-	int curbg = 0;
 	replog_t *walk;
 
-	fprintf(htmlrep, "<TABLE BORDER=0 BGCOLOR=\"#333333\" CELLSPACING=3 SUMMARY=\"History logs\">\n");
-	fprintf(htmlrep, "<TR>\n");
+	fprintf(htmlrep, "<table class=\"table table-sm table-striped\">\n");
+	fprintf(htmlrep, "<caption class=\"caption-top\">\n");
 	if (entrycount) {
-		fprintf(htmlrep, "<TD COLSPAN=3 ALIGN=CENTER><B>Last %d log entries</B> ", entrycount);
-		fprintf(htmlrep, "<A HREF=\"%s&amp;ENDTIME=%u&amp;PIXELS=%d&amp;ENTRIES=all\">(Full HTML log)</A></TD>\n", 
-			selfurl, (unsigned int)req_endtime, (usepct ? 0 : pixels));
+		fprintf(htmlrep, "<strong>Last %d log entries</strong> ", entrycount);
+		fprintf(htmlrep, "<a href=\"%s&amp;ENDTIME=%u&amp;ENTRIES=all\">(Full HTML log)</a>",
+			selfurl, (unsigned int)req_endtime);
 	}
 	else {
-		fprintf(htmlrep, "<TD COLSPAN=3 ALIGN=CENTER><B>All log entries</B></TD>\n");
+		fprintf(htmlrep, "<strong>All log entries</strong>");
 	}
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "<TR BGCOLOR=\"#333333\">\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Date</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Status</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Duration</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "</TR>\n");
+	fprintf(htmlrep, "\n</caption>\n");
+	fprintf(htmlrep, "<thead><tr><th>Date</th><th class=\"text-center\">Status</th><th class=\"text-center\">Duration</th></tr></thead>\n");
+	fprintf(htmlrep, "<tbody>\n");
 
 	for (walk = loghead; (walk); walk = walk->next) {
 		char start[30];
 
 		strftime(start, sizeof(start), "%a %b %d %H:%M:%S %Y", localtime(&walk->starttime));
 
-		fprintf(htmlrep, "<TR BGCOLOR=%s>\n", bgcols[curbg]); curbg = (1-curbg);
-		fprintf(htmlrep, "<TD ALIGN=LEFT NOWRAP>%s</TD>\n", start);
-		fprintf(htmlrep, "<TD ALIGN=CENTER BGCOLOR=\"#000000\">");
-		fprintf(htmlrep, "<A HREF=\"%s\">", histlogurl(hostname, service, 0, walk->timespec));
-		fprintf(htmlrep, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0>", 
-			xgetenv("XYMONSKIN"), dotgiffilename(walk->color, 0, 1), colorname(walk->color), colorname(walk->color),
-			xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-		fprintf(htmlrep, "</A></TD>\n");
-
-		fprintf(htmlrep, "<TD ALIGN=CENTER>%s</TD>\n", durationstr(walk->duration));
-		fprintf(htmlrep, "</TR>\n\n");
+		fprintf(htmlrep, "<tr>\n");
+		fprintf(htmlrep, "<td class=\"text-nowrap\">%s</td>\n", start);
+		fprintf(htmlrep, "<td class=\"text-center\">");
+		fprintf(htmlrep, "<a href=\"%s\">", histlogurl(hostname, service, 0, walk->timespec));
+		fprintf(htmlrep, "%s", coloricon(walk->color, 0, 1));
+		fprintf(htmlrep, "</a></td>\n");
+		fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", durationstr(walk->duration));
+		fprintf(htmlrep, "</tr>\n");
 	}
 
-	fprintf(htmlrep, "</TABLE>\n");
+	fprintf(htmlrep, "</tbody></table>\n");
 }
 
 
@@ -515,10 +424,9 @@ void generate_history(FILE *htmlrep, 			/* output file */
 	headfoot(htmlrep, "hist", "", "header", COL_GREEN);
 
 	fprintf(htmlrep, "\n");
-	fprintf(htmlrep, "<CENTER>\n");
 	if (wantserviceid) {
-		fprintf(htmlrep, "<BR><FONT %s><B>%s", xgetenv("XYMONPAGEROWFONT"), htmlquoted(displayname));
-		fprintf(htmlrep, " - %s</B></FONT><BR>\n", htmlquoted(service));
+		fprintf(htmlrep, "<p class=\"fw-semibold mb-3\">%s &mdash; %s</p>\n",
+			htmlquoted(displayname), htmlquoted(service));
 	}
 
 	/* Create the color-bars */
@@ -547,16 +455,10 @@ void generate_history(FILE *htmlrep, 			/* output file */
 	}
 
 	/* Last N histlog entries */
-	fprintf(htmlrep, "<CENTER>\n");
 	generate_histlog_table(htmlrep, hostname, service, entrycount, loghead);
-	fprintf(htmlrep, "</CENTER>\n");
-
-	fprintf(htmlrep, "<BR><BR>\n");
 
 	/* XYMONHISTEXT extensions */
 	do_extensions(htmlrep, "XYMONHISTEXT", "hist");
-
-	fprintf(htmlrep, "</CENTER>\n");
 
 	headfoot(htmlrep, "hist", "", "footer", COL_GREEN);
 }

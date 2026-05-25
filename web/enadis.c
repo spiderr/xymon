@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
 		printf("</pre>\n");
 	}
 
-	if (preview) printf("<table align=\"center\" summary=\"Actions performed\" width=\"60%%\">\n");
+	if (preview) printf("<div class=\"enadis-preview\"><table class=\"table table-sm\">\n");
 
 
 	if (action == ACT_SCHED_CANCEL) {
@@ -490,8 +490,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (preview) {
-		printf("<tr><td align=center><br><br><form method=\"GET\" ACTION=\"%s\"><input type=submit value=\"Continue\"></form></td></tr>\n", xgetenv("HTTP_REFERER"));
-		printf("</table>\n");
+		printf("<tr><td><form method=\"GET\" action=\"%s\"><button type=\"submit\" class=\"btn btn-primary\">Continue</button></form></td></tr>\n", xgetenv("HTTP_REFERER"));
+		printf("</table></div>\n");
 
 		headfoot(stdout, "maintact", "", "footer", COL_BLUE);
 	}

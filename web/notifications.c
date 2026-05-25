@@ -127,13 +127,11 @@ int main(int argc, char *argv[])
 
 	/* Now generate the webpage */
 	headfoot(stdout, "notify", "", "header", COL_GREEN);
-	fprintf(stdout, "<center>\n");
-	do_notifylog(stdout, maxcount, maxminutes, fromtime, totime, 
-			pageregex, expageregex, 
-			hostregex, exhostregex, 
+	do_notifylog(stdout, maxcount, maxminutes, fromtime, totime,
+			pageregex, expageregex,
+			hostregex, exhostregex,
 			testregex, extestregex,
 			rcptregex, exrcptregex);
-	fprintf(stdout, "</center>\n");
 	headfoot(stdout, "notify", "", "footer", COL_GREEN);
 
 	return 0;

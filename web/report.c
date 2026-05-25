@@ -293,12 +293,10 @@ int main(int argc, char *argv[])
 
 		strftime(startstr, sizeof(startstr), "%b %d %Y", localtime(&starttime));
 		strftime(endstr, sizeof(endstr), "%b %d %Y", localtime(&endtime));
-		printf("<CENTER><A NAME=begindata>&nbsp;</A>\n");
-		printf("<BR><BR><BR><BR>\n");
-		printf("<H3>Generating report for the period: %s", htmlquoted(startstr));
+		printf("<span id=\"begindata\"></span>\n");
+		printf("<h3>Generating report for the period: %s", htmlquoted(startstr));
 		printf(" - %s ", htmlquoted(endstr));
-		printf("(%s)<BR>\n", htmlquoted(style));
-		printf("<P><P>\n");
+		printf("(%s)</h3>\n", htmlquoted(style));
 		fflush(stdout);
 	}
 
@@ -323,22 +321,22 @@ int main(int argc, char *argv[])
 		else {
 			/* Send the browser off to the report */
 			if (usemultipart) {
-				printf("Done...Report is <A HREF=\"%s/%s/%s\">here</a>.</P></BODY></HTML>\n", xgetenv("XYMONREPURL"), dirid, suburl);
+				printf("Done. Report is <a href=\"%s/%s/%s\">here</a>.</body></html>\n", xgetenv("XYMONREPURL"), dirid, suburl);
 				fflush(stdout);
 				printf("--%s\n\n", htmldelim);
 			}
 			printf("Content-Type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
-			printf("<HTML><HEAD>\n");
+			printf("<html><head>\n");
 			if (!csvoutput) {
-				printf("<META HTTP-EQUIV=\"REFRESH\" CONTENT=\"0; URL=%s/%s/%s\"\n", 
+				printf("<meta http-equiv=\"refresh\" content=\"0; url=%s/%s/%s\">\n",
 					xgetenv("XYMONREPURL"), dirid, suburl);
-				printf("</HEAD><BODY>Report is available <a href=\"%s/%s/%s\">here</a></BODY></HTML>\n",
+				printf("</head><body>Report is available <a href=\"%s/%s/%s\">here</a></body></html>\n",
 					xgetenv("XYMONREPURL"), dirid, suburl);
 			}
 			else {
-				printf("<META HTTP-EQUIV=\"REFRESH\" CONTENT=\"0; URL=%s/%s.csv\"\n", 
+				printf("<meta http-equiv=\"refresh\" content=\"0; url=%s/%s.csv\">\n",
 					xgetenv("XYMONREPURL"), dirid);
-				printf("</HEAD><BODY>Report is available <a href=\"%s/%s.csv\">here</a></BODY></HTML>\n",
+				printf("</head><body>Report is available <a href=\"%s/%s.csv\">here</a></body></html>\n",
 					xgetenv("XYMONREPURL"), dirid);
 			}
 			if (usemultipart) printf("\n--%s\n", htmldelim);

@@ -236,20 +236,19 @@ int main(int argc, char *argv[])
 		int hosti, testi;
 
 		headfoot(stdout, hffile, "", "header", COL_GREEN);
-		fprintf(stdout, "<table align=\"center\" summary=\"Graphs\">\n");
-
+		fprintf(stdout, "<div class=\"hostgraphs\">\n");
 
 		for (testi=0; (tests[testi]); testi++) {
-			fprintf(stdout, "<tr><td><img src=\"%s/showgraph.sh?host=%s",
+			fprintf(stdout, "<p><img src=\"%s/showgraph.sh?host=%s",
 				xgetenv("CGIBINURL"), htmlquoted(hosts[0]));
 
 			for (hosti=1; (hosts[hosti]); hosti++) fprintf(stdout, ",%s", htmlquoted(hosts[hosti]));
 
-			fprintf(stdout, "&amp;service=%s&amp;graph_start=%ld&amp;graph_end=%ld&graph=custom&amp;action=view&amp;graph_height=%s&amp;graph_width=%s\"></td></tr>\n",
+			fprintf(stdout, "&amp;service=%s&amp;graph_start=%ld&amp;graph_end=%ld&graph=custom&amp;action=view&amp;graph_height=%s&amp;graph_width=%s\"></p>\n",
 				htmlquoted(tests[testi]), (long int)starttime, (long int)endtime, xgetenv("RRDHEIGHT"), xgetenv("RRDWIDTH"));
 		}
 
-	  	fprintf(stdout, "</table><br><br>\n");
+		fprintf(stdout, "</div>\n");
 		headfoot(stdout, hffile, "", "footer", COL_GREEN);
 	}
 

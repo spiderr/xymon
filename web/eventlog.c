@@ -123,10 +123,9 @@ void show_topchanges(FILE *output,
 		     countlist_t *hostcounthead, countlist_t *svccounthead, event_t *eventhead, 
 		     int topcount, time_t firstevent, time_t lastevent)
 {
-	fprintf(output, "<p><font size=+1>%s</font></p>\n", (periodstring ? periodstring : ""));
+	fprintf(output, "<p class=\"event-period\">%s</p>\n", (periodstring ? periodstring : ""));
 
-	fprintf(output, "<table summary=\"Top changing hosts and services\" border=1>\n");
-	fprintf(output, "<tr>\n");
+	fprintf(output, "<div class=\"topchanges row\">\n");
 	if (hostcounthead && (output != NULL)) {
 		countlist_t *cwalk;
 		int i;
@@ -168,10 +167,10 @@ void show_topchanges(FILE *output,
 		if (counttype == XYMON_COUNT_EVENTS) addtobuffer(othercriteria, "&amp;COUNTTYPE=events");
 		else if (counttype == XYMON_COUNT_DURATION) addtobuffer(othercriteria, "&amp;COUNTTYPE=duration");
 
-		fprintf(output, "<td width=40%% align=center valign=top>\n");
-		fprintf(output, "   <table summary=\"Top %d hosts\" border=0>\n", topcount);
-		fprintf(output, "      <tr><th colspan=3>Top %d hosts</th></tr>\n", topcount);
-		fprintf(output, "      <tr><th align=left>Host</th><th align=left colspan=2>%s</th></tr>\n",
+		fprintf(output, "<div class=\"col-12 col-md-6\">\n");
+		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-bordered topchanges-hosts\">\n");
+		fprintf(output, "<tr><th colspan=\"3\">Top %d hosts</th></tr>\n", topcount);
+		fprintf(output, "<tr><th>Host</th><th colspan=\"2\">%s</th></tr>\n",
 			(counttype == XYMON_COUNT_EVENTS) ? "State changes" : "Seconds red/yellow");
 
 		/* Compute the total count */
@@ -179,7 +178,7 @@ void show_topchanges(FILE *output,
 
 		for (i=0, cwalk=hostcounthead; (cwalk && (cwalk->total > 0)); i++, cwalk=cwalk->next) {
 			if (i < topcount) {
-				fprintf(output, "      <tr><td align=left><a href=\"eventlog.sh?HOSTMATCH=^%s$&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td align=right>%lu</td><td align=right>(%6.2f %%)</td></tr>\n", 
+				fprintf(output, "<tr><td><a href=\"eventlog.sh?HOSTMATCH=^%s$&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
 					xmh_item(cwalk->src, XMH_HOSTNAME), 
 					(unsigned long)firstevent, (unsigned long)lastevent,
 					STRBUF(othercriteria),
@@ -194,16 +193,16 @@ void show_topchanges(FILE *output,
 				others += cwalk->total;
 			}
 		}
-		fprintf(output, "      <tr><td align=left><a href=\"eventlog.sh?EXHOSTMATCH=%s&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td align=right>%lu</td><td align=right>(%6.2f %%)</td></tr>\n", 
+		fprintf(output, "<tr><td><a href=\"eventlog.sh?EXHOSTMATCH=%s&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
 			STRBUF(s),
 			(unsigned long)firstevent, (unsigned long)lastevent,
 			STRBUF(othercriteria),
 			"Other hosts", 
 			others, ((100.0 * others) / totalcount));
-		fprintf(output, "      <tr><td colspan=3><hr width=\"100%%\"></td></tr>\n");
-		fprintf(output, "      <tr><th>Total</th><th>%lu</th><th>&nbsp;</th></tr>\n", totalcount);
-		fprintf(output, "   </table>\n");
-		fprintf(output, "</td>\n");
+		fprintf(output, "<tr><td colspan=\"3\"><hr></td></tr>\n");
+		fprintf(output, "<tr><th>Total</th><th>%lu</th><th>&nbsp;</th></tr>\n", totalcount);
+		fprintf(output, "</table></div>\n");
+		fprintf(output, "</div>\n");
 
 		freestrbuffer(s);
 		freestrbuffer(othercriteria);
@@ -250,10 +249,10 @@ void show_topchanges(FILE *output,
 		else if (counttype == XYMON_COUNT_DURATION) addtobuffer(othercriteria, "&amp;COUNTTYPE=duration");
 
 
-		fprintf(output, "<td width=40%% align=center valign=top>\n");
-		fprintf(output, "   <table summary=\"Top %d services\" border=0>\n", topcount);
-		fprintf(output, "      <tr><th colspan=3>Top %d services</th></tr>\n", topcount);
-		fprintf(output, "      <tr><th align=left>Service</th><th align=left colspan=2>%s</th></tr>\n",
+		fprintf(output, "<div class=\"col-12 col-md-6\">\n");
+		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-bordered topchanges-services\">\n");
+		fprintf(output, "<tr><th colspan=\"3\">Top %d services</th></tr>\n", topcount);
+		fprintf(output, "<tr><th>Service</th><th colspan=\"2\">%s</th></tr>\n",
 			(counttype == XYMON_COUNT_EVENTS) ? "State changes" : "Seconds red/yellow");
 
 		/* Compute the total count */
@@ -261,7 +260,7 @@ void show_topchanges(FILE *output,
 
 		for (i=0, cwalk=svccounthead; (cwalk && (cwalk->total > 0)); i++, cwalk=cwalk->next) {
 			if (i < topcount) {
-				fprintf(output, "      <tr><td align=left><a href=\"eventlog.sh?TESTMATCH=^%s$&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td align=right>%lu</td><td align=right>(%6.2f %%)</td></tr>\n", 
+				fprintf(output, "<tr><td><a href=\"eventlog.sh?TESTMATCH=^%s$&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
 					((htnames_t *)cwalk->src)->name, 
 					(unsigned long)firstevent, (unsigned long)lastevent,
 					STRBUF(othercriteria),
@@ -276,22 +275,21 @@ void show_topchanges(FILE *output,
 				others += cwalk->total;
 			}
 		}
-		fprintf(output, "      <tr><td align=left><a href=\"eventlog.sh?EXTESTMATCH=%s&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</td><td align=right>%lu</td><td align=right>(%6.2f %%)</td></tr>\n", 
+		fprintf(output, "<tr><td><a href=\"eventlog.sh?EXTESTMATCH=%s&amp;MAXCOUNT=-1&amp;MAXTIME=-1&amp;FROMTIME=%lu&amp;TOTIME=%lu%s\">%s</a></td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
 			STRBUF(s),
 			(unsigned long)firstevent, (unsigned long)lastevent,
 			STRBUF(othercriteria),
 			"Other services", 
 			others, ((100.0 * others) / totalcount));
-		fprintf(output, "      <tr><td colspan=3><hr width=\"100%%\"></td></tr>\n");
-		fprintf(output, "      <tr><th>Total</th><th>%lu</th><th>&nbsp;</th></tr>\n", totalcount);
-		fprintf(output, "   </table>\n");
-		fprintf(output, "</td>\n");
+		fprintf(output, "<tr><td colspan=\"3\"><hr></td></tr>\n");
+		fprintf(output, "<tr><th>Total</th><th>%lu</th><th>&nbsp;</th></tr>\n", totalcount);
+		fprintf(output, "</table></div>\n");
+		fprintf(output, "</div>\n");
 
 		freestrbuffer(s);
 		freestrbuffer(othercriteria);
 	}
-	fprintf(output, "</tr>\n");
-	fprintf(output, "</table>\n");
+	fprintf(output, "</div>\n");
 }
 
 int main(int argc, char *argv[])
@@ -359,8 +357,6 @@ int main(int argc, char *argv[])
 
 	/* Now generate the webpage */
 	headfoot(stdout, webfile_hf, "", "header", COL_GREEN);
-	fprintf(stdout, "<center>\n");
-
 	if (topcount == 0) {
 		do_eventlog(stdout, maxcount, maxminutes, fromtime, totime, 
 			    pageregex, expageregex, hostregex, exhostregex, testregex, extestregex,
@@ -393,7 +389,6 @@ int main(int argc, char *argv[])
 		show_topchanges(stdout, hcounts, scounts, events, topcount, firstevent, lastevent);
 	}
 
-	fprintf(stdout, "</center>\n");
 	headfoot(stdout, webfile_hf, "", "footer", COL_GREEN);
 
 	return 0;
