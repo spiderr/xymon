@@ -161,6 +161,8 @@ const static struct {
 	{ "HOSTPOPUP", "CDI" },
 	{ "STATUSLIFETIME", "30" },
 	{ "ACK_COOKIE_EXPIRATION", "86400" },
+	{ "XYMONTHEME", "default" },
+	{ "XYMONSTATUSMETA", "" },
 	{ NULL, NULL }
 };
 

@@ -29,9 +29,6 @@ static char rcsid[] = "$Id$";
 #include "htmllog.h"
 
 static char *cgibinurl = NULL;
-static char *colfont = NULL;
-static char *ackfont = NULL;
-static char *rowfont = NULL;
 static char *documentationurl = NULL;
 static char *doctarget = NULL;
 
@@ -52,7 +49,6 @@ static void hostpopup_setup(void)
 
 	val = xgetenv("HOSTPOPUP");
 	if (val) {
-		/* Clear the setting, since there is an explicit value for it */
 		hostpopup = 0;
 
 		for (p = val; (*p); p++) {
@@ -77,9 +73,6 @@ static void hostsvc_setup(void)
 	hostpopup_setup();
 	getenv_default("NONHISTS", "info,trends,graphs", NULL);
 	getenv_default("CGIBINURL", "/cgi-bin", &cgibinurl);
-	getenv_default("XYMONPAGEACKFONT", "COLOR=\"#33ebf4\" SIZE=-1\"", &ackfont);
-	getenv_default("XYMONPAGECOLFONT", "COLOR=\"#87a9e5\" SIZE=-1\"", &colfont);
-	getenv_default("XYMONPAGEROWFONT", "SIZE=+1 COLOR=\"#FFFFCC\" FACE=\"Tahoma, Arial, Helvetica\"", &rowfont);
 	getenv_default("XYMONWEB", "/xymon", NULL);
 	{
 		SBUF_DEFINE(dbuf);
@@ -93,32 +86,6 @@ static void hostsvc_setup(void)
 }
 
 
-static void historybutton(char *cgibinurl, char *hostname, char *service, char *ip, char *displayname, char *btntxt, FILE *output) 
-{
-	SBUF_DEFINE(tmp1);
-	SBUF_DEFINE(tmp2)
-		
-	SBUF_MALLOC(tmp2, strlen(service)+3);
-
-	getenv_default("NONHISTS", "info,trends", NULL);
-	SBUF_MALLOC(tmp1, strlen(xgetenv("NONHISTS"))+3);
-
-	snprintf(tmp1, tmp1_buflen, ",%s,", xgetenv("NONHISTS"));
-	snprintf(tmp2, tmp2_buflen, ",%s,", service);
-	if (strstr(tmp1, tmp2) == NULL) {
-		fprintf(output, "<BR><BR><CENTER><FORM ACTION=\"%s/history.sh\">", cgibinurl);
-		fprintf(output, "<INPUT TYPE=SUBMIT VALUE=\"%s\">", htmlquoted(btntxt));
-		fprintf(output, "<INPUT TYPE=HIDDEN NAME=\"HISTFILE\" VALUE=\"%s", htmlquoted(hostname));
-		fprintf(output, ".%s\">", htmlquoted(service));
-		fprintf(output, "<INPUT TYPE=HIDDEN NAME=\"ENTRIES\" VALUE=\"50\">");
-		fprintf(output, "<INPUT TYPE=HIDDEN NAME=\"IP\" VALUE=\"%s\">", htmlquoted(ip));
-		fprintf(output, "<INPUT TYPE=HIDDEN NAME=\"DISPLAYNAME\" VALUE=\"%s\">", htmlquoted(displayname));
-		fprintf(output, "</FORM></CENTER>\n");
-	}
-
-	xfree(tmp2);
-	xfree(tmp1);
-}
 
 static void textwithcolorimg(char *msg, FILE *output)
 {
@@ -150,10 +117,7 @@ static void textwithcolorimg(char *msg, FILE *output)
 				acked = (strncmp(p + 1 + strlen(colorname(color)), "-acked", 6) == 0);
 				recent = (strncmp(p + 1 + strlen(colorname(color)), "-recent", 7) == 0);
 
-				fprintf(output, "<IMG SRC=\"%s/%s\" ALT=\"%s\" HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0>",
-                                                        xgetenv("XYMONSKIN"), dotgiffilename(color, acked, !recent),
-							colorname(color),
-                                                        xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
+				fprintf(output, "%s", coloricon(color, acked, !recent));
 
 				restofmsg = p+1+strlen(colorname(color));
 				if (acked) restofmsg += 6;
@@ -168,9 +132,9 @@ static void textwithcolorimg(char *msg, FILE *output)
 }
 
 
-void generate_html_log(char *hostname, char *displayname, char *service, char *ip, 
-		       int color, int flapping, char *sender, char *flags, 
-		       time_t logtime, char *timesincechange, 
+void generate_html_log(char *hostname, char *displayname, char *service, char *ip,
+		       int color, int flapping, char *sender, char *flags,
+		       time_t logtime, char *timesincechange,
 		       char *firstline, char *restofmsg, char *modifiers,
 		       time_t acktime, char *ackmsg, char *acklist,
 		       time_t disabletime, char *dismsg,
@@ -185,6 +149,8 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 	xymonrrd_t *rrd = NULL;
 	xymongraph_t *graph = NULL;
 	char *tplfile = "hostsvc";
+	char xymontpl[32];
+	char pagetitle[512];
 	SBUF_DEFINE(graphs);
 	char *graphsenv;
 	char *graphsptr;
@@ -204,7 +170,47 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 	if (strcmp(service, xgetenv("INFOCOLUMN")) == 0) tplfile = "info";
 	else if (strcmp(service, xgetenv("TRENDSCOLUMN")) == 0) tplfile = "trends";
 
-	headfoot(output, tplfile, "", "header", color);
+	snprintf(xymontpl, sizeof(xymontpl), "xymon%s", tplfile);
+	if (is_history)
+		snprintf(pagetitle, sizeof(pagetitle), "Historical Status: %s - %s", displayname, service);
+	else if (strcmp(tplfile, "info") == 0)
+		snprintf(pagetitle, sizeof(pagetitle), "%s - Host Information", displayname);
+	else if (strcmp(tplfile, "trends") == 0)
+		snprintf(pagetitle, sizeof(pagetitle), "%s - Host Trends", displayname);
+	else
+		snprintf(pagetitle, sizeof(pagetitle), "%s - %s", displayname, service);
+
+	/* Signal whether the HISTORY button should appear in the sub-header template */
+	{
+		char _nh[256], _sv[256];
+		snprintf(_nh, sizeof(_nh), ",%s,", xgetenv("NONHISTS"));
+		snprintf(_sv, sizeof(_sv), ",%s,", service);
+		setenv("XYMONSHOWHISTORY",
+		       (histlocation != HIST_NONE && strstr(_nh, _sv) == NULL) ? "1" : "",
+		       1);
+	}
+
+	{
+		char metabuf[1024];
+		int n = 0;
+
+		if (timesincechange && *timesincechange) {
+			n += snprintf(metabuf + n, sizeof(metabuf) - n,
+				"<small class=\"text-muted xymon-status-duration\">"
+				"<i class=\"fa-regular fa-clock me-1\"></i>%s</small>",
+				timesincechange);
+		}
+		setenv("XYMONSTATUSMETA", (n > 0 ? metabuf : ""), 1);
+	}
+	/* Pre-set XYMWEBDATE to logtime so navbar shows data freshness, not request time */
+	if (logtime) {
+		char _lwdate[64];
+		strftime(_lwdate, sizeof(_lwdate)-1, "%a %b %d %H:%M:%S", localtime(&logtime));
+		setenv("XYMWEBDATE", _lwdate, 1);
+	}
+	headfoot(output, xymontpl, "", "header", color);
+	unsetenv("XYMWEBDATE");
+	setenv("XYMONSTATUSMETA", "", 1);
 
 	if (strcmp(service, xgetenv("TRENDSCOLUMN")) == 0) {
 		int formfile;
@@ -248,7 +254,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 			if (n > 0) inbuf[st.st_size] = '\0';
 			close(formfile);
 
-			sethostenv_critack(atoi(prio), ttgroup, ttextra, 
+			sethostenv_critack(atoi(prio), ttgroup, ttextra,
 				 hostsvcurl(hostname, xgetenv("INFOCOLUMN"), 1), hostlink(hostname));
 
 			output_parsed(output, inbuf, color, 0);
@@ -259,22 +265,16 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 	if (acklist && *acklist) {
 		/* received:validuntil:level:ackedby:msg */
 		time_t received, validuntil;
-		int level; 
+		int level;
 		char *ackedby, *msg;
 		char *bol, *eol, *tok;
 		char receivedstr[200];
 		char untilstr[200];
 
-		fprintf(output, "<table border=0 summary=\"Ack info\" align=center>\n");
-		fprintf(output, "<tr>");
-		fprintf(output, "<th align=center colspan=4><font %s>Acknowledgments</font></th>", ackfont);
-		fprintf(output, "</tr>\n");
-		fprintf(output, "<tr>");
-		fprintf(output, "<th align=left><font %s>Level</font></th>", ackfont);
-		fprintf(output, "<th align=left><font %s>From</font></th>", ackfont);
-		fprintf(output, "<th align=left><font %s>Validity</font></th>", ackfont);
-		fprintf(output, "<th align=left><font %s>Message</font></th>", ackfont);
-		fprintf(output, "</tr>\n");
+		fprintf(output, "<div class=\"table-responsive mb-3\"><table class=\"table table-sm table-bordered\">\n");
+		fprintf(output, "<thead><tr><th colspan=\"4\" class=\"text-center\">Acknowledgments</th></tr>\n");
+		fprintf(output, "<tr><th>Level</th><th>From</th><th>Validity</th><th>Message</th></tr></thead>\n");
+		fprintf(output, "<tbody>\n");
 
 		nldecode(acklist);
 
@@ -293,97 +293,126 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 				strftime(receivedstr, sizeof(receivedstr)-1, "%Y-%m-%d %H:%M", localtime(&received));
 				strftime(untilstr, sizeof(untilstr)-1, "%Y-%m-%d %H:%M", localtime(&validuntil));
 				fprintf(output, "<tr>");
-				fprintf(output, "<td align=center><font %s>%d</font></td>", ackfont, level);
-				fprintf(output, "<td><font %s>%s</font></td>", ackfont, htmlquoted(ackedby));
-				fprintf(output, "<td><font %s>%s&nbsp;-&nbsp;%s</font></td>", ackfont, receivedstr, untilstr);
-				fprintf(output, "<td><font %s>%s</font></td>", ackfont, htmlquoted(msg));
+				fprintf(output, "<td class=\"text-center\">%d</td>", level);
+				fprintf(output, "<td>%s</td>", htmlquoted(ackedby));
+				fprintf(output, "<td>%s &ndash; %s</td>", receivedstr, untilstr);
+				fprintf(output, "<td>%s</td>", htmlquoted(msg));
 				fprintf(output, "</tr>\n");
 			}
 
 			if (eol) { *eol = '\n'; bol = eol+1; } else bol = NULL;
 		} while (bol);
 
-		fprintf(output, "</table>\n");
+		fprintf(output, "</tbody></table></div>\n");
 	}
 
-	fprintf(output, "<br><br><a name=\"begindata\">&nbsp;</a>\n");
+	fprintf(output, "<a name=\"begindata\"></a>\n");
 
-	if (flapping) fprintf(output, "<CENTER><B>WARNING: Flapping status</B></CENTER>\n");
+	if (flapping) fprintf(output, "<div class=\"alert alert-warning text-center fw-bold\">WARNING: Flapping status</div>\n");
 
-	if (histlocation == HIST_TOP) {
-		historybutton(cgibinurl, hostname, service, ip, displayname,
-			      (is_history ? "Full History" : "HISTORY"), output);
+	/* Look up RRD graph definition before opening the row so we can size columns */
+	if (!is_history) {
+		rrd = find_xymon_rrd(service, flags);
+		if (rrd) {
+			graph = find_xymon_graph(rrd->xymonrrdname);
+			if (graph == NULL) {
+				errprintf("Setup error: Service %s has a graph %s, but no graph-definition\n",
+					  service, rrd->xymonrrdname);
+			}
+		}
 	}
 
-	fprintf(output, "<CENTER><TABLE ALIGN=CENTER BORDER=0 SUMMARY=\"Detail Status\">\n");
+	fprintf(output, "<div class=\"row g-3 mb-3\">\n");
+	fprintf(output, "<div class=\"%s\">\n", (rrd && graph) ? "col-sm-12 col-md-6" : "col-12");
 
 	if (wantserviceid) {
-		fprintf(output, "<TR><TH><FONT %s>", rowfont);
-		fprintf(output, "%s - ", htmlquoted(displayname));
-		fprintf(output, "%s", htmlquoted(service));
-		fprintf(output, "</FONT><BR><HR WIDTH=\"60%%\"></TH></TR>\n");
+		fprintf(output, "<h5 class=\"fw-semibold\">%s &mdash; %s</h5><hr class=\"my-2\">\n",
+			htmlquoted(displayname), htmlquoted(service));
 	}
 
 	if (disabletime != 0) {
-		fprintf(output, "<TR><TD ALIGN=LEFT><H3>Disabled until %s</H3></TD></TR>\n", 
+		fprintf(output, "<div class=\"alert alert-info mb-2\"><strong>Disabled until %s</strong>",
 			(disabletime == -1 ? "OK" : ctime(&disabletime)));
-		fprintf(output, "<TR><TD ALIGN=LEFT><PRE>%s</PRE></TD></TR>\n", htmlquoted(dismsg));
-		fprintf(output, "<TR><TD ALIGN=LEFT><BR><HR>Current status message follows:<HR><BR></TD></TR>\n");
+		fprintf(output, "<pre class=\"mt-1 mb-0 bg-transparent border-0\">%s</pre></div>\n", htmlquoted(dismsg));
+		fprintf(output, "<p class=\"text-muted\">Current status message follows:</p>\n");
 
-		fprintf(output, "<TR><TD ALIGN=LEFT>");
 		if (strlen(firstline)) {
-			fprintf(output, "<H3>");
+			fprintf(output, "<h2 class=\"fs-6\">");
 			textwithcolorimg(firstline, output);
-			fprintf(output, "</H3>");	/* Drop the color */
+			fprintf(output, "</h2>\n");
 		}
-		fprintf(output, "\n");
-			
 	}
 	else {
 		char *txt = skipword(firstline);
 
 		if (dismsg) {
-			fprintf(output, "<TR><TD ALIGN=LEFT><H3>Planned downtime: %s</H3></TD></TR>\n", htmlquoted(dismsg));
-			fprintf(output, "<TR><TD ALIGN=LEFT><BR><HR>Current status message follows:<HR><BR></TD></TR>\n");
+			fprintf(output, "<div class=\"alert alert-warning mb-2\">Planned downtime: %s</div>\n", htmlquoted(dismsg));
+			fprintf(output, "<p class=\"text-muted\">Current status message follows:</p>\n");
 		}
 
 		if (modifiers) {
 			char *modtxt;
 
 			nldecode(modifiers);
-			fprintf(output, "<TR><TD ALIGN=LEFT>");
 			modtxt = strtok(modifiers, "\n");
 			while (modtxt) {
-				fprintf(output, "<H3>");
+				fprintf(output, "<h2 class=\"fs-6\">");
 				textwithcolorimg(modtxt, output);
-				fprintf(output, "</H3>");
+				fprintf(output, "</h2>\n");
 				modtxt = strtok(NULL, "\n");
-				if (modtxt) fprintf(output, "<br>");
 			}
-			fprintf(output, "\n");
 		}
 
-		fprintf(output, "<TR><TD ALIGN=LEFT>");
-		if (strlen(txt)) {
-			fprintf(output, "<H3>");
-			textwithcolorimg(txt, output);
-			fprintf(output, "</H3>");	/* Drop the color */
+		/* Strip ctime date prefix — locale-independent: weekday check uses
+		 * hardcoded English names (Xymon always formats timestamps in C locale),
+		 * year-scan uses only ASCII digits so LC_TIME doesn't matter. */
+		{
+			char *msg = skipwhitespace(txt);
+			static const char * const wdays[] =
+				{ "Mon","Tue","Wed","Thu","Fri","Sat","Sun", NULL };
+			int i, has_date = 0;
+			for (i = 0; wdays[i]; i++) {
+				if (strncmp(msg, wdays[i], 3) == 0 &&
+				    (msg[3] == ' ' || msg[3] == '\t')) { has_date = 1; break; }
+			}
+			if (has_date) {
+				/* Scan forward to 4-digit year, skip past it */
+				char *p = msg;
+				while (*p) {
+					if (isdigit((unsigned char)p[0]) && isdigit((unsigned char)p[1]) &&
+					    isdigit((unsigned char)p[2]) && isdigit((unsigned char)p[3]) &&
+					    (p[4]=='\0' || p[4]==' ' || p[4]=='\t')) {
+						p += 4;
+						while (*p == ' ' || *p == '\t') p++;
+						msg = p;
+						break;
+					}
+					p++;
+				}
+			}
+			if (*msg) {
+				fprintf(output, "<h2 class=\"fs-6\">");
+				textwithcolorimg(msg, output);
+				fprintf(output, "</h2>\n");
+			}
 		}
-		fprintf(output, "\n");
 	}
 
-	if (!htmlfmt) fprintf(output, "<PRE>\n");
+	/* Sender below the summary heading, above the message body */
+	if (sender) {
+		fprintf(output, "<p class=\"text-muted small mb-2\">");
+		if (linktoclient)
+			fprintf(output, "<a class=\"text-muted\" href=\"%s\">Status</a> from %s",
+				linktoclient, htmlquoted(sender));
+		else
+			fprintf(output, "%s", htmlquoted(sender));
+		fprintf(output, "</p>\n");
+	}
+
+	if (!htmlfmt) fprintf(output, "<pre class=\"bg-dark p-3 rounded border border-secondary overflow-auto\">\n");
 	textwithcolorimg(restofmsg, output);
-	if (!htmlfmt) fprintf(output, "\n</PRE>\n");
+	if (!htmlfmt) fprintf(output, "\n</pre>\n");
 
-	fprintf(output, "</TD></TR></TABLE>\n");
-
-	fprintf(output, "<br><br>\n");
-	fprintf(output, "<table align=\"center\" border=0 summary=\"Status report info\">\n");
-	fprintf(output, "<tr><td align=\"center\"><font %s>", colfont);
-	if (strlen(timesincechange)) fprintf(output, "Status unchanged in %s<br>\n", timesincechange);
-	if (sender) fprintf(output, "Status message received from %s<br>\n", sender);
-	if (linktoclient) fprintf(output, "<a href=\"%s\">Client data</a> available<br>\n", linktoclient);
 	if (ackmsg) {
 		char *ackedby;
 		char ackuntil[200];
@@ -396,41 +425,24 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		ackedby = strstr(ackmsg, "\nAcked by:");
 		if (ackedby) {
 			*ackedby = '\0';
-			fprintf(output, "<font %s>Current acknowledgment: %s<br>%s<br>%s</font><br>\n", 
-				ackfont, htmlquoted(ackmsg), (ackedby+1), ackuntil);
+			fprintf(output, "<div class=\"alert alert-info mt-2 mb-0\"><strong>Acknowledged:</strong> %s<br>%s<br>%s</div>\n",
+				htmlquoted(ackmsg), (ackedby+1), ackuntil);
 			*ackedby = '\n';
 		}
 		else {
-			fprintf(output, "<font %s>Current acknowledgment: %s<br>%s</font><br>\n", 
-				ackfont, htmlquoted(ackmsg), ackuntil);
+			fprintf(output, "<div class=\"alert alert-info mt-2 mb-0\"><strong>Acknowledged:</strong> %s<br>%s</div>\n",
+				htmlquoted(ackmsg), ackuntil);
 		}
 
 		MEMUNDEFINE(ackuntil);
 	}
 
-	fprintf(output, "</font></td></tr>\n");
-	fprintf(output, "</table>\n");
+	fprintf(output, "</div>\n"); /* end message column */
 
-	/* trends stuff here */
-	if (!is_history) {
-		rrd = find_xymon_rrd(service, flags);
-		if (rrd) {
-			graph = find_xymon_graph(rrd->xymonrrdname);
-			if (graph == NULL) {
-				errprintf("Setup error: Service %s has a graph %s, but no graph-definition\n",
-					  service, rrd->xymonrrdname);
-			}
-		}
-	}
 	if (rrd && graph) {
+		fprintf(output, "<div class=\"col-sm-12 col-md-6\">\n");
 		int may_have_rrd = 1;
 
-		/*
-		 * See if there is already a linecount in the report.
-		 * If there is, this overrides the calculation here.
-		 *
-		 * From Francesco Duranti's hobbit-perl-client.
-		 */
 		char *lcstr = strstr(restofmsg, "<!-- linecount=");
 		if (lcstr) {
 			linecount=atoi(lcstr+15);
@@ -439,60 +451,39 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 			SBUF_DEFINE(multikey);
 			char *p;
 
-			/* quotas, snapshot and TblSpace are generated by hobbit-perl-client */
 			if (multigraphs == NULL) multigraphs = ",disk,inode,qtree,quotas,snapshot,TblSpace,if_load,";
 
-			/* Not all devmon statuses have graphs, so try to avoid generating graph links unless there is one */
 			if (strncmp(rrd->xymonrrdname,"devmon",6) == 0) may_have_rrd=0;
 
-			/* 
-			 * Some reports (disk) use the number of lines as a rough measure for how many
-			 * graphs to build.
-			 * What we *really* should do was to scan the RRD directory and count how many
-			 * RRD database files are present matching this service - but that is way too
-			 * much overhead for something that might be called on every status logged.
-			 */
 			SBUF_MALLOC(multikey, strlen(service) + 3);
 			snprintf(multikey, multikey_buflen, ",%s,", service);
 			if (strstr(multigraphs, multikey)) {
-				/* The "disk" report from the NetWare client puts a "warning light" on all entries */
 				int netwarediskreport = (strstr(firstline, "NetWare Volumes") != NULL);
-
-				/* FD: The "TblSpace" report from dbcheck.pl need to take out a total of 3 line of heade */
 				int tblspacereport = (strstr(restofmsg, "dbcheck.pl") != NULL);
-
-				/* Old BB clients do not send in df's header line */
 				int header = (strchr(firstline, '/') == NULL);
 
-				/* Count how many lines are in the status message. This is needed by xymond_graph later */
 				linecount = 0; p = restofmsg;
 				do {
-					/* First skip all whitespace and blank lines */
 					while ((*p) && (isspace((int)*p) || iscntrl((int)*p))) p++;
 					if (*p) {
 						if ((*p == '&') && (parse_color(p+1) != -1)) {
-							/* A "warninglight" line - skip it, unless its from a Netware box */
 							if (netwarediskreport) linecount++;
 						}
 						else {
-							/* We found something that is not blank, so one more line */
 							if (!netwarediskreport) linecount++;
 						}
 
 						if (strlen(p) > 10 &&  *p == '<' ) {
-							/* Check if this is a devmon RRD header, reset the linecount to -2, as we will see a DS line and a Devmon banner*/
 							if(!strncmp(p, "<!--DEVMON",10)) {
 								linecount = -2;
 								may_have_rrd=1;
 							}
 						}
 
-						/* Then skip forward to the EOLN */
 						p = strchr(p, '\n');
 					}
 				} while (p && (*p));
 
-				/* Do not count the 'df' header line */
 				if (!netwarediskreport && header && (linecount > 1)) linecount--;
 				if (tblspacereport && (linecount > 2)) linecount-=2;
 
@@ -504,19 +495,15 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 			fprintf(output, "<!-- linecount=%d -->\n", linecount);
 			fprintf(output, "<a name=\"begingraph\">&nbsp;</a>\n");
 
-			/* Get the GRAPHS_* environment setting */
 			SBUF_MALLOC(graphs, 7 + strlen(service) + 1);
 			snprintf(graphs, graphs_buflen, "GRAPHS_%s", service);
 			graphsenv=getenv(graphs);
 			if (graphsenv) {
 				fprintf(output, "<!-- GRAPHS_%s: %s -->\n", service, graphsenv);
-				/* check for strtokens */
 				graphsptr = strtok(graphsenv,",");
 				while (graphsptr != NULL) {
-					// fprintf(output, "<!-- found: %s -->\n", graphsptr);
 					graph->xymonrrdname = strdup(graphsptr);
 					fprintf(output, "%s\n", xymon_graph_data(hostname, displayname, graphsptr, color, graph, linecount, HG_WITHOUT_STALE_RRDS, HG_PLAIN_LINK, locatorbased, now-graphtime, now));
-					// next token
 					graphsptr = strtok(NULL,",");
 				}
 
@@ -526,15 +513,12 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 			}
 			xfree(graphs);
 		}
+		fprintf(output, "</div>\n"); /* end graph column */
 	}
 
-	if (histlocation == HIST_BOTTOM) {
-		historybutton(cgibinurl, hostname, service, ip, displayname,
-			      (is_history ? "Full History" : "HISTORY"), output);
-	}
+	fprintf(output, "</div>\n"); /* end row */
 
-	fprintf(output,"</CENTER>\n");
-	headfoot(output, tplfile, "", "footer", color);
+	headfoot(output, xymontpl, "", "footer", color);
 }
 
 char *alttag(char *columnname, int color, int acked, int propagate, char *age)
@@ -564,14 +548,13 @@ static char *nameandcomment(void *host, char *hostname, int usetooltip)
 
 	hostpopup_setup();
 
-	/* For summary "hosts", we have no hinfo record. */
 	if (!host) return hostname;
 
 	hname = xmh_item(host, XMH_HOSTNAME);
 	disp = xmh_item(host, XMH_DISPLAYNAME);
 
 	cmt = NULL;
-	if (!cmt && (hostpopup & HOSTPOPUP_COMMENT))             cmt = xmh_item(host, XMH_COMMENT); 
+	if (!cmt && (hostpopup & HOSTPOPUP_COMMENT))             cmt = xmh_item(host, XMH_COMMENT);
 	if (!cmt && usetooltip && (hostpopup & HOSTPOPUP_DESCR)) cmt = xmh_item(host, XMH_DESCRIPTION);
 	if (!cmt && usetooltip && (hostpopup & HOSTPOPUP_IP))    cmt = xmh_item(host, XMH_IP);
 
@@ -579,7 +562,6 @@ static char *nameandcomment(void *host, char *hostname, int usetooltip)
 
 	if (cmt) {
 		if (usetooltip) {
-			/* Thanks to Marco Schoemaker for suggesting the use of <span title...> */
 			SBUF_MALLOC(result, strlen(disp) + strlen(cmt) + 30);
 			snprintf(result, result_buflen, "<span title=\"%s\">%s</span>", cmt, disp);
 		}
@@ -589,18 +571,12 @@ static char *nameandcomment(void *host, char *hostname, int usetooltip)
 		}
 		return result;
 	}
-	else 
+	else
 		return disp;
 }
 
 static char *urldoclink(const char *docurl, const char *hostname)
 {
-	/*
-	 * docurl is a user defined text string to build
-	 * a documentation url. It is expanded with the
-	 * hostname.
-	 */
-
 	static char linkurl[PATH_MAX];
 
 	if (docurl) {
@@ -634,41 +610,27 @@ char *hostnamehtml(char *hostname, char *defaultlink, int usetooltip)
 
 	if (!doctarget) doctarget = strdup("");
 
-	/* First the hostname and a notes-link.
-	 *
-	 * If a documentation CGI is defined, use that.
-	 *
-	 * else if a host has a direct notes-link, use that.
-	 *
-	 * else if no direct link and we are doing a nongreen/critical page, 
-	 * provide a link to the main page with this host (there
-	 * may be links to documentation in some page-title).
-	 *
-	 * else just put the hostname there.
-	 */
-
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wformat-truncation"
 #endif  // __GNUC__
 	if (documentationurl) {
-		snprintf(result, sizeof(result), "<A HREF=\"%s\" %s><FONT %s>%s</FONT></A>",
+		snprintf(result, sizeof(result), "<a href=\"%s\" %s>%s</a>",
 			urldoclink(documentationurl, hostname),
-			doctarget, xgetenv("XYMONPAGEROWFONT"), nameandcomment(hinfo, hostname, usetooltip));
+			doctarget, nameandcomment(hinfo, hostname, usetooltip));
 	}
 	else if ((hostlinkurl = hostlink(hostname)) != NULL) {
-		snprintf(result, sizeof(result), "<A HREF=\"%s\" %s><FONT %s>%s</FONT></A>",
-			hostlinkurl, doctarget, xgetenv("XYMONPAGEROWFONT"), nameandcomment(hinfo, hostname, usetooltip));
+		snprintf(result, sizeof(result), "<a href=\"%s\" %s>%s</a>",
+			hostlinkurl, doctarget, nameandcomment(hinfo, hostname, usetooltip));
 	}
 	else if (defaultlink) {
-		/* Provide a link to the page where this host lives */
-		snprintf(result, sizeof(result), "<A HREF=\"%s/%s\" %s><FONT %s>%s</FONT></A>",
+		snprintf(result, sizeof(result), "<a href=\"%s/%s\" %s>%s</a>",
 			xgetenv("XYMONWEB"), defaultlink, doctarget,
-			xgetenv("XYMONPAGEROWFONT"), nameandcomment(hinfo, hostname, usetooltip));
+			nameandcomment(hinfo, hostname, usetooltip));
 	}
 	else {
-		snprintf(result, sizeof(result), "<FONT %s>%s</FONT>",
-			xgetenv("XYMONPAGEROWFONT"), nameandcomment(hinfo, hostname, usetooltip));
+		snprintf(result, sizeof(result), "%s",
+			nameandcomment(hinfo, hostname, usetooltip));
 	}
 #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
 	#pragma GCC diagnostic pop
@@ -676,4 +638,3 @@ char *hostnamehtml(char *hostname, char *defaultlink, int usetooltip)
 #endif  // __GNUC__
 	return result;
 }
-

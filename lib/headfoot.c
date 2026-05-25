@@ -22,6 +22,7 @@ static char rcsid[] = "$Id$";
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <ctype.h>
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -409,10 +410,7 @@ static void *wanted_host(char *hostname)
 
 	if (classpattern && hinfo) {
 		char *hostclass = xmh_item(hinfo, XMH_CLASS);
-		if (!hostclass) {
-			pcre2_match_data_free(ovector);
-			return NULL;
-		}
+		if (!hostclass) return NULL;
 
 		result = pcre2_match(classpattern, hostclass, strlen(hostclass), 0, 0,
 				ovector, NULL);
@@ -635,6 +633,45 @@ typedef struct dishost_t {
 	struct dishost_t *next;
 } dishost_t;
 
+/* Strip KEY=VALUE lines from buf, calling setenv() for each match.
+ * Lines are removed in-place so output_parsed never sees them.
+ * Used to let per-page inc files declare env vars (e.g. XYMONBODYCLASS). */
+static void strip_assignments(char *buf)
+{
+	char *p = buf;
+	while (*p) {
+		char *nl  = strchr(p, '\n');
+		char *eol = nl ? nl : (p + strlen(p));
+		char *eq  = (char *)memchr(p, '=', (size_t)(eol - p));
+		if (eq && eq > p) {
+			int valid = 1;
+			char *c;
+			for (c = p; c < eq; c++) {
+				if (!isupper((unsigned char)*c) && *c != '_' &&
+				    !(c > p && isdigit((unsigned char)*c)))
+					{ valid = 0; break; }
+			}
+			if (valid) {
+				char val[4096];
+				int vlen = (int)(eol - (eq + 1));
+				*eq = '\0';
+				if (vlen > 0 && vlen < (int)sizeof(val)) {
+					memcpy(val, eq + 1, (size_t)vlen);
+					val[vlen] = '\0';
+				} else {
+					val[0] = '\0';
+				}
+				setenv(p, val, 1);
+				*eq = '=';
+				if (nl) memmove(p, nl + 1, strlen(nl + 1) + 1);
+				else    { *p = '\0'; break; }
+				continue;
+			}
+		}
+		p = nl ? nl + 1 : (p + strlen(p));
+	}
+}
+
 void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selectedtime)
 {
 	char	*t_start, *t_next;
@@ -694,6 +731,55 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 
 		else if ((strcmp(t_start, "XYMWEBBACKGROUND") == 0) || (strcmp(t_start, "BBBACKGROUND") == 0)) {
 			fprintf(output, "%s", colorname(bgcolor));
+		}
+		else if (strcmp(t_start, "XYMWEBSTATUS") == 0) {
+			fprintf(output, "status-%s", colorname(bgcolor));
+		}
+		else if (strcmp(t_start, "XYMONSTYLESSHEET") == 0) {
+			char *wwwurl = xgetenv("XYMONSERVERWWWURL");
+			char *theme  = xgetenv("XYMONTHEME");
+			if (!theme || !*theme) theme = "default";
+			fprintf(output, "%s/themes/%s/xymon.css",
+				(wwwurl && *wwwurl) ? wwwurl : "/xymon", theme);
+		}
+		else if (strcmp(t_start, "XYMONEXTERNALS") == 0) {
+			char *exturl = xgetenv("XYMONEXTERNALS");
+			if (exturl && *exturl) {
+				fprintf(output, "%s", exturl);
+			} else {
+				char *wwwurl = xgetenv("XYMONSERVERWWWURL");
+				fprintf(output, "%s/externals",
+					(wwwurl && *wwwurl) ? wwwurl : "/xymon");
+			}
+		}
+		else if (strcmp(t_start, "XYMONHISTORYBUTTON") == 0) {
+			char *show = xgetenv("XYMONSHOWHISTORY");
+			if (show && *show) {
+				char *cgiurl   = xgetenv("CGIBINURL");
+				/* hostenv_* vars are already HTML-quoted; don't call htmlquoted()
+				 * again — it uses a static buffer so two calls in one fprintf()
+				 * would both point at the same memory (the last value written). */
+				char *histhost = hostenv_hikey ? hostenv_hikey : hostenv_host;
+				if (!cgiurl || !*cgiurl) cgiurl = "/cgi-bin";
+				fprintf(output,
+					"<form class=\"d-inline m-0\" action=\"%s/history.sh\">",
+					cgiurl);
+				fprintf(output,
+					"<button type=\"submit\""
+					" class=\"btn btn-outline-secondary btn-sm py-0\">"
+					"History</button>");
+				fprintf(output,
+					"<input type=\"hidden\" name=\"HISTFILE\" value=\"%s.%s\">",
+					histhost, hostenv_svc);
+				fprintf(output,
+					"<input type=\"hidden\" name=\"ENTRIES\" value=\"50\">"
+					"<input type=\"hidden\" name=\"IP\" value=\"%s\">",
+					hostenv_ip);
+				fprintf(output,
+					"<input type=\"hidden\" name=\"DISPLAYNAME\" value=\"%s\">",
+					hostenv_host);
+				fprintf(output, "</form>");
+			}
 		}
 		else if ((strcmp(t_start, "XYMWEBCOLOR") == 0) || (strcmp(t_start, "BBCOLOR") == 0))
 			fprintf(output, "%s", hostenv_color);
@@ -1501,6 +1587,45 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 			fprintf(output, "%s", (val ? val : ""));
 		}
 
+		else if (strcmp(t_start, "PAGEHEAD") == 0 ||
+			 strcmp(t_start, "XYMONPAGEHEADER") == 0 ||
+			 strcmp(t_start, "PAGEFOOTER") == 0) {
+			/* Load webfiles/${XYMONTEMPLATE}/<head|body_header|footer>_inc. */
+			char *tmpl = getenv("XYMONTEMPLATE");
+			const char *td = hostenv_templatedir ? hostenv_templatedir : xgetenv("XYMONHOME");
+			const char *subname;
+			char partpath[PATH_MAX];
+			int pfd;
+			struct stat pst;
+			int found = 0;
+
+			if      (strcmp(t_start, "PAGEHEAD")        == 0) subname = "head";
+			else if (strcmp(t_start, "XYMONPAGEHEADER") == 0) subname = "body_header";
+			else                                               subname = "footer";
+
+			if (tmpl && td) {
+				snprintf(partpath, sizeof(partpath), "%s/web/%s/%s_inc",
+					 td, tmpl, subname);
+				pfd = open(partpath, O_RDONLY);
+				if (pfd >= 0) {
+					found = 1;
+					if (fstat(pfd, &pst) == 0 && pst.st_size > 0) {
+						char *pb = (char *)malloc((size_t)pst.st_size + 1);
+						if (pb) {
+							ssize_t n = read(pfd, pb, (size_t)pst.st_size);
+							if (n > 0) {
+								pb[n] = '\0';
+								strip_assignments(pb);
+								output_parsed(output, pb, bgcolor, selectedtime);
+							}
+							free(pb);
+						}
+					}
+					close(pfd);
+				}
+			}
+		}
+
 		else if (strlen(t_start) && xgetenv(t_start)) {
 			fprintf(output, "%s", xgetenv(t_start));
 		}
@@ -1514,6 +1639,29 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 	fprintf(output, "%s", t_start);
 }
 
+
+/* Pre-load KEY=VALUE assignments from all *_inc files so any inc-file variable
+ * overrides (e.g. XYMONBODYCLASS) are applied before the main template renders. */
+static void preload_inc_assignments(const char *tmpl, const char *td)
+{
+	const char *parts[] = {"head", "body", "footer"};
+	int i;
+	for (i = 0; i < 3; i++) {
+		char p[PATH_MAX]; int fd; struct stat st; char *buf; ssize_t n;
+		snprintf(p, sizeof(p), "%s/web/%s/%s_inc", td, tmpl, parts[i]);
+		fd = open(p, O_RDONLY);
+		if (fd < 0) continue;
+		if (fstat(fd, &st) == 0 && st.st_size > 0) {
+			buf = (char *)malloc((size_t)st.st_size + 1);
+			if (buf) {
+				n = read(fd, buf, (size_t)st.st_size);
+				if (n > 0) { buf[n] = '\0'; strip_assignments(buf); }
+				free(buf);
+			}
+		}
+		close(fd);
+	}
+}
 
 void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, int bgcolor)
 {
@@ -1532,6 +1680,70 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 		SBUF_MALLOC(xymondrel, 12+strlen(VERSION));
 		snprintf(xymondrel, xymondrel_buflen, "XYMONDREL=%s", VERSION);
 		putenv(xymondrel);
+	}
+
+	/* Tell PAGE* token handlers which per-page subdir to use.
+	 * Default body class to template name; head_inc may override. */
+	setenv("XYMONTEMPLATE", template, 1);
+	setenv("XYMONBODYCLASS", template, 1);
+
+	/* Set XYMONPAGETITLE from static table or host/svc context */
+	{
+		static const struct { const char *t; const char *p; } titles[] = {
+			{"acknowledge",     "Acknowledge Alert"},
+			{"acknowledgements","Acknowledgement Log"},
+			{"ackinfo",         "Acknowledge Alert"},
+			{"chpasswd",        "Change Password"},
+			{"columndoc",       "Column Info"},
+			{"confreport",      "Configuration Report"},
+			{"critedit",        "Critical Systems Editor"},
+			{"critical",        "Critical Systems"},
+			{"critmulti",       "Critical Systems"},
+			{"divider",         "Xymon"},
+			{"event",           "Eventlog"},
+			{"findhost",        "Find Host"},
+			{"ghosts",          "Ghost Clients"},
+			{"graphs",          "Graphs"},
+			{"hostgraphs",      "Metrics Report"},
+			{"hostlist",        "List of Hosts"},
+			{"maint",           "Maintenance"},
+			{"maintact",        "Maintenance"},
+			{"notify",          "Notification Log"},
+			{"perfdata",        "Performance Data"},
+			{"repnormal",       "Availability Report"},
+			{"report",          "Availability Report"},
+			{"snapshot",        "Snapshot Report"},
+			{"snapcritical",    "Snapshot"},
+			{"snapnongreen",    "Snapshot"},
+			{"snapnormal",      "Snapshot Report"},
+			{"stdcritical",     "Critical Systems"},
+			{"stdnongreen",     "Non-green Systems"},
+			{"stdnormal",       "Status"},
+			{"topchanges",      "Top Changes"},
+			{"useradm",         "Manage Users"},
+			{"xymonnormal",     "Current Status"},
+			{NULL, NULL}
+		};
+		int i; char buf[512]; const char *title = NULL;
+		for (i = 0; titles[i].t; i++)
+			if (strcmp(template, titles[i].t) == 0) { title = titles[i].p; break; }
+		if (title) {
+			setenv("XYMONPAGETITLE", title, 1);
+		} else if (hostenv_host && hostenv_svc) {
+			snprintf(buf, sizeof(buf), "%s \xe2\x80\x94 %s", hostenv_host, hostenv_svc);
+			setenv("XYMONPAGETITLE", buf, 1);
+		} else if (hostenv_host) {
+			setenv("XYMONPAGETITLE", hostenv_host, 1);
+		} else {
+			setenv("XYMONPAGETITLE", template, 1);
+		}
+	}
+
+	/* Pre-pass: load KEY=VALUE assignments from all *_inc files so any
+	 * inc-file overrides take effect before the main template is rendered. */
+	{
+		const char *td_pre = hostenv_templatedir ? hostenv_templatedir : xgetenv("XYMONHOME");
+		if (td_pre) preload_inc_assignments(template, td_pre);
 	}
 
 	/*
@@ -1589,16 +1801,42 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 	}
 	xfree(hfpath);
 
+	/* Subdir layout: web/${template}/${head_or_foot} */
 	if (fd == -1) {
-		/* Fall back to default head/foot file. */
 		if (hostenv_templatedir) {
-			snprintf(filename, sizeof(filename), "%s/%s_%s", hostenv_templatedir, template, head_or_foot);
+			snprintf(filename, sizeof(filename), "%s/%s/%s",
+				 hostenv_templatedir, template, head_or_foot);
+		} else {
+			snprintf(filename, sizeof(filename), "%s/web/%s/%s",
+				 xgetenv("XYMONHOME"), template, head_or_foot);
 		}
-		else {
-			snprintf(filename, sizeof(filename), "%s/web/%s_%s", xgetenv("XYMONHOME"), template, head_or_foot);
-		}
+		dbgprintf("Trying subdir template '%s'\n", filename);
+		fd = open(filename, O_RDONLY);
+	}
 
-		dbgprintf("Trying header/footer file '%s'\n", filename);
+	/* Legacy flat layout: web/${template}_${head_or_foot} */
+	if (fd == -1) {
+		if (hostenv_templatedir) {
+			snprintf(filename, sizeof(filename), "%s/%s_%s",
+				 hostenv_templatedir, template, head_or_foot);
+		} else {
+			snprintf(filename, sizeof(filename), "%s/web/%s_%s",
+				 xgetenv("XYMONHOME"), template, head_or_foot);
+		}
+		dbgprintf("Trying flat template '%s'\n", filename);
+		fd = open(filename, O_RDONLY);
+	}
+
+	/* Master page fallback: web/shared/${head_or_foot} — header/footer only */
+	if (fd == -1 && (strcmp(head_or_foot, "header") == 0 || strcmp(head_or_foot, "footer") == 0)) {
+		if (hostenv_templatedir) {
+			snprintf(filename, sizeof(filename), "%s/shared/%s",
+				 hostenv_templatedir, head_or_foot);
+		} else {
+			snprintf(filename, sizeof(filename), "%s/web/shared/%s",
+				 xgetenv("XYMONHOME"), head_or_foot);
+		}
+		dbgprintf("Trying shared master template '%s'\n", filename);
 		fd = open(filename, O_RDONLY);
 	}
 
@@ -1611,6 +1849,15 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 		if (n > 0) templatedata[n] = '\0';
 		close(fd);
 
+		strip_assignments(templatedata);
+		/* Make XYMWEBDATE available as $VAR in xymonmenu.cfg navbar.
+		 * setenv(..., 0): don't override if htmllog.c pre-set it to logtime. */
+		{
+			char _xwdate[64];
+			time_t _now = getcurrenttime(NULL);
+			strftime(_xwdate, sizeof(_xwdate)-1, "%a %b %d %H:%M:%S", localtime(&_now));
+			setenv("XYMWEBDATE", _xwdate, 0);
+		}
 		output_parsed(output, templatedata, bgcolor, getcurrenttime(NULL));
 
 		xfree(templatedata);
@@ -1631,6 +1878,7 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 		n = read(fd, templatedata, st.st_size);
 		templatedata[n] = '\0';
 		close(fd);
+		strip_assignments(templatedata);
 		output_parsed(output, templatedata, bgcolor, getcurrenttime(NULL));
 		xfree(templatedata);
 	}
@@ -1648,11 +1896,27 @@ void showform(FILE *output, char *headertemplate, char *formtemplate, int color,
 	      char *pretext, char *posttext)
 {
 	/* Present the query form */
-	int formfile;
+	int formfile = -1;
 	char formfn[PATH_MAX];
 
-	snprintf(formfn, sizeof(formfn), "%s/web/%s", xgetenv("XYMONHOME"), formtemplate);
-	formfile = open(formfn, O_RDONLY);
+	/* Subdir layout: web/${headertemplate}/form or web/${headertemplate}/form_* */
+	if (headertemplate) {
+		/* Strip "headertemplate_" prefix from formtemplate to get the local name.
+		 * e.g. headertemplate="report", formtemplate="report_form_daily" → "form_daily" */
+		const char *suffix = formtemplate;
+		size_t pfxlen = strlen(headertemplate);
+		if (strncmp(formtemplate, headertemplate, pfxlen) == 0 && formtemplate[pfxlen] == '_')
+			suffix = formtemplate + pfxlen + 1;
+		snprintf(formfn, sizeof(formfn), "%s/web/%s/%s",
+			 xgetenv("XYMONHOME"), headertemplate, suffix);
+		formfile = open(formfn, O_RDONLY);
+	}
+
+	/* Legacy flat path: web/${formtemplate} */
+	if (formfile < 0) {
+		snprintf(formfn, sizeof(formfn), "%s/web/%s", xgetenv("XYMONHOME"), formtemplate);
+		formfile = open(formfn, O_RDONLY);
+	}
 
 	if (formfile >= 0) {
 		char *inbuf;

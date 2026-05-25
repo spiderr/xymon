@@ -30,7 +30,7 @@ void * xymonrrdtree;
 /* This is the information needed to generate links on the trends column page  */
 xymongraph_t *xymongraphs = NULL;
 
-static const char *xymonlinkfmt = "<table summary=\"%s Graph\"><tr><td><A HREF=\"%s&amp;action=menu\"><IMG BORDER=0 SRC=\"%s&amp;graph=hourly&amp;action=view\" ALT=\"xymongraph %s\"></A></td><td> <td align=\"left\" valign=\"top\"> <a href=\"%s&amp;graph=custom&amp;action=selzoom\"> <img src=\"%s/zoom.%s\" border=0 alt=\"Zoom graph\" style='padding: 3px'> </a> </td></tr></table>\n";
+static const char *xymonlinkfmt = "<div class=\"mb-2\" data-graph=\"%s\"><a href=\"%s&amp;action=menu\"><img class=\"img-fluid d-block\" src=\"%s&amp;graph=hourly&amp;action=view\" alt=\"xymongraph %s\"></a><a href=\"%s&amp;graph=custom&amp;action=selzoom\" class=\"text-muted small\"><i class=\"fa-solid fa-magnifying-glass-plus me-1\"></i>Zoom</a></div>\n";
 
 static const char *metafmt = "<RRDGraph>\n  <GraphType>%s</GraphType>\n  <GraphLink><![CDATA[%s]]></GraphLink>\n  <GraphImage><![CDATA[%s&amp;graph=hourly]]></GraphImage>\n</RRDGraph>\n";
 
@@ -296,7 +296,7 @@ static char *xymon_graph_text(char *hostname, char *dispname, char *service, int
 			if (bgcolor != -1) snprintf(svcurl+strlen(svcurl), (svcurl_buflen - strlen(svcurl)), "&amp;color=%s", colorname(bgcolor));
 			snprintf(svcurl+strlen(svcurl), (svcurl_buflen - strlen(svcurl)), "&amp;graph_start=%d&amp;graph_end=%d", (int)starttime, (int)endtime);
 
-			snprintf(rrdparturl, rrdparturl_buflen, fmt, rrdservicename, svcurl, svcurl, rrdservicename, svcurl, xgetenv("XYMONSKIN"), xgetenv("IMAGEFILETYPE"));
+			snprintf(rrdparturl, rrdparturl_buflen, fmt, rrdservicename, svcurl, svcurl, rrdservicename, svcurl);
 			if ((strlen(rrdparturl) + strlen(rrdurl) + 1) >= rrdurl_buflen) {
 				SBUF_REALLOC(rrdurl, rrdurl_buflen + strlen(rrdparturl) + 4096);
 			}

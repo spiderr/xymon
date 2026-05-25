@@ -120,6 +120,35 @@ char *dotgiffilename(int color, int acked, int oldage)
 	return filename;
 }
 
+char *coloricon(int color, int acked, int oldage)
+{
+	static char *buf = NULL;
+	const char *colorclass, *stateclass;
+
+	if (buf == NULL) buf = (char *)malloc(128);
+
+	if (acked) {
+		stateclass = "xymon-acked";
+	} else if (use_recentgifs && !oldage) {
+		stateclass = "xymon-recent";
+	} else {
+		stateclass = "xymon-stable";
+	}
+
+	switch (color) {
+	  case COL_GREEN:  colorclass = "xymon-green";   break;
+	  case COL_RED:    colorclass = "xymon-red";      break;
+	  case COL_YELLOW: colorclass = "xymon-yellow";   break;
+	  case COL_BLUE:   colorclass = "xymon-blue";     break;
+	  case COL_PURPLE: colorclass = "xymon-purple";   break;
+	  case COL_CLEAR:  colorclass = "xymon-clear";    break;
+	  default:         colorclass = "xymon-unknown";  break;
+	}
+
+	snprintf(buf, 128, "<i class=\"xymon-icon %s %s\"></i>", colorclass, stateclass);
+	return buf;
+}
+
 #ifndef CLIENTONLY
 int colorset(char *colspec, int excludeset)
 {

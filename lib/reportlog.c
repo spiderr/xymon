@@ -30,90 +30,73 @@ void generate_replog(FILE *htmlrep, FILE *textrep, char *textrepurl,
 		     reportinfo_t *repinfo)
 {
 	replog_t *walk;
-	char *bgcols[2] = { "\"#000000\"", "\"#000033\"" };
-	int curbg = 0;
-
 	if (!displayname) displayname = hostname;
 	sethostenv(displayname, ip, service, colorname(color), hostname);
 	sethostenv_report(st, end, reportwarnlevel, reportgreenlevel);
 
 	headfoot(htmlrep, "replog", "", "header", color);
 
-	fprintf(htmlrep, "\n");
-
-	fprintf(htmlrep, "<CENTER>\n");
-	fprintf(htmlrep, "<BR><FONT %s>", xgetenv("XYMONPAGEROWFONT"));
-	fprintf(htmlrep, "<B>%s - ", htmlquoted(displayname));
-	fprintf(htmlrep, "%s</B></FONT>\n", htmlquoted(service));
-	fprintf(htmlrep, "<TABLE BORDER=0 BGCOLOR=\"#333333\" CELLPADDING=3 SUMMARY=\"Availability percentages\">\n");
-	fprintf(htmlrep, "<TR>\n");
+	fprintf(htmlrep, "<h3 class=\"replog-title\">%s - ", htmlquoted(displayname));
+	fprintf(htmlrep, "%s</h3>\n", htmlquoted(service));
+	fprintf(htmlrep, "<div class=\"table-responsive\"><table class=\"table table-sm table-dark replog-availability\">\n");
+	fprintf(htmlrep, "<tr>\n");
 
 	if (repinfo->withreport) {
-		fprintf(htmlrep, "<TD COLSPAN=3><CENTER><BR><B>Availability (24x7): %.2f%%</B></CENTER></TD>\n", repinfo->fullavailability);
-		fprintf(htmlrep, "<TD>&nbsp;</TD>\n");
-		fprintf(htmlrep, "<TD COLSPAN=3><CENTER><B>Availability (SLA): %.2f%%</B></CENTER></TD>\n", repinfo->reportavailability);
+		fprintf(htmlrep, "<td colspan=\"3\" class=\"text-center fw-bold\">Availability (24x7): %.2f%%</td>\n", repinfo->fullavailability);
+		fprintf(htmlrep, "<td>&nbsp;</td>\n");
+		fprintf(htmlrep, "<td colspan=\"3\" class=\"text-center fw-bold\">Availability (SLA): %.2f%%</td>\n", repinfo->reportavailability);
 	}
 	else {
-		fprintf(htmlrep, "<TD COLSPAN=7><CENTER><B><BR>Availability: %.2f%%</B></CENTER></TD>\n", repinfo->fullavailability);
+		fprintf(htmlrep, "<td colspan=\"7\" class=\"text-center fw-bold\">Availability: %.2f%%</td>\n", repinfo->fullavailability);
 	}
-	fprintf(htmlrep, "</TR>\n");
+	fprintf(htmlrep, "</tr>\n");
 
-	fprintf(htmlrep, "<TR BGCOLOR=\"#000033\">\n");
-	fprintf(htmlrep, "<TD>&nbsp;</TD>\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_GREEN, 0, 1), colorname(COL_GREEN), colorname(COL_GREEN), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_YELLOW, 0, 1), colorname(COL_YELLOW), colorname(COL_YELLOW), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_RED, 0, 1), colorname(COL_RED), colorname(COL_RED), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_PURPLE, 0, 1), colorname(COL_PURPLE), colorname(COL_PURPLE), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_CLEAR, 0, 1), colorname(COL_CLEAR), colorname(COL_CLEAR), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0></TD>\n", 
-		xgetenv("XYMONSKIN"), dotgiffilename(COL_BLUE, 0, 1), colorname(COL_BLUE), colorname(COL_BLUE), xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "<TR BGCOLOR=\"#000033\">\n");
-	fprintf(htmlrep, "<TD ALIGN=LEFT><B>24x7</B></TD>\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_GREEN]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_YELLOW]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_RED]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_PURPLE]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_CLEAR]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->fullpct[COL_BLUE]);
-	fprintf(htmlrep, "</TR>\n");
+	fprintf(htmlrep, "<tr>\n");
+	fprintf(htmlrep, "<td>&nbsp;</td>\n");
+	fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", coloricon(COL_GREEN,  0, 1));
+	fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", coloricon(COL_YELLOW, 0, 1));
+	fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", coloricon(COL_RED,    0, 1));
+	fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", coloricon(COL_PURPLE, 0, 1));
+	fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", coloricon(COL_CLEAR,  0, 1));
+	fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", coloricon(COL_BLUE,   0, 1));
+	fprintf(htmlrep, "</tr>\n");
+	fprintf(htmlrep, "<tr>\n");
+	fprintf(htmlrep, "<td><strong>24x7</strong></td>\n");
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->fullpct[COL_GREEN]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->fullpct[COL_YELLOW]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->fullpct[COL_RED]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->fullpct[COL_PURPLE]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->fullpct[COL_CLEAR]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->fullpct[COL_BLUE]);
+	fprintf(htmlrep, "</tr>\n");
 	if (repinfo->withreport) {
-		fprintf(htmlrep, "<TR BGCOLOR=\"#000033\">\n");
-		fprintf(htmlrep, "<TD ALIGN=LEFT><B>SLA (%.2f)</B></TD>\n", reportwarnlevel);
-		fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->reportpct[COL_GREEN]);
-		fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->reportpct[COL_YELLOW]);
-		fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->reportpct[COL_RED]);
-		fprintf(htmlrep, "<TD ALIGN=CENTER>-</TD>\n");
-		fprintf(htmlrep, "<TD ALIGN=CENTER><B>%.2f%%</B></TD>\n", repinfo->reportpct[COL_CLEAR]);
-		fprintf(htmlrep, "<TD ALIGN=CENTER>-</TD>\n");
-		fprintf(htmlrep, "</TR>\n");
+		fprintf(htmlrep, "<tr>\n");
+		fprintf(htmlrep, "<td><strong>SLA (%.2f)</strong></td>\n", reportwarnlevel);
+		fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->reportpct[COL_GREEN]);
+		fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->reportpct[COL_YELLOW]);
+		fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->reportpct[COL_RED]);
+		fprintf(htmlrep, "<td class=\"text-center\">-</td>\n");
+		fprintf(htmlrep, "<td class=\"text-center\"><strong>%.2f%%</strong></td>\n", repinfo->reportpct[COL_CLEAR]);
+		fprintf(htmlrep, "<td class=\"text-center\">-</td>\n");
+		fprintf(htmlrep, "</tr>\n");
 	}
-	fprintf(htmlrep, "<TR BGCOLOR=\"#000000\">\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER COLSPAN=2><B>Event count</B></TD>\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%d</B></TD>\n", repinfo->count[COL_YELLOW]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%d</B></TD>\n", repinfo->count[COL_RED]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%d</B></TD>\n", repinfo->count[COL_PURPLE]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%d</B></TD>\n", repinfo->count[COL_CLEAR]);
-	fprintf(htmlrep, "<TD ALIGN=CENTER><B>%d</B></TD>\n", repinfo->count[COL_BLUE]);
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "<TR BGCOLOR=\"#000000\">\n");
-	fprintf(htmlrep, "<TD COLSPAN=7 ALIGN=CENTER>\n");
-	fprintf(htmlrep, "<FONT %s><B>[Total may not equal 100%%]</B></FONT></TD> </TR>\n", xgetenv("XYMONPAGECOLFONT"));
+	fprintf(htmlrep, "<tr>\n");
+	fprintf(htmlrep, "<td colspan=\"2\" class=\"text-center\"><strong>Event count</strong></td>\n");
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%d</strong></td>\n", repinfo->count[COL_YELLOW]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%d</strong></td>\n", repinfo->count[COL_RED]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%d</strong></td>\n", repinfo->count[COL_PURPLE]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%d</strong></td>\n", repinfo->count[COL_CLEAR]);
+	fprintf(htmlrep, "<td class=\"text-center\"><strong>%d</strong></td>\n", repinfo->count[COL_BLUE]);
+	fprintf(htmlrep, "</tr>\n");
+	fprintf(htmlrep, "<tr>\n");
+	fprintf(htmlrep, "<td colspan=\"7\" class=\"text-center\"><strong>[Total may not equal 100%%]</strong></td></tr>\n");
 
 	if (strcmp(repinfo->fstate, "NOTOK") == 0) {
-		fprintf(htmlrep, "<TR BGCOLOR=\"#000000\">\n");
-		fprintf(htmlrep, "<TD COLSPAN=7 ALIGN=CENTER>\n");
-		fprintf(htmlrep, "<FONT %s><B>[History file contains invalid entries]</B></FONT></TD></TR>\n", 
-			xgetenv("XYMONPAGECOLFONT"));
+		fprintf(htmlrep, "<tr>\n");
+		fprintf(htmlrep, "<td colspan=\"7\" class=\"text-center\"><strong>[History file contains invalid entries]</strong></td></tr>\n");
 	}
 
-	fprintf(htmlrep, "</TABLE>\n");
-	fprintf(htmlrep, "</CENTER>\n");
+	fprintf(htmlrep, "</table></div>\n");
 
 	/* Text-based report start */
 	if (textrep) {
@@ -161,21 +144,17 @@ void generate_replog(FILE *htmlrep, FILE *textrep, char *textrepurl,
 	}
 
 
-	fprintf(htmlrep, "<BR><BR>\n");
-
-
-	fprintf(htmlrep, "<CENTER>\n");
-	fprintf(htmlrep, "<TABLE BORDER=0 BGCOLOR=\"#333333\" CELLSPACING=3 SUMMARY=\"Event table\">\n");
-	fprintf(htmlrep, "<TR>\n");
-	fprintf(htmlrep, "<TD COLSPAN=5><CENTER>Event logs for the given period</CENTER></TD>\n");
-	fprintf(htmlrep, "</TR>\n");
-	fprintf(htmlrep, "<TR BGCOLOR=\"#333333\">\n");
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Event Start</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Event End</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Status</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Duration</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "<TD ALIGN=CENTER><FONT %s><B>Cause</B></FONT></TD>\n", xgetenv("XYMONPAGECOLFONT"));
-	fprintf(htmlrep, "</TR>\n");
+	fprintf(htmlrep, "<div class=\"table-responsive\"><table class=\"table table-sm table-dark table-striped replog-events\">\n");
+	fprintf(htmlrep, "<tr>\n");
+	fprintf(htmlrep, "<td colspan=\"5\" class=\"text-center fw-bold\">Event logs for the given period</td>\n");
+	fprintf(htmlrep, "</tr>\n");
+	fprintf(htmlrep, "<tr>\n");
+	fprintf(htmlrep, "<th class=\"text-center\">Event Start</th>\n");
+	fprintf(htmlrep, "<th class=\"text-center\">Event End</th>\n");
+	fprintf(htmlrep, "<th class=\"text-center\">Status</th>\n");
+	fprintf(htmlrep, "<th class=\"text-center\">Duration</th>\n");
+	fprintf(htmlrep, "<th class=\"text-center\">Cause</th>\n");
+	fprintf(htmlrep, "</tr>\n");
 
 	for (walk = reploghead; (walk); walk = walk->next) {
 		int wanted = 0;
@@ -196,20 +175,18 @@ void generate_replog(FILE *htmlrep, FILE *textrep, char *textrepurl,
 			endtime = walk->starttime + walk->duration;
 			strftime(end, sizeof(end), "%a %b %d %H:%M:%S %Y", localtime(&endtime));
 
-			fprintf(htmlrep, "<TR BGCOLOR=%s>\n", bgcols[curbg]); curbg = (1-curbg);
-			fprintf(htmlrep, "<TD ALIGN=LEFT NOWRAP>%s</TD>\n", start);
-			fprintf(htmlrep, "<TD ALIGN=RIGHT NOWRAP>%s</TD>\n", end);
-			fprintf(htmlrep, "<TD ALIGN=CENTER BGCOLOR=\"#000000\">");
-			fprintf(htmlrep, "<A HREF=\"%s\">", 
+			fprintf(htmlrep, "<tr>\n");
+			fprintf(htmlrep, "<td class=\"text-nowrap\">%s</td>\n", start);
+			fprintf(htmlrep, "<td class=\"text-nowrap text-end\">%s</td>\n", end);
+			fprintf(htmlrep, "<td class=\"text-center\">");
+			fprintf(htmlrep, "<a href=\"%s\">",
 				histlogurl(hostname, service, 0, walk->timespec));
-			fprintf(htmlrep, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=%s WIDTH=%s BORDER=0>", 
-				xgetenv("XYMONSKIN"), dotgiffilename(walk->color, 0, !angrygif), colorname(walk->color), colorname(walk->color),
-				xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
-			fprintf(htmlrep, "</A></TD>\n");
+			fprintf(htmlrep, "%s", coloricon(walk->color, 0, !angrygif));
+			fprintf(htmlrep, "</a></td>\n");
 
-			fprintf(htmlrep, "<TD ALIGN=CENTER>%s</TD>\n", durationstr(walk->duration));
-			fprintf(htmlrep, "<TD>%s</TD>\n", walk->cause);
-			fprintf(htmlrep, "</TR>\n\n");
+			fprintf(htmlrep, "<td class=\"text-center\">%s</td>\n", durationstr(walk->duration));
+			fprintf(htmlrep, "<td>%s</td>\n", walk->cause);
+			fprintf(htmlrep, "</tr>\n\n");
 
 
 			/* And the text-report */
@@ -237,29 +214,25 @@ void generate_replog(FILE *htmlrep, FILE *textrep, char *textrepurl,
 		}
 	}
 
-	fprintf(htmlrep, "<TR><TD ALIGN=RIGHT BGCOLOR=\"#000033\" COLSPAN=3>\n");
-	fprintf(htmlrep, "<B>Time Critical/Offline (24x7):</B></TD>\n");
-	fprintf(htmlrep, "<TD ALIGN=LEFT NOWRAP COLSPAN=2>%s</TD></TR>\n", 
+	fprintf(htmlrep, "<tr><td colspan=\"3\" class=\"text-end\"><strong>Time Critical/Offline (24x7):</strong></td>\n");
+	fprintf(htmlrep, "<td colspan=\"2\" class=\"text-nowrap\">%s</td></tr>\n",
 		durationstr(repinfo->fullduration[COL_RED]));
 
 	if (style != STYLE_CRIT) {
-		fprintf(htmlrep, "<TR><TD ALIGN=RIGHT BGCOLOR=\"#000033\" COLSPAN=3>\n");
-		fprintf(htmlrep, "<B>Time Non-Critical (24x7):</B></TD>\n");
-		fprintf(htmlrep, "<TD ALIGN=LEFT NOWRAP COLSPAN=2>%s</TD></TR>\n", 
+		fprintf(htmlrep, "<tr><td colspan=\"3\" class=\"text-end\"><strong>Time Non-Critical (24x7):</strong></td>\n");
+		fprintf(htmlrep, "<td colspan=\"2\" class=\"text-nowrap\">%s</td></tr>\n",
 			durationstr(repinfo->fullduration[COL_YELLOW] + repinfo->fullduration[COL_PURPLE] +
 				    repinfo->fullduration[COL_CLEAR]  + repinfo->fullduration[COL_BLUE]));
 	}
 
 	if (repinfo->withreport) {
-		fprintf(htmlrep, "<TR><TD ALIGN=RIGHT BGCOLOR=\"#000033\" COLSPAN=3>\n");
-		fprintf(htmlrep, "<B>Time Critical/Offline (SLA):</B></TD>\n");
-		fprintf(htmlrep, "<TD ALIGN=LEFT NOWRAP COLSPAN=2>%s</TD></TR>\n", 
+		fprintf(htmlrep, "<tr><td colspan=\"3\" class=\"text-end\"><strong>Time Critical/Offline (SLA):</strong></td>\n");
+		fprintf(htmlrep, "<td colspan=\"2\" class=\"text-nowrap\">%s</td></tr>\n",
 			durationstr(repinfo->reportduration[COL_RED]));
 
 		if (style != STYLE_CRIT) {
-			fprintf(htmlrep, "<TR><TD ALIGN=RIGHT BGCOLOR=\"#000033\" COLSPAN=3>\n");
-			fprintf(htmlrep, "<B>Time Non-Critical (SLA):</B></TD>\n");
-			fprintf(htmlrep, "<TD ALIGN=LEFT NOWRAP COLSPAN=2>%s</TD></TR>\n", 
+			fprintf(htmlrep, "<tr><td colspan=\"3\" class=\"text-end\"><strong>Time Non-Critical (SLA):</strong></td>\n");
+			fprintf(htmlrep, "<td colspan=\"2\" class=\"text-nowrap\">%s</td></tr>\n",
 				durationstr(repinfo->reportduration[COL_YELLOW]));
 		}
 	}
@@ -296,18 +269,12 @@ void generate_replog(FILE *htmlrep, FILE *textrep, char *textrepurl,
 		}
 	}
 
-	fprintf(htmlrep, "</TABLE>\n");
+	fprintf(htmlrep, "</table></div>\n");
 
-
-	fprintf(htmlrep, "<BR><BR>\n");
-	fprintf(htmlrep, "<BR><BR><CENTER><FONT COLOR=yellow>\n");
-	fprintf(htmlrep, "<A HREF=\"%s\">Click here for text-based availability report</A>\n", textrepurl);
-	fprintf(htmlrep, "</FONT></CENTER><BR><BR>\n");
+	fprintf(htmlrep, "<p><a class=\"text-warning\" href=\"%s\">Click here for text-based availability report</a></p>\n", textrepurl);
 
 	/* XYMONREPEXT extensions */
 	do_extensions(htmlrep, "XYMONREPEXT", "rep");
-
-	fprintf(htmlrep, "</CENTER>\n");
 
 	headfoot(htmlrep, "replog", "", "footer", color);
 }

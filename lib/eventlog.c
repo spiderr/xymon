@@ -730,43 +730,41 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 	if (svccounthead)  svccounthead = msort(svccounthead, record_compare, record_getnext, record_setnext);
 
 	if (eventhead && (output != NULL)) {
-		char *bgcolors[2] = { "#000000", "#000033" };
-		int  bgcolor = 0;
 		struct event_t *ewalk, *lasttoshow = eventhead;
 		countlist_t *cwalk;
 		unsigned long totalcount = 0;
 
-		if (periodstring) fprintf(output, "<p><font size=+1>%s</font></p>\n", htmlquoted(periodstring));
+		if (periodstring) fprintf(output, "<p class=\"event-period\"><strong>%s</strong></p>\n", htmlquoted(periodstring));
 
 		switch (sumtype) {
 		  case XYMON_S_HOST_BREAKDOWN:
 			/* Request for a specific service, show breakdown by host */
 			for (cwalk = hostcounthead; (cwalk); cwalk = cwalk->next) totalcount += cwalk->total;
-			fprintf(output, "<table summary=\"Breakdown by host\" border=0>\n");
-			fprintf(output, "<tr><th align=left>Host</th><th colspan=2>%s</th></tr>\n",
+			fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm event-breakdown\">\n");
+			fprintf(output, "<tr><th>Host</th><th colspan=\"2\">%s</th></tr>\n",
 				(counttype == XYMON_COUNT_EVENTS) ? "State changes" : "Seconds red/yellow");
-			fprintf(output, "<tr><td colspan=3><hr width=\"100%%\"></td></tr>\n");
+			fprintf(output, "<tr><td colspan=\"3\"><hr></td></tr>\n");
 			for (cwalk = hostcounthead; (cwalk && (cwalk->total > 0)); cwalk = cwalk->next) {
-				fprintf(output, "<tr><td align=left>%s</td><td align=right>%lu</td><td align=right>(%6.2f %%)</tr>\n",
-					xmh_item(cwalk->src, XMH_HOSTNAME), 
+				fprintf(output, "<tr><td>%s</td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
+					xmh_item(cwalk->src, XMH_HOSTNAME),
 					cwalk->total, ((100.0 * cwalk->total) / totalcount));
 			}
-			fprintf(output, "</table>\n");
+			fprintf(output, "</table></div>\n");
 			break;
 
 		  case XYMON_S_SERVICE_BREAKDOWN:
 			/* Request for a specific host, show breakdown by service */
 			for (cwalk = svccounthead; (cwalk); cwalk = cwalk->next) totalcount += cwalk->total;
-			fprintf(output, "<table summary=\"Breakdown by service\" border=0>\n");
-			fprintf(output, "<tr><th align=left>Service</th><th colspan=2>%s</th></tr>\n",
+			fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm event-breakdown\">\n");
+			fprintf(output, "<tr><th>Service</th><th colspan=\"2\">%s</th></tr>\n",
 				(counttype == XYMON_COUNT_EVENTS) ? "State changes" : "Seconds red/yellow");
-			fprintf(output, "<tr><td colspan=3><hr width=\"100%%\"></td></tr>\n");
+			fprintf(output, "<tr><td colspan=\"3\"><hr></td></tr>\n");
 			for (cwalk = svccounthead; (cwalk && (cwalk->total > 0)); cwalk = cwalk->next) {
-				fprintf(output, "<tr><td align=left>%s</td><td align=right>%lu</td><td align=right>(%6.2f %%)</tr>\n",
-					((htnames_t *)cwalk->src)->name, 
+				fprintf(output, "<tr><td>%s</td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
+					((htnames_t *)cwalk->src)->name,
 					cwalk->total, ((100.0 * cwalk->total) / totalcount));
 			}
-			fprintf(output, "</table>\n");
+			fprintf(output, "</table></div>\n");
 			break;
 
 		  case XYMON_S_NONE:
@@ -796,10 +794,9 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 			strncpy(title, "Events in summary", sizeof(title));
 		}
 
-		fprintf(output, "<BR><BR>\n");
-		fprintf(output, "<TABLE SUMMARY=\"$EVENTSTITLE\" BORDER=0>\n");
-		fprintf(output, "<TR BGCOLOR=\"#333333\">\n");
-		fprintf(output, "<TD ALIGN=CENTER COLSPAN=6><FONT SIZE=-1 COLOR=\"#33ebf4\">%s</FONT></TD></TR>\n", htmlquoted(title));
+		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-dark table-striped event-log\">\n");
+		fprintf(output, "<tr>\n");
+		fprintf(output, "<td colspan=\"6\" class=\"text-center\"><span class=\"event-title\">%s</span></td></tr>\n", htmlquoted(title));
 
 		for (ewalk=eventhead; (ewalk); ewalk=ewalk->next) {
 			char *hostname = xmh_item(ewalk->host, XMH_HOSTNAME);
@@ -811,39 +808,24 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 			if ( (counttype == XYMON_COUNT_DURATION) &&
 			     (ewalk->eventtime >= lastevent) ) continue;
 
-			fprintf(output, "<TR BGCOLOR=%s>\n", bgcolors[bgcolor]);
-			bgcolor = ((bgcolor + 1) % 2);
+			fprintf(output, "<tr>\n");
 
-			fprintf(output, "<TD ALIGN=CENTER>%s</TD>\n", ctime(&ewalk->eventtime));
+			fprintf(output, "<td>%s</td>\n", ctime(&ewalk->eventtime));
 
-			if (ewalk->newcolor == COL_CLEAR) {
-				fprintf(output, "<TD ALIGN=CENTER BGCOLOR=black><FONT COLOR=white>%s</FONT></TD>\n",
-					hostname);
-			}
-			else {
-				fprintf(output, "<TD ALIGN=CENTER BGCOLOR=%s><FONT COLOR=black>%s</FONT></TD>\n",
-					colorname(ewalk->newcolor), hostname);
-			}
+			fprintf(output, "<td>%s</td>\n", hostname);
 
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", ewalk->service->name);
-			fprintf(output, "<TD><A HREF=\"%s\">\n", 
+			fprintf(output, "<td>%s</td>\n", ewalk->service->name);
+			fprintf(output, "<td><a href=\"%s\">",
 				histlogurl(hostname, ewalk->service->name, ewalk->changetime, NULL));
-			fprintf(output, "<IMG SRC=\"%s/%s\"  HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0 ALT=\"%s\" TITLE=\"%s\"></A>\n", 
-				xgetenv("XYMONSKIN"), dotgiffilename(ewalk->oldcolor, 0, 0), 
-				xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"), 
-				colorname(ewalk->oldcolor), colorname(ewalk->oldcolor));
-			fprintf(output, "<IMG SRC=\"%s/arrow.%s\" BORDER=0 ALT=\"From -&gt; To\">\n", 
-				xgetenv("XYMONSKIN"), xgetenv("IMAGEFILETYPE"));
-			fprintf(output, "<TD><A HREF=\"%s\">\n", 
+			fprintf(output, "%s</a>\n", coloricon(ewalk->oldcolor, 0, 0));
+			fprintf(output, "<i class=\"fa-solid fa-arrow-right mx-1\"></i>\n");
+			fprintf(output, "<a href=\"%s\">",
 				histlogurl(hostname, ewalk->service->name, ewalk->eventtime, NULL));
-			fprintf(output, "<IMG SRC=\"%s/%s\"  HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0 ALT=\"%s\" TITLE=\"%s\"></A></TD>\n", 
-				xgetenv("XYMONSKIN"), dotgiffilename(ewalk->newcolor, 0, 0), 
-				xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"), 
-				colorname(ewalk->newcolor), colorname(ewalk->newcolor));
-			fprintf(output, "</TR>\n");
+			fprintf(output, "%s</a></td>\n", coloricon(ewalk->newcolor, 0, 0));
+			fprintf(output, "</tr>\n");
 		}
 
-		fprintf(output, "</TABLE>\n");
+		fprintf(output, "</table></div>\n");
 
 	}
 	else if (output != NULL) {
@@ -853,13 +835,7 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 		else
 			strncpy(title, "No events logged", sizeof(title));
 
-		fprintf(output, "<CENTER><BR>\n");
-		fprintf(output, "<TABLE SUMMARY=\"%s\" BORDER=0>\n", title);
-		fprintf(output, "<TR BGCOLOR=\"#333333\">\n");
-		fprintf(output, "<TD ALIGN=CENTER COLSPAN=6><FONT SIZE=-1 COLOR=\"#33ebf4\">%s</FONT></TD>\n", htmlquoted(title));
-		fprintf(output, "</TR>\n");
-		fprintf(output, "</TABLE>\n");
-		fprintf(output, "</CENTER>\n");
+		fprintf(output, "<p class=\"event-title\">%s</p>\n", htmlquoted(title));
 	}
 
 	if (eventlog) fclose(eventlog);
