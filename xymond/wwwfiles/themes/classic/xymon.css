@@ -1,0 +1,96 @@
+/* ------------------------------------------------------------------ */
+/* Xymon "classic" theme  –  expressive per-color icons               */
+/*                                                                     */
+/* Inherits all layout, typography, navbar, and table rules from the   */
+/* default theme. Overrides icon ::before content to restore the       */
+/* personality of the original Xymon GIFs using FA6 Free Solid.       */
+/*                                                                     */
+/* stable green  = gem/diamond   (fa-gem)                              */
+/* stable yellow = exclamation   (fa-triangle-exclamation) + pulse     */
+/* stable red    = circle-X      (fa-circle-xmark) + jolt              */
+/* recent green  = smiley        (fa-face-smile)                       */
+/* recent yellow = meh           (fa-face-meh)                         */
+/* recent red    = angry         (fa-face-angry)                       */
+/* recent blue   = blank         (fa-face-meh-blank)                   */
+/* recent purple = dizzy         (fa-face-dizzy)                       */
+/* recent clear  = rolling-eyes  (fa-face-rolling-eyes)                */
+/* ------------------------------------------------------------------ */
+@import url("../default/xymon.css");
+
+/* ── Animations ── */
+@keyframes xymon-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%      { opacity: 0.6; transform: scale(1.18); }
+}
+
+/* Brief intermittent rotation — quiet for most of the cycle, quick jolt at end */
+@keyframes xymon-jolt {
+  0%, 80%, 100% { transform: rotate(0deg);   }
+  85%           { transform: rotate(30deg);  }
+  92%           { transform: rotate(-20deg); }
+  97%           { transform: rotate(10deg);  }
+}
+
+/* ── Stable icon overrides ── */
+
+/* green.gif = diamond (rotated square) */
+.xymon-green.xymon-stable::before {
+  content: "\f0c8";   /* fa-square */
+}
+.xymon-green.xymon-stable {
+  display: inline-block;
+  transform: rotate(45deg);
+}
+
+/* yellow.gif = exclamation triangle, pulsing */
+.xymon-yellow.xymon-stable::before {
+  content: "\f071";   /* fa-triangle-exclamation */
+}
+.xymon-yellow.xymon-stable {
+  display: inline-block;
+  animation: xymon-pulse 2s ease-in-out infinite;
+}
+
+/* red.gif = circle-X, intermittent jolt */
+.xymon-red.xymon-stable::before {
+  content: "\f057";   /* fa-circle-xmark */
+}
+.xymon-red.xymon-stable {
+  display: inline-block;
+  animation: xymon-jolt 4s ease-in-out infinite;
+}
+
+/* ── Recent icon overrides ── */
+
+/* green-recent.gif = smiley face */
+.xymon-green.xymon-recent::before {
+  content: "\f118";   /* fa-face-smile */
+}
+
+/* yellow-recent.gif = confused/meh face */
+.xymon-yellow.xymon-recent::before {
+  content: "\f11a";   /* fa-face-meh */
+}
+
+/* red-recent.gif = angry face */
+.xymon-red.xymon-recent::before {
+  content: "\f556";   /* fa-face-angry */
+}
+
+/* blue-recent.gif = blank/expressionless face (just entered maintenance) */
+.xymon-blue.xymon-recent::before {
+  content: "\f5a4";   /* fa-face-meh-blank */
+}
+.xymon-blue.xymon-stable::before {
+  content: "\f1f6";   /* fa-bell-slash */
+}
+
+/* purple-recent.gif = dizzy face (just lost data) */
+.xymon-purple.xymon-recent::before {
+  content: "\f567";   /* fa-face-dizzy */
+}
+
+/* clear-recent.gif = rolling-eyes face (just became untested) */
+.xymon-clear.xymon-recent::before {
+  content: "\f5a5";   /* fa-face-rolling-eyes */
+}

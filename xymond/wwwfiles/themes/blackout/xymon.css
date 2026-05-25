@@ -1,0 +1,21 @@
+/* ------------------------------------------------------------------ */
+/* Xymon "blackout" theme  –  dark mode, desaturated status colors    */
+/* Inherits all structure, icons, and layout from default.            */
+/* ------------------------------------------------------------------ */
+@import url("../default/xymon.css");
+
+/* Icon colors — muted/low-saturation palette */
+.xymon-green   { color: #66bb6a; }
+.xymon-red     { color: #ef5350; }
+.xymon-yellow  { color: #ffb300; }
+.xymon-blue    { color: #29b6f6; }
+.xymon-purple  { color: #ab47bc; }
+.xymon-clear   { color: #78909c; }
+.xymon-unknown { color: #78909c; }
+
+/* Softer gradient tints to match muted palette */
+body.status-green  { background-image: linear-gradient(to right, rgba(102,187,106,0.12) 0%, transparent 22%); }
+body.status-red    { background-image: linear-gradient(to right, rgba(239,83,80,0.14) 0%, transparent 22%); }
+body.status-yellow { background-image: linear-gradient(to right, rgba(255,179,0,0.13) 0%, transparent 22%); }
+body.status-blue   { background-image: linear-gradient(to right, rgba(41,182,246,0.12) 0%, transparent 22%); }
+body.status-purple { background-image: linear-gradient(to right, rgba(171,71,188,0.10) 0%, transparent 22%); }

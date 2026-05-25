@@ -1,0 +1,132 @@
+/* ------------------------------------------------------------------ */
+/* Xymon "default" theme  –  dark mode, saturated status colors       */
+/*                                                                     */
+/* Requires data-bs-theme="dark" on <html> (set by all header         */
+/* templates). Bootstrap activates its built-in dark palette first;   */
+/* this file overrides only the values specific to Xymon's aesthetic. */
+/* ------------------------------------------------------------------ */
+
+/* ── Override Bootstrap dark-mode defaults with Xymon values ── */
+/* [data-bs-theme=dark] has same specificity as Bootstrap's own   */
+/* block; our file loads after Bootstrap so we win via cascade.   */
+[data-bs-theme=dark] {
+  /* Deeper black than Bootstrap's default dark (#212529) */
+  --bs-body-bg:           #111111;
+  --bs-body-bg-rgb:       17, 17, 17;
+  --bs-body-color:        #f0f0f0;
+  --bs-body-color-rgb:    240, 240, 240;
+
+  /* Cards: 50% transparent so status gradient shows through */
+  --bs-card-bg:           rgba(17,17,17,0.5);
+  --bs-card-border-color: rgba(255,255,255,0.1);
+  --bs-card-cap-bg:       rgba(255,255,255,0.05);
+
+  /* Slightly lighter surfaces for secondary/tertiary areas */
+  --bs-secondary-bg:      #1c1c1c;
+  --bs-tertiary-bg:       #2a2a2a;
+}
+
+/* ── Base ── */
+/* Bootstrap dark mode sets background-color and color on body     */
+/* via var(--bs-body-bg) / var(--bs-body-color).                   */
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+/* ── Status gradient backgrounds ── */
+/* Punchy left-edge splash — high opacity at 1%, gone by 10%. */
+body.status-green  { background-image: linear-gradient(to right, rgba(0,230,118,0.58) 1%, transparent 10%); }
+body.status-red    { background-image: linear-gradient(to right, rgba(255,23,68,0.62) 1%, transparent 10%); }
+body.status-yellow { background-image: linear-gradient(to right, rgba(255,204,0,0.58) 1%, transparent 10%); }
+body.status-blue   { background-image: linear-gradient(to right, rgba(0,176,255,0.55) 1%, transparent 10%); }
+body.status-purple { background-image: linear-gradient(to right, rgba(224,64,251,0.55) 1%, transparent 10%); }
+
+/* ── Semantic status icon classes ── */
+.xymon-icon {
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}
+.xymon-icon::before { font-family: "Font Awesome 6 Free"; display: inline-block; }
+
+.xymon-stable::before  { font-weight: 900; content: "\f111"; } /* fa-circle */
+.xymon-recent::before  { font-weight: 900; content: "\f192"; } /* fa-circle-dot */
+.xymon-acked::before   { font-weight: 900; content: "\f14a"; } /* fa-square-check */
+.xymon-clear.xymon-stable::before { font-weight: 400; content: "\f111"; }
+.xymon-clear.xymon-recent::before { font-weight: 400; content: "\f192"; }
+.xymon-clear.xymon-acked::before  { font-weight: 400; content: "\f14a"; } /* fa-square-check */
+.xymon-unknown::before { font-weight: 900; content: "\f29c"; }
+
+/* Icon colors — saturated for dark background */
+.xymon-green   { color: #00e676; }
+.xymon-red     { color: #ff1744; }
+.xymon-yellow  { color: #ffd600; }
+.xymon-blue    { color: #00b0ff; }
+.xymon-purple  { color: #e040fb; }
+.xymon-clear   { color: #9e9e9e; }
+.xymon-unknown { color: #9e9e9e; }
+
+/* ── Tables ── */
+/* Bootstrap dark mode sets --bs-table-bg: transparent automatically. */
+/* thead: dark neutral header, no status color.                       */
+.table {
+  font-size: 0.9rem;
+}
+.table thead th {
+  background-color: #222222;
+  color: #f0f0f0;
+  white-space: nowrap;
+}
+
+/* ── PRE / monospace log text ── */
+/* bg-dark class on <pre> (set in htmllog.c) handles background;     */
+/* these rules handle font and size regardless of class presence.    */
+pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+}
+
+/* ── Navbar ── */
+.navbar.bg-dark {
+  background-color: #222222 !important;
+}
+
+/* Navbar brand status icon — mirrors the favicon color for the current page */
+.xymon-brand-icon                  { color: #9e9e9e; } /* default/clear */
+body.status-green  .xymon-brand-icon { color: #00e676; }
+body.status-yellow .xymon-brand-icon { color: #ffd600; }
+body.status-red    .xymon-brand-icon { color: #ff1744; }
+body.status-blue   .xymon-brand-icon { color: #00b0ff; }
+body.status-purple .xymon-brand-icon { color: #e040fb; }
+
+/* Status duration clock icon — color matches the page status */
+.xymon-status-duration i           { color: #9e9e9e; } /* default/clear */
+body.status-green  .xymon-status-duration i { color: #00e676; }
+body.status-yellow .xymon-status-duration i { color: #ffd600; }
+body.status-red    .xymon-status-duration i { color: #ff1744; }
+body.status-blue   .xymon-status-duration i { color: #00b0ff; }
+body.status-purple .xymon-status-duration i { color: #e040fb; }
+
+/* Ghost client count badge in navbar */
+#xymon-ghost-badge { font-size: 0.5em; opacity: 0.75; background-color: #fd9f0d !important; color: #fff !important; }
+
+/* Page header bar */
+.xymon-page-header {
+  align-items: center;
+  border-bottom: 1px solid var(--bs-border-color);
+  padding-bottom: .5rem;
+  margin-bottom: 1rem;
+}
+.xymon-page-header h1 {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+#xymon-hdr-right {
+  align-items: center;
+  gap: .5rem;
+}
+
