@@ -1,0 +1,144 @@
+<div class="row g-3">
+
+  <!-- Current status: disabled tests + scheduled actions -->
+  <div class="col-12 col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header"><em>Current Status</em></div>
+      <div class="card-body p-2">
+        <table class="table table-sm table-bordered mb-3">
+          <thead><tr><th colspan="3">Currently disabled tests</th></tr></thead>
+          <tbody>&DISABLELIST</tbody>
+        </table>
+        <table class="table table-sm table-bordered mb-0">
+          <thead><tr><th colspan="3">Scheduled actions</th></tr></thead>
+          <tbody>&SCHEDULELIST</tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disable form -->
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header"><em>Select what to Disable</em></div>
+      <div class="card-body">
+        <form method="POST" name="selectionform" action="&SCRIPT_NAME">
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">Hosts</label>
+              <select multiple name="hostname" size="12" class="form-select" onchange="updateOptions(window.document.selectionform.hostname.options[selectedIndex].text);">
+                &HOSTLIST
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Tests</label>
+              <select multiple name="disabletest" size="12" class="form-select">
+                <option value="">-- Select a host --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-header small"><em>Filter hostlist</em></div>
+            <div class="card-body p-2">
+              <div class="row g-2 align-items-end">
+                <div class="col-9">
+                  <div class="mb-2">
+                    <label class="form-label small mb-1">Hostname pattern</label>
+                    <input type="text" name="hostpattern" value="&HOSTFILTER" maxlength="80" class="form-control form-control-sm">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small mb-1">Pagename pattern</label>
+                    <input type="text" name="pagepattern" value="&PAGEFILTER" maxlength="80" class="form-control form-control-sm">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small mb-1">IP address pattern</label>
+                    <input type="text" name="ippattern" value="&IPFILTER" maxlength="80" class="form-control form-control-sm">
+                  </div>
+                  <div>
+                    <label class="form-label small mb-1">Class pattern</label>
+                    <input type="text" name="classpattern" value="&CLASSFILTER" maxlength="80" class="form-control form-control-sm">
+                  </div>
+                </div>
+                <div class="col-3 text-center">
+                  <button type="submit" name="go" value="Apply filters" class="btn btn-sm btn-secondary w-100">Apply filters</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cause</label>
+            <input name="cause" type="text" maxlength="80" class="form-control">
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-body p-2">
+              <div class="mb-2">
+                <div class="form-check">
+                  <input name="go2" type="radio" value="Disable for" checked class="form-check-input" id="go2-for">
+                  <label class="form-check-label" for="go2-for">Disable for</label>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-4 mt-1">
+                  <input name="duration" type="text" value="4" maxlength="5" class="form-control maint-duration">
+                  <select name="scale" class="form-select w-auto">
+                    <option value="1">minutes</option>
+                    <option value="60" selected>hours</option>
+                    <option value="1440">days</option>
+                    <option value="10080">weeks</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div class="form-check">
+                  <input name="go2" type="radio" value="Disable until" class="form-check-input" id="go2-until">
+                  <label class="form-check-label" for="go2-until">Disable until</label>
+                </div>
+                <div class="d-flex flex-wrap gap-1 align-items-center ms-4 mt-1">
+                  <select name="endmonth" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&REPMONLIST</select>
+                  <select name="endday" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&REPDAYLIST</select>
+                  <select name="endyear" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&FUTUREYEARLIST</select>
+                  <select name="endhour" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&REPHOURLIST</select>
+                  <select name="endminute" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&REPMINLIST</select>
+                  <span class="text-muted small">— or until OK:</span>
+                  <input name="untilok" type="checkbox" class="form-check-input" onclick="setcheck(this.form.go2,true)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-body p-2">
+              <div class="form-check mb-2">
+                <input name="go" type="radio" value="Disable now" checked class="form-check-input" id="go-now">
+                <label class="form-check-label" for="go-now">Disable now</label>
+              </div>
+              <div class="form-check">
+                <input name="go" type="radio" value="Schedule disable" class="form-check-input" id="go-sched">
+                <label class="form-check-label" for="go-sched">Schedule disable at</label>
+              </div>
+              <div class="d-flex flex-wrap gap-1 align-items-center ms-4 mt-1">
+                <select name="month" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&REPMONLIST</select>
+                <select name="day" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&REPDAYLIST</select>
+                <select name="year" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&FUTUREYEARLIST</select>
+                <select name="hour" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&REPHOURLIST</select>
+                <select name="minute" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&REPMINLIST</select>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <button name="apply" type="button" class="btn btn-primary" onclick="validateDisable(this.form)">Apply</button>
+            <div class="form-check mb-0">
+              <input type="checkbox" name="preview" class="form-check-input" id="preview">
+              <label class="form-check-label" for="preview">Preview</label>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>

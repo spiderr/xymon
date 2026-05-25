@@ -1,0 +1,12 @@
+&PAGEFOOTER
+<div class="border-top mt-4 pt-2 pb-2 text-end">
+  <small><a href="http://xymon.sourceforge.net/" class="text-muted text-decoration-none">Xymon &XYMONDREL</a></small>
+</div>
+</div><!-- /.container-fluid -->
+
+<script src="&XYMONEXTERNALS/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+&XYMONBODYFOOTER
+
+</body>
+</html>

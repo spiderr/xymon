@@ -1,0 +1,44 @@
+<div class="card mb-3">
+  <div class="card-header fw-semibold">Explanation of Terms</div>
+  <div class="card-body pb-1">
+
+    <h6 class="fw-semibold">Basics</h6>
+    <dl class="row">
+      <dt class="col-sm-3">Aliases</dt>
+      <dd class="col-sm-9">Names for this host other than the primary name, e.g. a hostname used by a client installed on the server</dd>
+      <dt class="col-sm-3">Monitoring location</dt>
+      <dd class="col-sm-9">The location of this host on the Xymon webpages</dd>
+      <dt class="col-sm-3">Comment / Description</dt>
+      <dd class="col-sm-9">Explanatory text about the host</dd>
+      <dt class="col-sm-3">Planned downtime</dt>
+      <dd class="col-sm-9">Time of day/week when the host monitoring is disabled</dd>
+      <dt class="col-sm-3">SLA Reporting Period</dt>
+      <dd class="col-sm-9">Time of day/week where the status impacts the SLA availability calculation</dd>
+    </dl>
+
+    <h6 class="fw-semibold">Network tests</h6>
+    <dl class="row">
+      <dt class="col-sm-3">Service</dt>
+      <dd class="col-sm-9">Corresponds to the column-name on the Xymon webpage</dd>
+      <dt class="col-sm-3">Critical</dt>
+      <dd class="col-sm-9">Whether this test appears on the Critical Systems view</dd>
+      <dt class="col-sm-3">C/Y/R limits</dt>
+      <dd class="col-sm-9">If set, this is the number of failures that must happen before the status changes to Clear/Yellow/Red</dd>
+      <dt class="col-sm-3">Specifics</dt>
+      <dd class="col-sm-9">Details about how this status is monitored</dd>
+    </dl>
+
+    <h6 class="fw-semibold">Local tests</h6>
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Service</dt>
+      <dd class="col-sm-9">Corresponds to the column-name on the Xymon webpage</dd>
+      <dt class="col-sm-3">Critical</dt>
+      <dd class="col-sm-9">Whether this test appears on the Critical view</dd>
+      <dt class="col-sm-3">C/Y/R limits</dt>
+      <dd class="col-sm-9">If set, this is the number of failures that must happen before the status changes to Clear/Yellow/Red</dd>
+      <dt class="col-sm-3">Configuration</dt>
+      <dd class="col-sm-9">Details about how this status is monitored. NOTE: The exact thresholds for each test are configured on the client, and may differ from that listed here.</dd>
+    </dl>
+
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<div class="card card-body mb-3">
+  <h5 class="card-title">Xymon Snapshot Report</h5>
+  <form method="GET" action="&SCRIPT_NAME">
+    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+      <div>
+        <label class="form-label">Month</label>
+        <select name="mon" class="form-select">&REPMONLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Day</label>
+        <select name="day" class="form-select">&REPDAYLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Year</label>
+        <select name="yr" class="form-select">&REPYEARLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Hour</label>
+        <select name="hour" class="form-select">&REPHOURLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Minute</label>
+        <select name="min" class="form-select">&REPMINLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Second</label>
+        <select name="sec" class="form-select">&REPSECLIST</select>
+      </div>
+    </div>
+    <button type="submit" name="SUB" value="Generate Report" class="btn btn-primary">Generate Report</button>
+  </form>
+</div>

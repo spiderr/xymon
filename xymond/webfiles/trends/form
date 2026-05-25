@@ -1,0 +1,73 @@
+<div class="card card-body mb-3">
+  <h6 class="card-subtitle mb-3 text-muted">Trends period</h6>
+  <form method="GET" action="&SCRIPT_NAME">
+    <input type="hidden" name="HOST" value="&XMH_HOSTNAME">
+    <input type="hidden" name="SERVICE" value="&XYMWEBSVC">
+
+    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+      <div>
+        <label class="form-label">Days</label>
+        <input type="text" name="backdays" id="backdays" value="&BACKDAYS" class="form-control trends-duration"
+          onchange="document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return false">
+      </div>
+      <div>
+        <label class="form-label">Hours</label>
+        <input type="text" name="backhours" id="backhours" value="&BACKHOURS" class="form-control trends-duration"
+          onchange="document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return false">
+      </div>
+      <div>
+        <label class="form-label">Minutes</label>
+        <input type="text" name="backmins" id="backmins" value="&BACKMINS" class="form-control trends-duration"
+          onchange="document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return false">
+      </div>
+      <div>
+        <label class="form-label">Seconds</label>
+        <input type="text" name="backsecs" id="backsecs" value="&BACKSECS" class="form-control trends-duration"
+          onchange="document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return false">
+      </div>
+      <div class="align-self-end">
+        <button type="submit" name="Go" value="Update" class="btn btn-primary">Update</button>
+      </div>
+    </div>
+
+    <div class="text-center text-muted mb-3">— or —</div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">From <span class="text-muted small">(ccyy/mm/dd@hh:mm:ss)</span></label>
+        <input type="text" name="FROMTIME" id="starttime" value="&EVENTSTARTTIME" class="form-control"
+          onchange="document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return false">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">To <span class="text-muted small">(ccyy/mm/dd@hh:mm:ss)</span></label>
+        <input type="text" name="TOTIME" id="endtime" value="&EVENTENDTIME" class="form-control"
+          onchange="document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return false">
+      </div>
+    </div>
+
+    <div class="mb-2">
+      <span class="text-muted small me-2">Show last</span>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('backdays').value='2'; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return true">2 days</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('backdays').value='12'; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return true">12 days</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('backdays').value='48'; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return true">48 days</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('backdays').value='576'; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; document.getElementById('starttime').value=''; document.getElementById('endtime').value=''; return true">576 days</button>
+    </div>
+
+    <div class="mb-2">
+      <span class="text-muted small me-2">Show last</span>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTYEARBEGIN'; document.getElementById('endtime').value='&EVENTCURRYEARBEGIN'; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">year</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTMONTHBEGIN'; document.getElementById('endtime').value='&EVENTCURRMONTHBEGIN'; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">month</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTWEEKBEGIN'; document.getElementById('endtime').value='&EVENTCURRWEEKBEGIN'; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">week</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTYESTERDAY'; document.getElementById('endtime').value='&EVENTTODAY'; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">Yesterday</button>
+    </div>
+
+    <div>
+      <span class="text-muted small me-2">Show this</span>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTCURRYEARBEGIN'; document.getElementById('endtime').value=''; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">year</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTCURRMONTHBEGIN'; document.getElementById('endtime').value=''; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">month</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTCURRWEEKBEGIN'; document.getElementById('endtime').value=''; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">week</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTTODAY'; document.getElementById('endtime').value='&EVENTNOW'; document.getElementById('backdays').value=''; document.getElementById('backhours').value=''; document.getElementById('backmins').value=''; document.getElementById('backsecs').value=''; return true">Today</button>
+    </div>
+
+  </form>
+</div>

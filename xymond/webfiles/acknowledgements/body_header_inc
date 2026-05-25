@@ -1,0 +1,9 @@
+<h1>&XYMONPAGETITLE</h1>
+<div class="ms-auto d-flex" id="xymon-hdr-right">
+  <a class="btn btn-outline-secondary btn-sm" href="&XYMONSERVERCGIURL/acknowledgements.sh">
+    <i class="fa-solid fa-sliders me-1"></i>Filter
+  </a>
+  <a class="btn btn-outline-secondary btn-sm" href="&XYMONSERVERSECURECGIURL/acknowledge.sh">
+    <i class="fa-solid fa-square-check me-1"></i>Acknowledge
+  </a>
+</div>

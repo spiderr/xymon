@@ -1,0 +1,42 @@
+<script>
+function setcheck(field, val) {
+  var len = field.length;
+  if (len) { for (var i = 0; i < len; i++) field[i].checked = val; }
+  else field.checked = val;
+}
+function mark4Disable(services) {
+  var opts = document.disableform.disabletest.options;
+  for (var i = 0; i < opts.length; i++) {
+    if (services.indexOf(',' + opts[i].value + ',') > -1)
+      opts[i].selected = !opts[i].selected;
+  }
+}
+function ispositive(v) {
+  var s = v.toString();
+  for (var i = 0; i < s.length; i++) { if (s[i] < '0' || s[i] > '9') return false; }
+  return parseInt(s, 10) >= 1;
+}
+function disableButtons(f, action) {
+  for (var i = 0; i < f.length; i++) {
+    if (f.elements[i].type.toLowerCase() === 'button') f.elements[i].disabled = action;
+  }
+}
+function validateDisable(theform) {
+  if (!theform.disabletest.value) {
+    alert('You must select the Test(s) to disable!');
+    theform.disabletest.focus();
+    return false;
+  }
+  if (!theform.cause.value) {
+    alert('You must fill in the Cause field!');
+    theform.cause.focus();
+    return false;
+  }
+  if (!ispositive(theform.duration.value)) {
+    alert('Duration must be a positive integer.');
+    return false;
+  }
+  disableButtons(theform, true);
+  theform.submit();
+}
+</script>

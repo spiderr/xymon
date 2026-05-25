@@ -1,0 +1,82 @@
+<div class="card card-body mb-3">
+  <form method="GET" action="&SCRIPT_NAME">
+
+    <div class="row g-3 mb-2">
+      <div class="col-md-4">
+        <label class="form-label">Starting <span class="text-muted small">(Default 1440)</span></label>
+        <div class="input-group">
+          <input type="text" name="MAXTIME" class="form-control">
+          <span class="input-group-text">min ago</span>
+        </div>
+      </div>
+    </div>
+    <div class="text-center text-muted mb-2">— or —</div>
+    <div class="row g-3 mb-2">
+      <div class="col-md-6">
+        <label class="form-label">From <span class="text-muted small">(ccyy/mm/dd@hh:mm:ss)</span></label>
+        <input type="text" name="FROMTIME" id="starttime" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">To <span class="text-muted small">(ccyy/mm/dd@hh:mm:ss)</span></label>
+        <input type="text" name="TOTIME" id="endtime" class="form-control">
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTYEARBEGIN'; document.getElementById('endtime').value='&EVENTCURRYEARBEGIN'; return false">Last year</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTMONTHBEGIN'; document.getElementById('endtime').value='&EVENTCURRMONTHBEGIN'; return false">Last month</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTWEEKBEGIN'; document.getElementById('endtime').value='&EVENTCURRWEEKBEGIN'; return false">Last week</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTCURRYEARBEGIN'; document.getElementById('endtime').value=''; return false">This year</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTCURRMONTHBEGIN'; document.getElementById('endtime').value=''; return false">This month</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTCURRWEEKBEGIN'; document.getElementById('endtime').value=''; return false">This week</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTYESTERDAY'; document.getElementById('endtime').value='&EVENTTODAY'; return false">Yesterday</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTTODAY'; document.getElementById('endtime').value='&EVENTNOW'; return false">Today</button>
+    </div>
+
+    <hr>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Max # of events <span class="text-muted small">(Default 100)</span></label>
+        <input type="text" name="MAXCOUNT" value="100" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Hosts to match <span class="text-muted small">(ex: ^host.*$)</span></label>
+        <input type="text" name="HOSTMATCH" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Hosts to skip <span class="text-muted small">(ex: ^host.*$)</span></label>
+        <input type="text" name="EXHOSTMATCH" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Pages to match</label>
+        <div class="input-group">
+          <input type="text" name="PAGEMATCH" id="PAGEMATCH" class="form-control">
+          <select name="PATHLIST" id="PATHLIST" class="form-select w-auto" onchange="document.getElementById('PAGEMATCH').value=document.getElementById('PATHLIST').value; return false">&PAGEPATH_DROPDOWN</select>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Pages to skip <span class="text-muted small">(ex: ^webservers/.*$)</span></label>
+        <input type="text" name="EXPAGEMATCH" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Tests to match <span class="text-muted small">(ex: cpu|vmstat)</span></label>
+        <input type="text" name="TESTMATCH" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Tests to skip <span class="text-muted small">(ex: cpu|vmstat)</span></label>
+        <input type="text" name="EXTESTMATCH" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Colors to match <span class="text-muted small">(ex: red|green)</span></label>
+        <input type="text" name="COLORMATCH" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <div class="form-check mt-4">
+          <input type="checkbox" name="NODIALUPS" class="form-check-input" id="nodialups">
+          <label class="form-check-label" for="nodialups">Ignore dialup hosts</label>
+        </div>
+      </div>
+    </div>
+    <button type="submit" name="Send" value="View log" class="btn btn-primary">View log</button>
+  </form>
+</div>

@@ -1,0 +1,20 @@
+<div class="card card-body mb-3 acknowledge-form">
+  <form method="GET" action="&SCRIPT_NAME">
+    <input type="hidden" name="ACTION" value="Ack">
+    <div class="row g-3 align-items-end mb-3">
+      <div class="col-auto">
+        <label class="form-label">Estimated time to resolve (minutes)</label>
+        <input type="text" name="DELAY" value="60" maxlength="4" class="form-control ack-delay">
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Explanation / Cause of problem</label>
+      <input type="text" name="MESSAGE" maxlength="80" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Acknowledgment Code</label>
+      <input type="text" name="NUMBER" maxlength="7" class="form-control ack-number">
+    </div>
+    <button type="submit" name="Send" value="Send" class="btn btn-primary">Send</button>
+  </form>
+</div>

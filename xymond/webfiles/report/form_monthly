@@ -1,0 +1,17 @@
+<div class="card card-body mb-3 report-form-monthly">
+  <h5 class="card-title">Xymon Monthly Availability Report</h5>
+  <form method="POST" action="&SCRIPT_NAME">
+    <input type="hidden" name="type" value="month">
+    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+      <div>
+        <label class="form-label">Month</label>
+        <select name="month" class="form-select">&REPMONLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Year</label>
+        <select name="year" class="form-select">&REPYEARLIST</select>
+      </div>
+    </div>
+    <button type="submit" name="SUB" value="View Report" class="btn btn-primary">View Report</button>
+  </form>
+</div>

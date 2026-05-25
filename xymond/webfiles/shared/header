@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="expires" content="Sat, 01 Jan 2001 00:00:00 GMT">
+<title>&XYMWEBBACKGROUND : Xymon - &XYMONPAGETITLE @ &XYMWEBDATE</title>
+&PAGEHEAD
+<link rel="icon" href="&XYMONSKIN/favicon-&XYMWEBBACKGROUND.ico">
+<link rel="stylesheet" href="&XYMONEXTERNALS/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="&XYMONEXTERNALS/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="&XYMONSTYLESSHEET">
+</head>
+
+<body class="&XYMONBODYCLASS &XYMWEBSTATUS">
+
+&XYMONBODYHEADER
+
+<div class="container-fluid px-3 py-2">
+<header class="xymon-page-header d-flex">
+  &XYMONPAGEHEADER
+</header>

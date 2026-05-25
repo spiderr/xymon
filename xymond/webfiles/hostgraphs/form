@@ -1,0 +1,55 @@
+<div class="card card-body mb-3">
+  <h5 class="card-title">Metrics Report</h5>
+  <form method="GET" action="&SCRIPT_NAME">
+    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+      <div>
+        <label class="form-label">From month</label>
+        <select name="start-mon" class="form-select">&REPMONLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Day</label>
+        <select name="start-day" class="form-select">&REPDAYLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Year</label>
+        <select name="start-yr" class="form-select">&REPYEARLIST</select>
+      </div>
+      <div class="align-self-end pb-2 text-muted">to</div>
+      <div>
+        <label class="form-label">Month</label>
+        <select name="end-mon" class="form-select">&REPMONLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Day</label>
+        <select name="end-day" class="form-select">&REPDAYLIST</select>
+      </div>
+      <div>
+        <label class="form-label">Year</label>
+        <select name="end-yr" class="form-select">&REPYEARLIST</select>
+      </div>
+    </div>
+    <!-- If you need hour/minute/second selections, add SELECT lists here with
+         the names "start-hour", "start-min", "start-sec", "end-hour", "end-min", "end-sec" -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Hosts</label>
+        <select name="hostname" multiple size="12" class="form-select">&HOSTLIST</select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Tests</label>
+        <select name="testname" multiple size="12" class="form-select">
+          <option value="ALL" selected>ALL</option>
+          <option value="cpu">CPU load (Windows/Unix)</option>
+          <option value="la1">CPU utilization (Unix)</option>
+          <option value="ram">RAM/Real</option>
+          <option value="mem">RAM/Actual</option>
+          <option value="swap">RAM/Swap</option>
+          <option value="conn">Ping times</option>
+          <option value="netstat3">Network connections</option>
+          <option value="apache3">Apache requests</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" name="DoReport" value="Generate Report" class="btn btn-primary">Generate Report</button>
+  </form>
+</div>
