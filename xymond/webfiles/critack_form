@@ -1,52 +1,56 @@
-<table border=1 summary="Critical info" align=center>
-<tr>
-<th align=center>Priority</th>
-<th align=center>Resolver group</th>
-<th align=center>Documentation</th>
-</tr>
-
-<tr>
-  <td align=center>&CRITACKTTPRIO</td>
-  <td align=center>&CRITACKTTGROUP</td>
-  <td align=center>
-     <a href="&CRITACKINFOURL">Host info</a>
-     <br>
-     <a href="&CRITACKDOCURL">Host docs</a>
-  </td>
-</tr>
-
-<tr>
-  <td colspan=3 align=center>&CRITACKTTEXTRA</td>
-</tr>
-
-<tr>
-  <td colspan=3 align=center valign=middle>
-    <form method="POST" action="&SECURECGIBINURL/ackinfo.sh">
-      <INPUT TYPE="TEXT" NAME="NOTE" VALUE="" MAXLENGTH=60 SIZE=60 tabindex="0">
-      &nbsp;&nbsp;Host-ack
-      <INPUT TYPE="CHECKBOX" NAME="ALLTESTS" VALUE="OFF">&nbsp;&nbsp;
-      <SELECT NAME="VALIDITY">
-         <OPTION VALUE="30">30 minutes</OPTION>
-         <OPTION VALUE="60">1 hour</OPTION>
-         <OPTION VALUE="120">2 hours</OPTION>
-         <OPTION VALUE="180">3 hours</OPTION>
-         <OPTION VALUE="360">6 hours</OPTION>
-         <OPTION VALUE="720">12 hours</OPTION>
-         <OPTION VALUE="1440" SELECTED>24 hours</OPTION>
-         <OPTION VALUE="2880">2 days</OPTION>
-         <OPTION VALUE="4320">3 days</OPTION>
-         <OPTION VALUE="5760">4 days</OPTION>
-         <OPTION VALUE="7200">5 days</OPTION>
-         <OPTION VALUE="10080">1 week</OPTION>
-         <OPTION VALUE="43200">4 weeks</OPTION>
-      </SELECT>
-      <INPUT TYPE="HIDDEN"   NAME="HOST"     VALUE="&XYMWEBHIKEY">
-      <INPUT TYPE="HIDDEN"   NAME="SERVICE"  VALUE="&XYMWEBSVC">
-      <INPUT TYPE="HIDDEN"   NAME="LEVEL"    VALUE="1">
-      <INPUT TYPE="SUBMIT"   NAME="ACK"      VALUE="Acknowledge">
-    </form>
-  </td>
-</tr>
-
-</table>
-
+<div class="card mb-3">
+  <table class="table table-sm table-bordered mb-0">
+    <thead class="table-dark">
+      <tr>
+        <th class="text-center">Priority</th>
+        <th class="text-center">Resolver group</th>
+        <th class="text-center">Documentation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="text-center">&CRITACKTTPRIO</td>
+        <td class="text-center">&CRITACKTTGROUP</td>
+        <td class="text-center">
+          <a href="&CRITACKINFOURL">Host info</a><br>
+          <a href="&CRITACKDOCURL">Host docs</a>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" class="text-center">&CRITACKTTEXTRA</td>
+      </tr>
+      <tr>
+        <td colspan="3">
+          <form method="POST" action="&SECURECGIBINURL/ackinfo.sh">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <input type="text" name="NOTE" value="" maxlength="60" class="form-control critack-note" tabindex="0">
+              <div class="form-check mb-0">
+                <input type="checkbox" name="ALLTESTS" value="OFF" class="form-check-input" id="critack-alltests">
+                <label class="form-check-label" for="critack-alltests">Host-ack</label>
+              </div>
+              <select name="VALIDITY" class="form-select w-auto">
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="180">3 hours</option>
+                <option value="360">6 hours</option>
+                <option value="720">12 hours</option>
+                <option value="1440" selected>24 hours</option>
+                <option value="2880">2 days</option>
+                <option value="4320">3 days</option>
+                <option value="5760">4 days</option>
+                <option value="7200">5 days</option>
+                <option value="10080">1 week</option>
+                <option value="43200">4 weeks</option>
+              </select>
+              <input type="hidden" name="HOST" value="&XYMWEBHIKEY">
+              <input type="hidden" name="SERVICE" value="&XYMWEBSVC">
+              <input type="hidden" name="LEVEL" value="1">
+              <button type="submit" name="ACK" value="Acknowledge" class="btn btn-warning">Acknowledge</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
