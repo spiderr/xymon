@@ -1,3 +1,11 @@
+xymon (5.0.0) stable; urgency=low
+
+   * Version bump to 5.0.0 for HTML5/Bootstrap 5 web UI modernization
+   * Replace GIF status icons with FontAwesome 6
+   * Self-hosted Bootstrap 5.3 and FontAwesome 6 assets
+
+ -- spiderr <spiderr@bitweaver.org>  Tue, 19 May 2026 00:00:00 +0000
+
 xymon (4.3.30) stable; urgency=high
 
    * rev 8010
