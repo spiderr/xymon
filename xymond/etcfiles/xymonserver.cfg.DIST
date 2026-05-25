@@ -8,20 +8,29 @@ XYMONCLIENTHOME="@XYMONTOPDIR@/client"		# XYMONHOME directory for the client
 XYMONSERVERHOSTNAME="@XYMONHOSTNAME@"		# The hostname of your server
 XYMONSERVERIP="@XYMONHOSTIP@"			# The IP-address of your server. Use the real one, not 127.0.0.1 .
 XYMONSERVEROS="@XYMONHOSTOS@"			# The operating system of your server. linux,freebsd,solaris,hpux,aix,osf
+XYMONTHEME="classic"				# Web UI theme (classic, dark, ...)
 
-XYMONSERVERWWWNAME="@XYMONHOSTNAME@"		# The name used for this hosts' webserver
+XYMONSERVERWWWNAME="$XYMONSERVERHOSTNAME"	# The name used for this hosts' webserver
 XYMONSERVERWWWURL="@XYMONHOSTURL@"		# The top URL for the Xymon webpages
 XYMONSERVERCGIURL="@XYMONCGIURL@"		# The URL for the Xymon CGI scripts.
 XYMONSERVERSECURECGIURL="@SECUREXYMONCGIURL@"	# The URL for the secured Xymon CGI scripts.
 
-# XYMONNETWORK="foo"				# The network location, makes xymonnet test only hosts with NET:foo
+# XYMONNETWORK="foo,bar"			# The network location (if any). If set, xymonnet will only test hosts with
+						# NET:foo or NET:bar in hosts.cfg (subject to exclusions below).
 						# You only need to set this if you have multiple network test servers with
-						# a shared hosts.cfg file.
+						# a shared hosts.cfg file. This should be one or more network entries in a
+						# comma separated list. It is matched case-insensitively. If not specified,
+						# xymonnet will normally test all hosts (subject to exclusions below).
+
+# XYMONEXNETWORK="sna,fu"			# Network locations to EXCLUDE from polling, making xymonnet ignore those hosts.
+						# You only need to set this if you have multiple network test servers with
+						# a shared hosts.cfg file and you have a server that would otherwise test
+						# all hosts and you want to prevent them from doing those.
 
 # Make sure the path includes the directories where you have fping, mail and (optionally) ntpdate installed,
 # as well as the XYMONHOME/bin directory where all of the Xymon programs reside.
 PATH="/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin:@XYMONHOME@/bin"
-SHELL="/bin/sh"					# Shell to use when forking programs
+SHELL="/bin/bash"				# Shell to use when forking programs
 
 # Some systems need extra settings e.g. to locate run-time libraries.
 # You can add these extra settings here:
@@ -36,8 +45,8 @@ DELAYYELLOW=""			# Format: status:delay[,status:delay - e.g. "cpu:15,disk:30"
 
 # General settings
 XYMONDPORT="1984"		# Portnumber where xymond listens
-XYMSRV="$XYMONSERVERIP"		# IP of a single Xymon server
-XYMSERVERS=""			# IP of multiple Xymon servers. If used, XYMSRV must be 0.0.0.0
+XYMSRV="0.0.0.0"		# IP of a single Xymon server
+XYMSERVERS="$XYMONSERVERIP"	# IP of multiple Xymon servers. If used, XYMSRV must be 0.0.0.0
 FQDN="TRUE"			# Use fully-qualified hostnames internally. Keep it TRUE unless you know better.
 XYMONLOGSTATUS="DYNAMIC"	# Are HTML status logs statically or dynamically generated?
 				# Use DYNAMIC with Xymon, unless you run xymond_filestore --status --html
@@ -60,22 +69,25 @@ SLEEPBETWEENMSGS="0"            # Delay between sending each combo message, in m
 # have systems sending large status-messages or otherwise need to handle
 # large messages. Please read the description in xymonserver.cfg(5) first.
 #
-#MAXMSG_CLIENT=512		# clientdata messages (default=512k)
+MAXMSG_CLIENT=1024		# clientdata messages (default=512k)
 #MAXMSG_CLICHG=$MAXMSG_CLIENT	# client change messages (default=MAXMSG_CLIENT)
-#MAXMSG_STATUS=256		# general "status" messages (default=256k)
+MAXMSG_STATUS=512		# general "status" messages (default=256k)
 #MAXMSG_STACHG=$MAXMSG_STATUS	# status change messages (default=MAXMSG_STATUS)
 #MAXMSG_PAGE=$MAXMSG_STATUS	# page messages (default=MAXMSG_STATUS)
 #MAXMSG_ENADIS=32		# enable and disable control messages (default=32k)
 #MAXMSG_USER=128		# "user" messages (default=128k)
 #MAXMSG_DATA=256		# "data" messages, if enabled (default=256k)
 #MAXMSG_NOTES=256		# "notes" messages, if enabled (default=256k)
+#MAXMSG_BFQ=$MAXMSG_STATUS	# buffer space for backfeed queue messages, if enabled
+				# (default=MAXMSG_STATUS, however combo messages can result
+				# in messages much larger than this). See README.backfeed
 
 # HOLIDAYS="us"			# Default set of holidays (pointer to section in holidays.cfg)
 # HOLIDAYFORMAT="%m/%d/%y"	# Format for printing holiday dates. Default is %d/%m/%y (day/month/year).
 
 # Specific to this host
 SERVEROSTYPE="$XYMONSERVEROS"		# Hosttype (operating system). Not used by server-side, but clients use this.
-MACHINEDOTS="$XYMONSERVERHOSTNAME"	# This systems hostname
+#MACHINEDOTS="$XYMONSERVERHOSTNAME"	# This system's hostname; this usually doesn't need to be overridden.
 MACHINEADDR="$XYMONSERVERIP"		# This systems IP-address
 
 # URL's generated/used by xymongen
@@ -87,6 +99,7 @@ XYMONSKIN="$XYMONSERVERWWWURL/gifs"		# Xymon URL prefix for the GIF files
 XYMONHELPSKIN="$XYMONSERVERWWWURL/help"         # Xymon URL prefix for the online help files.
 XYMONNOTESSKIN="$XYMONSERVERWWWURL/notes"       # Xymon URL prefix for the online notes-files.
 XYMONMENUSKIN="$XYMONSERVERWWWURL/menu"         # Xymon URL prefix for the webpage menu files.
+XYMONEXTERNALS="$XYMONSERVERWWWURL/externals"	# URL prefix for bundled external libraries (Bootstrap, FontAwesome)
 XYMONREPURL="$XYMONSERVERWWWURL/rep"		# Xymon URL prefix for the Xymon availability reports
 XYMONSNAPURL="$XYMONSERVERWWWURL/snap"		# Xymon URL prefix for the Xymon snapshots
 XYMONWAP="$XYMONSERVERWWWURL/wml"		# Xymon URL prefix for the WAP/WML files.
@@ -110,7 +123,7 @@ XYMONHISTLOGS="$XYMONVAR/histlogs"		# Historical detail status-loge are stored h
 XYMONRAWSTATUSDIR="$XYMONVAR/logs"		# Status logs go here (xymond_filestore --status). Not needed by Xymon.
 XYMONWWWDIR="$XYMONHOME/www"			# The directory for Xymon webpage files.
 XYMONHTMLSTATUSDIR="$XYMONWWWDIR/html"		# HTML status logs go here (xymond_filestore --status --html)
-XYMONNOTESDIR="$XYMONWWWDIR/notes"		# For notes-files (xymond_filestore --notes)
+XYMONNOTESDIR="$XYMONVAR/notes"			# For notes-files (xymond_filestore --notes)
 XYMONREPDIR="$XYMONWWWDIR/rep"			# Top-level directory for Xymon reports.
 XYMONSNAPDIR="$XYMONWWWDIR/snap"		# Top-level directory for Xymon snapshots.
 
