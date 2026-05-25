@@ -333,7 +333,6 @@ void do_vertical(host_t *head, FILE *output, char *pagepath)
 
 	host_t	*h;
 	entry_t	*e;
-	char	*xymonskin;
 	int	hostcount = 0;
 	int	width;
 	int	hidx;
@@ -345,25 +344,20 @@ void do_vertical(host_t *head, FILE *output, char *pagepath)
 
 	vptree = xtreeNew(strcmp);
 
-	xymonskin = strdup(xgetenv("XYMONSKIN"));
-
 	width = atoi(xgetenv("DOTWIDTH"));
 	if ((width < 0) || (width > 50)) width = 16;
 	width += 4;
 
 	/* Start the table ... */
-	fprintf(output, "<CENTER><TABLE SUMMARY=\"Group Block\" BORDER=0 CELLPADDING=2>\n");
+	fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-hover align-middle\" summary=\"Group Block\">\n");
 
 	/* output column headings */
-	fprintf(output, "<TR><td>&nbsp;</td>");
+	fprintf(output, "<thead><tr><th></th>");
 	for (h = head, hostcount = 0; (h); h = h->next, hostcount++) {
-		fprintf(output, " <TD>");
-		fprintf(output, " <A HREF=\"%s\"><FONT %s><B>%s</B></FONT></A> </TD>\n", 
-			hostsvcurl(h->hostname, xgetenv("INFOCOLUMN"), 1),
-			xgetenv("XYMONPAGECOLFONT"), h->hostname);
+		fprintf(output, "<th class=\"text-center\"><a href=\"%s\">%s</a></th>\n",
+			hostsvcurl(h->hostname, xgetenv("INFOCOLUMN"), 1), h->hostname);
 	}
-	fprintf(output, "</TR>\n");
-	fprintf(output, "<TR><td>&nbsp;</td><TD COLSPAN=%d><HR WIDTH=\"100%%\"></TD></TR>\n\n", hostcount);
+	fprintf(output, "</tr></thead>\n<tbody>\n");
 
 	/* Create a tree indexed by the testname, and holding the show/noshow status of each test */
 	for (h = head, hidx = 0; (h); h = h->next, hidx++) {
@@ -391,34 +385,29 @@ void do_vertical(host_t *head, FILE *output, char *pagepath)
 		vprec_t *itm = xtreeData(vptree, handle);
 
 		fprintf(output, "<tr>");
-		fprintf(output, "<td valign=center align=left>%s</td>", itm->testname);
+		fprintf(output, "<td class=\"text-nowrap\">%s</td>", itm->testname);
 
 		for (hidx = 0; (hidx < hostcount); hidx++) {
-			char *skin, *htmlalttag;
+			char *htmlalttag;
 			host_t *h = (itm->hosts)[hidx];
 			entry_t *e = (itm->entries)[hidx];
 
-			fprintf(output, "<td align=center>");
+			fprintf(output, "<td class=\"text-center\">");
 			if (e == NULL) {
-				fprintf(output, "-");
+				fprintf(output, "<span class=\"text-muted\">-</span>");
 			}
 			else {
-
 				if (strcmp(e->column->name, xgetenv("INFOCOLUMN")) == 0) {
-					/* show the host ip on the hint display of the "info" column */
 					htmlalttag = alttag(e->column->name, COL_GREEN, 0, 1, h->ip);
 				}
 				else {
 					htmlalttag = alttag(e->column->name, e->color, e->acked, e->propagate, e->age);
 				}
 
-				skin = (e->skin ? e->skin : xymonskin);
-
-				fprintf(output, "<A HREF=\"%s\">", hostsvcurl(h->hostname, e->column->name, 1));
-				fprintf(output, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0></A>",
-						skin, dotgiffilename(e->color, e->acked, e->oldage),
-						htmlalttag, htmlalttag,
-						xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
+				fprintf(output, "<a href=\"%s\" title=\"%s\">%s</a>",
+					hostsvcurl(h->hostname, e->column->name, 1),
+					htmlalttag,
+					coloricon(e->color, e->acked, e->oldage));
 			}
 			fprintf(output, "</td>");
 		}
@@ -426,8 +415,7 @@ void do_vertical(host_t *head, FILE *output, char *pagepath)
 		fprintf(output, "</tr>\n");
 	}
 
-	fprintf(output, "</TABLE></CENTER><BR>\n");
-	xfree(xymonskin);
+	fprintf(output, "</tbody></table></div>\n");
 }
 
 void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FILE *output, FILE *rssoutput, char *grouptitle, int pagetype, char *pagepath)
@@ -443,18 +431,12 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 	col_list_t *groupcols, *gc;
 	int	genstatic;
 	int	columncount;
-	char	*xymonskin, *infocolumngif, *trendscolumngif, *clientcolumngif;
 	char	*safegrouptitle;
 	int	rowcount = 0;
 	int     usetooltip = 0;
 
 	if (head == NULL)
 		return;
-
-	xymonskin = strdup(xgetenv("XYMONSKIN"));
-	infocolumngif = strdup(getenv("INFOCOLUMNGIF") ?  getenv("INFOCOLUMNGIF") : dotgiffilename(COL_GREEN, 0, 1));
-	trendscolumngif = strdup(getenv("TRENDSCOLUMNGIF") ?  getenv("TRENDSCOLUMNGIF") : dotgiffilename(COL_GREEN, 0, 1));
-	clientcolumngif = strdup(getenv("CLIENTCOLUMNGIF") ?  getenv("CLIENTCOLUMNGIF") : dotgiffilename(COL_GREEN, 0, 1));
 
 	switch (tooltipuse) {
 	  case TT_STDONLY: usetooltip = (pagetype == PAGE_NORMAL); break;
@@ -484,7 +466,7 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 		width += 4;
 
 		/* Start the table ... */
-		fprintf(output, "<CENTER><TABLE SUMMARY=\"%s Group Block\" BORDER=0 CELLPADDING=2>\n", safegrouptitle);
+		fprintf(output, "<div class=\"table-responsive mb-3\"><table class=\"table table-sm table-hover align-middle\" summary=\"%s Group Block\">\n", safegrouptitle);
 
 		/* Generate the host rows */
 		if (sorthosts) {
@@ -508,122 +490,102 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 			dbgprintf("Host:%s, pretitle:%s\n", h->hostname, textornull(h->pretitle));
 
 			if (h->pretitle && (pagetype == PAGE_NORMAL)) {
-				fprintf(output, "<tr><td colspan=%d align=center valign=middle><br><font %s>%s</font></td></tr>\n", 
-						columncount+1, xgetenv("XYMONPAGETITLE"), h->pretitle);
+				fprintf(output, "<tr><td colspan=%d class=\"text-center\"><small class=\"text-muted\">%s</small></td></tr>\n",
+						columncount+1, h->pretitle);
 				rowcount = 0;
 			}
 
 			if (rowcount == 0) {
 				/* output group title and column headings */
-				fprintf(output, "<TR>");
-
-				fprintf(output, "<TD VALIGN=MIDDLE ROWSPAN=2><CENTER><FONT %s>%s</FONT></CENTER></TD>\n", 
-					xgetenv("XYMONPAGETITLE"), grouptitle);
-
+				fprintf(output, "<thead><tr>");
+				fprintf(output, "<th class=\"text-start\">%s</th>\n", grouptitle);
 				for (gc=groupcols; (gc); gc = gc->next) {
-					fprintf(output, " <TD ALIGN=CENTER VALIGN=BOTTOM WIDTH=45>\n");
-					fprintf(output, " <A HREF=\"%s\"><FONT %s><B>%s</B></FONT></A> </TD>\n", 
-						columnlink(gc->column->name), 
-						xgetenv("XYMONPAGECOLFONT"), gc->column->name);
+					fprintf(output, "<th class=\"text-center\"><a href=\"%s\">%s</a></th>\n",
+						columnlink(gc->column->name), gc->column->name);
 				}
-				if (columncount) fprintf(output, "</TR>\n<TR><TD COLSPAN=%d><HR WIDTH=\"100%%\"></TD></TR>\n\n", columncount);
-				else fprintf(output, "</TR>\n<TR><TD></TD></TR>\n\n");
+				fprintf(output, "</tr></thead>\n<tbody>\n");
 			}
 
-			fprintf(output, "<TR class=line>\n <TD NOWRAP ALIGN=LEFT><A NAME=\"%s\">&nbsp;</A>\n", h->hostname);
+			fprintf(output, "<tr>\n <td class=\"text-nowrap\"><a name=\"%s\"></a>\n", h->hostname);
 			if (maxrowsbeforeheading) rowcount = (rowcount + 1) % maxrowsbeforeheading;
 			else rowcount++;
 
-			fprintf(output, "%s", 
-				hostnamehtml(h->hostname, 
-					     ((pagetype != PAGE_NORMAL) ? hostpage_link(h) : NULL), 
+			fprintf(output, "%s</td>\n",
+				hostnamehtml(h->hostname,
+					     ((pagetype != PAGE_NORMAL) ? hostpage_link(h) : NULL),
 					     usetooltip));
 
 			/* Then the columns. */
 			for (gc = groupcols; (gc); gc = gc->next) {
 				char *htmlalttag;
 
-				fprintf(output, "<TD ALIGN=CENTER>");
+				fprintf(output, "<td class=\"text-center\">");
 
 				/* Any column entry for this host ? */
 				for (e = h->entries; (e && (e->column != gc->column)); e = e->next) ;
 				if (e == NULL) {
-					fprintf(output, "-");
+					fprintf(output, "<span class=\"text-muted\">-</span>");
 				}
 				else if (e->histlogname) {
 					/* Snapshot points to historical logfile */
 					htmlalttag = alttag(e->column->name, e->color, e->acked, e->propagate, e->age);
-					fprintf(output, "<A HREF=\"%s\">", 
-						histlogurl(h->hostname, e->column->name, 0, e->histlogname));
-
-					fprintf(output, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0></A>",
-						xymonskin, dotgiffilename(e->color, 0, 1),
-						htmlalttag, htmlalttag,
-						xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
+					fprintf(output, "<a href=\"%s\" title=\"%s\">%s</a>",
+						histlogurl(h->hostname, e->column->name, 0, e->histlogname),
+						htmlalttag,
+						coloricon(e->color, 0, 1));
 				}
 				else if (reportstart == 0) {
 					/* Standard webpage */
-					char *skin;
-					char *img = dotgiffilename(e->color, e->acked, e->oldage);
+					int iconcol = e->color;
+					int iconacked = e->acked;
+					int iconoldage = e->oldage;
 
 					if (strcmp(e->column->name, xgetenv("INFOCOLUMN")) == 0) {
-						/* Show the host IP on the hint display of the "info" column */
 						htmlalttag = alttag(e->column->name, COL_GREEN, 0, 1, h->ip);
-						img = infocolumngif;
+						iconcol = COL_GREEN; iconacked = 0; iconoldage = 1;
 					}
 					else if (strcmp(e->column->name, xgetenv("TRENDSCOLUMN")) == 0) {
 						htmlalttag = alttag(e->column->name, COL_GREEN, 0, 1, h->ip);
-						img = trendscolumngif;
+						iconcol = COL_GREEN; iconacked = 0; iconoldage = 1;
 					}
 					else if (strcmp(e->column->name, xgetenv("CLIENTCOLUMN")) == 0) {
 						htmlalttag = alttag(e->column->name, COL_GREEN, 0, 1, h->ip);
-						img = clientcolumngif;
+						iconcol = COL_GREEN; iconacked = 0; iconoldage = 1;
 					}
 					else {
 						htmlalttag = alttag(e->column->name, e->color, e->acked, e->propagate, e->age);
 					}
 
-					skin = (e->skin ? e->skin : xymonskin);
-
 					if (e->sumurl) {
-						/* A summary host. */
-						fprintf(output, "<A HREF=\"%s\">", e->sumurl);
+						fprintf(output, "<a href=\"%s\" title=\"%s\">%s</a>",
+							e->sumurl, htmlalttag,
+							coloricon(iconcol, iconacked, iconoldage));
 					}
 					else if (genstatic && strcmp(e->column->name, xgetenv("INFOCOLUMN")) && strcmp(e->column->name, xgetenv("TRENDSCOLUMN")) && strcmp(e->column->name, xgetenv("CLIENTCOLUMN"))) {
-						/*
-						 * Don't use htmlextension here - it's for the
-						 * pages generated dynamically.
-						 * We don't do static pages for the info- and trends-columns, because
-						 * they are always generated dynamically.
-						 */
-						fprintf(output, "<A HREF=\"%s/html/%s.%s.html\">",
-							xgetenv("XYMONWEB"), h->hostname, e->column->name);
+						fprintf(output, "<a href=\"%s/html/%s.%s.html\" title=\"%s\">%s</a>",
+							xgetenv("XYMONWEB"), h->hostname, e->column->name,
+							htmlalttag,
+							coloricon(iconcol, iconacked, iconoldage));
 						do_rss_item(rssoutput, h, e);
 					}
 					else {
-						fprintf(output, "<A HREF=\"%s\">",
-							hostsvcurl(h->hostname, e->column->name, 1));
+						fprintf(output, "<a href=\"%s\" title=\"%s\">%s</a>",
+							hostsvcurl(h->hostname, e->column->name, 1),
+							htmlalttag,
+							coloricon(iconcol, iconacked, iconoldage));
 						do_rss_item(rssoutput, h, e);
 					}
-
-					fprintf(output, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0></A>",
-						skin, img,
-						htmlalttag, htmlalttag,
-						xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
 				}
 				else {
 					/* Report format output */
 					if ((e->color == COL_GREEN) || (e->color == COL_CLEAR)) {
-						fprintf(output, "<IMG SRC=\"%s/%s\" ALT=\"%s\" TITLE=\"%s\" HEIGHT=\"%s\" WIDTH=\"%s\" BORDER=0>",
-							xymonskin, dotgiffilename(e->color, 0, 1),
-							colorname(e->color), colorname(e->color),
-							xgetenv("DOTHEIGHT"), xgetenv("DOTWIDTH"));
+						fprintf(output, "%s", coloricon(e->color, 0, 1));
 					}
 					else {
 						if (dynamicreport) {
-							fprintf(output, "<A HREF=\"%s\">",
-								replogurl(h->hostname, e->column->name, 
-									  e->color, 
+							fprintf(output, "<a href=\"%s\">",
+								replogurl(h->hostname, e->column->name,
+									  e->color,
 									  stylenames[reportstyle], use_recentgifs,
 									  e->repinfo,
 									  h->reporttime, reportend,
@@ -635,13 +597,11 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 							char textrepfn[PATH_MAX];
 							char textrepurl[PATH_MAX];
 
-							/* File names are relative - current directory is the output dir */
-							/* pagepath is either empty, or it ends with a '/' */
-							sprintf(htmlrepfn, "%s%s-%s%s", 
+							sprintf(htmlrepfn, "%s%s-%s%s",
 								pagepath, h->hostname, e->column->name, htmlextension);
 							sprintf(textrepfn, "%savail-%s-%s.txt",
 								pagepath, h->hostname, e->column->name);
-							sprintf(textrepurl, "%s/%s", 
+							sprintf(textrepurl, "%s/%s",
 								xgetenv("XYMONWEB"), textrepfn);
 
 							htmlrep = fopen(htmlrepfn, "w");
@@ -656,7 +616,6 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 							}
 
 							if (textrep && htmlrep) {
-								/* Pre-build the test-specific report */
 								restore_replogs(e->causes);
 								generate_replog(htmlrep, textrep, textrepurl,
 									h->hostname, e->column->name, e->color, reportstyle,
@@ -668,28 +627,27 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 								fclose(htmlrep);
 							}
 
-							fprintf(output, "<A HREF=\"%s-%s%s\">\n", 
+							fprintf(output, "<a href=\"%s-%s%s\">",
 								h->hostname, e->column->name, htmlextension);
 						}
 
-						/* Only show #stops if we have this as an SLA parameter */
 						if (h->reportwarnstops >= 0) {
-							fprintf(output, "<FONT SIZE=-1 COLOR=%s><B>%.2f (%d)</B></FONT></A>\n",
+							fprintf(output, "<strong class=\"text-%s\">%.2f (%d)</strong></a>\n",
 								colorname(e->color), e->repinfo->reportavailability, e->repinfo->reportstops);
 						}
 						else {
-							fprintf(output, "<FONT SIZE=-1 COLOR=%s><B>%.2f</B></FONT></A>\n",
+							fprintf(output, "<strong class=\"text-%s\">%.2f</strong></a>\n",
 								colorname(e->color), e->repinfo->reportavailability);
 						}
 					}
 				}
-				fprintf(output, "</TD>\n");
+				fprintf(output, "</td>\n");
 			}
 
-			fprintf(output, "</TR>\n\n");
+			fprintf(output, "</tr>\n");
 		}
 
-		fprintf(output, "</TABLE></CENTER><BR>\n");
+		fprintf(output, "</tbody></table></div>\n");
 	}
 
 	/* Free the columnlist allocated by gen_column_list() */
@@ -698,10 +656,6 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 		groupcols = groupcols->next;
 		xfree(gc);
 	}
-
-	xfree(xymonskin);
-	xfree(infocolumngif);
-	xfree(trendscolumngif);
 }
 
 void do_groups(group_t *head, FILE *output, FILE *rssoutput, char *pagepath)
@@ -717,19 +671,17 @@ void do_groups(group_t *head, FILE *output, FILE *rssoutput, char *pagepath)
 	if (head == NULL)
 		return;
 
-	fprintf(output, "<CENTER> \n\n<A NAME=begindata>&nbsp;</A>\n");
+	fprintf(output, "<a name=\"begindata\"></a>\n");
 
 	for (g = head; (g); g = g->next) {
 		if (g->hosts && g->pretitle) {
-			fprintf(output, "<CENTER><TABLE BORDER=0>\n");
-			fprintf(output, "  <TR><TD><CENTER><FONT %s>%s</FONT></CENTER></TD></TR>\n", xgetenv("XYMONPAGETITLE"), g->pretitle);
-			if (underlineheadings) fprintf(output, "  <TR><TD><HR WIDTH=\"100%%\"></TD></TR>\n");
-			fprintf(output, "</TABLE></CENTER>\n");
+			fprintf(output, "<div class=\"text-center my-2\"><span class=\"fw-bold\">%s</span>%s</div>\n",
+				g->pretitle,
+				underlineheadings ? "<hr>" : "");
 		}
 
 		do_hosts(g->hosts, g->sorthosts, g->onlycols, g->exceptcols, output, rssoutput, g->title, PAGE_NORMAL, pagepath);
 	}
-	fprintf(output, "\n</CENTER>\n");
 }
 
 void do_summaries(dispsummary_t *sums, FILE *output)
@@ -798,14 +750,8 @@ void do_summaries(dispsummary_t *sums, FILE *output)
 		}
 	}
 
-	fprintf(output, "<A NAME=\"summaries-blk\">&nbsp;</A>\n");
-	fprintf(output, "<CENTER>\n");
-	fprintf(output, "<TABLE SUMMARY=\"Summary Block\" BORDER=0>\n");
-	fprintf(output, "<TR><TD>\n");
+	fprintf(output, "<a name=\"summaries-blk\"></a>\n");
 	do_hosts(sumhosts, 1, NULL, NULL, output, NULL, xgetenv("XYMONPAGEREMOTE"), 0, NULL);
-	fprintf(output, "</TD></TR>\n");
-	fprintf(output, "</TABLE>\n");
-	fprintf(output, "</CENTER>\n");
 }
 
 void do_page_subpages(FILE *output, xymongen_page_t *subs, char *pagepath)
@@ -821,75 +767,36 @@ void do_page_subpages(FILE *output, xymongen_page_t *subs, char *pagepath)
 	char    *linkurl;
 
 	if (subs) {
-		fprintf(output, "<A NAME=\"pages-blk\">&nbsp;</A>\n");
-		fprintf(output, "<BR>\n<CENTER>\n");
-		fprintf(output, "<TABLE SUMMARY=\"Page Block\" BORDER=0>\n");
+		fprintf(output, "<a name=\"pages-blk\"></a>\n");
+		fprintf(output, "<div class=\"d-flex flex-wrap gap-3 my-3\">\n");
 
-		currentcolumn = 0;
 		for (p = subs; (p); p = p->next) {
 			if (p->pretitle) {
-				/*
-				 * Output a page-link title text.
-				 */
-				if (currentcolumn != 0) {
-					fprintf(output, "</TR>\n");
-					currentcolumn = 0;
-				}
-
-				fprintf(output, "<TR><TD COLSPAN=%d><CENTER> \n<FONT %s>\n", 
-						(2*subpagecolumns + (subpagecolumns - 1)), xgetenv("XYMONPAGETITLE"));
-				fprintf(output, "   <br>%s\n", p->pretitle);
-				fprintf(output, "</FONT></CENTER></TD></TR>\n");
-
-				fprintf(output, "<TR><TD COLSPAN=%d>", (2*subpagecolumns + (subpagecolumns - 1)));
-				if (underlineheadings) {
-					fprintf(output, "<HR WIDTH=\"100%%\">");
-				}
-				else {
-					fprintf(output, "&nbsp;");
-				}
-				fprintf(output, "</TD></TR>\n");
+				fprintf(output, "<div class=\"w-100 fw-bold\">%s%s</div>\n",
+					p->pretitle,
+					underlineheadings ? "<hr class=\"mt-0\">" : "");
 			}
-
-			if (currentcolumn == 0) fprintf(output, "<TR>\n");
 
 			sprintf(pagelink, "%s/%s/%s/%s%s", xgetenv("XYMONWEB"), pagepath, p->name, p->name, htmlextension);
-
 			linkurl = hostlink(p->name);
-			fprintf(output, "<TD ALIGN=LEFT><FONT %s>", xgetenv("XYMONPAGEROWFONT"));
+
+			fprintf(output, "<div class=\"d-flex align-items-center gap-1\">\n");
+			fprintf(output, "  <a href=\"%s\" title=\"%s\">%s</a>\n",
+				cleanurl(pagelink), colorname(p->color),
+				coloricon(p->color, 0, ((reportstart > 0) ? 1 : p->oldage)));
 			if (linkurl) {
-				fprintf(output, "<A HREF=\"%s\">%s</A>", linkurl, p->title);
+				fprintf(output, "  <a href=\"%s\">%s</a>\n", linkurl, p->title);
 			}
 			else if (pagetitlelinks) {
-				fprintf(output, "<A HREF=\"%s\">%s</A>", cleanurl(pagelink), p->title);
+				fprintf(output, "  <a href=\"%s\">%s</a>\n", cleanurl(pagelink), p->title);
 			}
 			else {
-				fprintf(output, "%s", p->title);
+				fprintf(output, "  <span>%s</span>\n", p->title);
 			}
-			fprintf(output, "</FONT></TD>\n");
-
-			fprintf(output, "<TD><CENTER><A HREF=\"%s\">", cleanurl(pagelink));
-			fprintf(output, "<IMG SRC=\"%s/%s\" WIDTH=\"%s\" HEIGHT=\"%s\" BORDER=0 ALT=\"%s\" TITLE=\"%s\"></A>", 
-				xgetenv("XYMONSKIN"), dotgiffilename(p->color, 0, ((reportstart > 0) ? 1 : p->oldage)), 
-				xgetenv("DOTWIDTH"), xgetenv("DOTHEIGHT"),
-				colorname(p->color), colorname(p->color));
-			fprintf(output, "</CENTER></TD>\n");
-
-			if (currentcolumn == (subpagecolumns-1)) {
-				fprintf(output, "</TR>\n");
-				currentcolumn = 0;
-			}
-			else {
-				/* Need to have a little space between columns */
-				fprintf(output, "<TD WIDTH=\"%s\">&nbsp;</TD>", xgetenv("DOTWIDTH"));
-				currentcolumn++;
-			}
+			fprintf(output, "</div>\n");
 		}
 
-		if (currentcolumn != 0) fprintf(output, "</TR>\n");
-
-		fprintf(output, "</TABLE><BR>\n");
-		fprintf(output, "</CENTER>\n");
+		fprintf(output, "</div>\n");
 	}
 }
 
@@ -1007,15 +914,12 @@ void do_one_page(xymongen_page_t *page, dispsummary_t *sums, int embedded)
 
 	setup_htaccess(pagepath);
 
-	headfoot(output, hf_prefix[PAGE_NORMAL], pagepath, "header", page->color);
+	headfoot(output, "xymonnormal", pagepath, "header", page->color);
 	do_rss_header(rssoutput);
 
 	if (pagetextheadings && page->title && strlen(page->title)) {
-		fprintf(output, "<CENTER><TABLE BORDER=0>\n");
-		fprintf(output, "  <TR><TD><CENTER><FONT %s>%s</FONT></CENTER></TD></TR>\n", 
-			xgetenv("XYMONPAGETITLE"), page->title);
-		if (underlineheadings) fprintf(output, "  <TR><TD><HR WIDTH=\"100%%\"></TD></TR>\n");
-		fprintf(output, "</TABLE></CENTER>\n");
+		fprintf(output, "<div class=\"text-center my-2\"><span class=\"fw-bold fs-4\">%s</span>%s</div>\n",
+			page->title, underlineheadings ? "<hr>" : "");
 	}
 	else if (page->subpages) {
 		/* If first page does not have a pretitle, use the default ones */
@@ -1042,7 +946,7 @@ void do_one_page(xymongen_page_t *page, dispsummary_t *sums, int embedded)
 	/* Extension scripts */
 	do_extensions(output, "XYMONSTDEXT", "mkbb");
 
-	headfoot(output, hf_prefix[PAGE_NORMAL], pagepath, "footer", page->color);
+	headfoot(output, "xymonnormal", pagepath, "footer", page->color);
 	do_rss_footer(rssoutput);
 
 	if (!embedded) {
@@ -1267,8 +1171,7 @@ int do_nongreen_page(char *nssidebarfilename, int summarytype, char *filenamebas
 	headfoot(output, hf_prefix[summarytype], "", "header", nongreenpage.color);
 	do_rss_header(rssoutput);
 
-	fprintf(output, "<center>\n");
-	fprintf(output, "\n<A NAME=begindata>&nbsp;</A> \n<A NAME=\"hosts-blk\">&nbsp;</A>\n");
+	fprintf(output, "<span id=\"begindata\"></span><span id=\"hosts-blk\"></span>\n");
 
 	if (nongreenpage.hosts) {
 		do_hosts(nongreenpage.hosts, 0, NULL, NULL, output, rssoutput, "", summarytype, NULL);
@@ -1294,7 +1197,6 @@ int do_nongreen_page(char *nssidebarfilename, int summarytype, char *filenamebas
 		if (nongreenacklog && !havedoneacklog) do_acklog(output, nongreenacklogmaxcount, nongreenacklogmaxtime);
 	}
 
-	fprintf(output, "</center>\n");
 	headfoot(output, hf_prefix[summarytype], "", "footer", nongreenpage.color);
 	do_rss_footer(rssoutput);
 
