@@ -30,7 +30,7 @@ void * xymonrrdtree;
 /* This is the information needed to generate links on the trends column page  */
 xymongraph_t *xymongraphs = NULL;
 
-static const char *xymonlinkfmt = "<div class=\"mb-2\" data-graph=\"%s\"><a href=\"%s&amp;action=menu\"><img class=\"img-fluid d-block\" src=\"%s&amp;graph=hourly&amp;action=view\" alt=\"xymongraph %s\"></a><a href=\"%s&amp;graph=custom&amp;action=selzoom\" class=\"text-muted small\"><i class=\"fa-solid fa-magnifying-glass-plus me-1\"></i>Zoom</a></div>\n";
+static const char *xymonlinkfmt = "<div class=\"position-relative\" data-graph=\"%s\"><a href=\"%s&amp;action=menu\"><img class=\"img-fluid d-block\" src=\"%s&amp;graph=hourly&amp;action=view\" alt=\"xymongraph %s\"></a><a href=\"%s&amp;graph=custom&amp;action=selzoom\" class=\"btn btn-info btn-sm graph-zoom-btn\" title=\"Zoom\"><i class=\"fa-solid fa-magnifying-glass-chart\"></i></a></div>\n";
 
 static const char *metafmt = "<RRDGraph>\n  <GraphType>%s</GraphType>\n  <GraphLink><![CDATA[%s]]></GraphLink>\n  <GraphImage><![CDATA[%s&amp;graph=hourly]]></GraphImage>\n</RRDGraph>\n";
 

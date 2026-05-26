@@ -684,18 +684,20 @@ void graph_link(FILE *output, char *uri, char *grtype, time_t seconds)
 
 	switch (action) {
 	  case ACT_MENU:
-		fprintf(output, "  <div><img class=\"img-fluid\" src=\"%s&amp;action=view&amp;graph=%s\" alt=\"%s graph\"></div>\n",
-			uri, grtype_s, grtype_s);
-		fprintf(output, "  <div><a href=\"%s&amp;graph=%s&amp;action=selzoom&amp;color=%s\"><i class=\"fa-solid fa-magnifying-glass-plus\"></i></a></div>\n",
-			uri, grtype_s, colorname(bgcolor));
+		fprintf(output, "  <div class=\"position-relative\"><a href=\"%s&amp;action=menu\"><img class=\"img-fluid d-block\" src=\"%s&amp;action=view&amp;graph=%s\" alt=\"%s graph\"></a><a href=\"%s&amp;graph=%s&amp;action=selzoom&amp;color=%s\" class=\"btn btn-info btn-sm graph-zoom-btn\" title=\"Zoom\"><i class=\"fa-solid fa-magnifying-glass-chart\"></i></a></div>\n",
+			uri, uri, grtype_s, grtype_s, uri, grtype_s, colorname(bgcolor));
 		break;
 
 	  case ACT_SELZOOM:
 		if (graphend == 0) gend = getcurrenttime(NULL); else gend = graphend;
 		if (graphstart == 0) gstart = gend - persecs; else gstart = graphstart;
 
-		fprintf(output, "  <div><img class=\"img-fluid\" id='zoomGraphImage' src=\"%s&amp;graph=%s&amp;action=view&amp;graph_start=%u&amp;graph_end=%u&amp;graph_height=%d&amp;graph_width=%d&amp;",
-			uri, grtype_s, (int) gstart, (int) gend, graphheight, graphwidth);
+		{
+			char *rrdgraphzoom = getenv("RRDGRAPHZOOM");
+			fprintf(output, "  <div><img class=\"img-fluid\" id='zoomGraphImage' data-rrd-zoom=\"%s\" src=\"%s&amp;graph=%s&amp;action=view&amp;graph_start=%u&amp;graph_end=%u&amp;graph_height=%d&amp;graph_width=%d&amp;",
+				(rrdgraphzoom && atof(rrdgraphzoom) > 1.0) ? rrdgraphzoom : "1",
+				uri, grtype_s, (int) gstart, (int) gend, graphheight, graphwidth);
+		}
 		if (haveupperlimit) fprintf(output, "&amp;upper=%f", upperlimit);
 		if (havelowerlimit) fprintf(output, "&amp;lower=%f", lowerlimit);
 		fprintf(output, "\" alt=\"Zoom source image\"></div>\n");
@@ -809,6 +811,7 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 	char loweropt[30];	/* -l MIN */
 	char startopt[30];	/* -s STARTTIME */
 	char endopt[30];	/* -e ENDTIME */
+	char zoomopt[32];	/* --zoom FACTOR (HiDPI/Retina, optional) */
 	char graphtitle[1024];	/* --title TEXT */
 	char timestamp[50];	/* COMMENT with timestamp graph was generated */
 
@@ -1138,7 +1141,7 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 	 * there are multiple RRD-files to handle).
 	 */
 	for (pcount = 0; (gdef->defs[pcount]); pcount++) ;
-	rrdargs = (char **) calloc(16 + pcount*rrddbcount + useroptcount + 1, sizeof(char *));
+	rrdargs = (char **) calloc(18 + pcount*rrddbcount + useroptcount + 1, sizeof(char *));
 
 
 	argi = 0;
@@ -1174,6 +1177,17 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 
 	for (useroptidx=0; (useroptidx < useroptcount); useroptidx++) {
 		rrdargs[argi++] = useropts[useroptidx];
+	}
+
+	{
+		/* RRDGRAPHZOOM: render at Nx for HiDPI/Retina displays (rrdtool 1.2+).
+		 * Only applied when explicitly set; unset = no change to rrd_graph call. */
+		char *zoomenv = getenv("RRDGRAPHZOOM");
+		if (zoomenv && (atof(zoomenv) > 1.0)) {
+			snprintf(zoomopt, sizeof(zoomopt), "%s", zoomenv);
+			rrdargs[argi++] = "--zoom";
+			rrdargs[argi++] = zoomopt;
+		}
 	}
 
 	for (rrdidx=0; (rrdidx < rrddbcount); rrdidx++) {
@@ -1263,43 +1277,14 @@ void generate_zoompage(char *selfURI)
 	headfoot(stdout, "graphs", "", "header", bgcolor);
 
 
-	fprintf(stdout, "  <div id='zoomBox' style='position:absolute; overflow:none; left:0px; top:0px; width:0px; height:0px; visibility:visible; background:red; filter:alpha(opacity=50); -moz-opacity:0.5; opacity:0.5; -khtml-opacity:0.5'></div>\n");
-	fprintf(stdout, "  <div id='zoomSensitiveZone' style='position:absolute; overflow:none; left:0px; top:0px; width:0px; height:0px; visibility:visible; cursor:crosshair; background:blue; filter:alpha(opacity=0); opacity:0; -moz-opacity:0; -khtml-opacity:0'></div>\n");
+	fprintf(stdout, "<div id='zoomBox' style='position:absolute; left:0; top:0; width:0; height:0; background:rgba(255,0,0,0.5)'></div>\n");
+	fprintf(stdout, "<div id='zoomSensitiveZone' style='position:absolute; left:0; top:0; width:0; height:0; cursor:crosshair'></div>\n");
 
 	fprintf(stdout, "<div class=\"graphs-menu\">\n");
 	graph_link(stdout, selfURI, gtype, 0);
 	fprintf(stdout, "</div>\n");
 
-	{
-		char zoomjsfn[PATH_MAX];
-		struct stat st;
-
-		snprintf(zoomjsfn, sizeof(zoomjsfn), "%s/web/zoom.js", xgetenv("XYMONHOME"));
-		if (stat(zoomjsfn, &st) == 0) {
-			FILE *fd;
-			char *buf;
-			size_t n;
-			char *zoomrightoffsetmarker = "var cZoomBoxRightOffset = -";
-			char *zoomrightoffsetp;
-
-			fd = fopen(zoomjsfn, "r");
-			if (fd) {
-				buf = (char *)malloc(st.st_size+1);
-				n = fread(buf, 1, st.st_size, fd);
-				fclose(fd);
-
-#ifdef RRDTOOL12
-				zoomrightoffsetp = strstr(buf, zoomrightoffsetmarker);
-				if (zoomrightoffsetp) {
-					zoomrightoffsetp += strlen(zoomrightoffsetmarker);
-					memcpy(zoomrightoffsetp, "30", 2);
-				}
-#endif
-
-				fwrite(buf, 1, n, stdout);
-			}
-		}
-	}
+	fprintf(stdout, "<script src=\"%s/zoom.js\"></script>\n", xgetenv("XYMONWEB"));
 
 
 	headfoot(stdout, "graphs", "", "footer", bgcolor);

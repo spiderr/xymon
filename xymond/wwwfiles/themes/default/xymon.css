@@ -130,3 +130,21 @@ body.status-purple .xymon-status-duration i { color: #e040fb; }
   gap: .5rem;
 }
 
+/* ── RRD graph panels ── */
+/* Spacing between stacked graph panels (replaces mb-2 utility class) */
+div[data-graph] {
+  margin-bottom: 0.5rem;
+}
+
+/* Zoom overlay button — inset, square, semi-transparent info color */
+.graph-zoom-btn {
+  position: absolute;
+  top: 5px;
+  right: 15px;
+  --bs-btn-bg:               rgba(var(--bs-info-rgb), 0.5);
+  --bs-btn-border-color:     rgba(var(--bs-info-rgb), 0.5);
+  --bs-btn-hover-bg:         rgba(var(--bs-info-rgb), 0.75);
+  --bs-btn-hover-border-color: rgba(var(--bs-info-rgb), 0.75);
+  --bs-btn-active-bg:        rgba(var(--bs-info-rgb), 0.9);
+}
+

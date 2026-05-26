@@ -1,5 +1,3 @@
-<script type="text/javascript">
-<!--
 /*
  This code was taken from the "Cacti" project by Henrik Storner, and
  modified slightly for use with the "Xymon" monitor project
@@ -256,9 +254,14 @@ function zoomGraphObjRefresh() {
  width = imgObject.width;
  height = imgObject.height;
 
+ /* pixelScale maps 1x-natural-pixel measurements to current CSS pixels.
+  * rrdZoom: --zoom factor applied to the PNG (data-rrd-zoom attribute).
+  * scale: CSS display size / actual PNG pixel size (img-fluid may downscale). */
  var rrdZoom = parseFloat(imgObject.getAttribute("data-rrd-zoom") || "1");
- zoomBoxWidth = Math.round((parseInt(gUrlObj.getUrlParameterValue("graph_width")) + 1) * rrdZoom);
- zoomBoxHeight = Math.round((parseInt(gUrlObj.getUrlParameterValue("graph_height")) + 1) * rrdZoom);
+ var scale = (imgObject.naturalWidth > 0) ? imgObject.width / imgObject.naturalWidth : 1.0;
+ var pixelScale = rrdZoom * scale;
+ zoomBoxWidth = Math.round((parseInt(gUrlObj.getUrlParameterValue("graph_width")) + 1) * pixelScale);
+ zoomBoxHeight = Math.round((parseInt(gUrlObj.getUrlParameterValue("graph_height")) + 1) * pixelScale);
 
  // Get absolute graph position
  // start with the image's coordinates and walk through it's
@@ -283,12 +286,12 @@ function zoomGraphObjRefresh() {
  this.zoomGraphWidth = width;
  this.zoomGraphHeight = height;
 
-this.zoomBoxRight = this.zoomGraphRight + cZoomBoxRightOffset;
+this.zoomBoxRight = this.zoomGraphRight + Math.round(cZoomBoxRightOffset * pixelScale);
 if(imgAlt == "") {
- this.zoomBoxTop = this.zoomGraphTop + cZoomBoxTopOffsetWOText;
+ this.zoomBoxTop = this.zoomGraphTop + Math.round(cZoomBoxTopOffsetWOText * pixelScale);
 }
 else {
- this.zoomBoxTop = this.zoomGraphTop + cZoomBoxTopOffsetWText;
+ this.zoomBoxTop = this.zoomGraphTop + Math.round(cZoomBoxTopOffsetWText * pixelScale);
 }
  this.zoomBoxLeft = this.zoomBoxRight - zoomBoxWidth;
  this.zoomBoxBottom = this.zoomBoxTop + zoomBoxHeight;
@@ -719,5 +722,3 @@ function windowOnResizeEvent() {
 window.onload = initBonsai;
 
 // end of script
-//-->
-</script>

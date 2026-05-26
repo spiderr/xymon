@@ -159,9 +159,18 @@ NETFAILTEXT="not OK"				# Text indicating a network test failed
 # Top level directory for the RRD files
 XYMONRRDS="$XYMONVAR/rrd"
 
-# Size of the generated graph images
+# Size of the generated graph images (width x height in pixels).
+# RRDWIDTH: 576 = 1 pixel per RRD data point (optimal for clarity).
+#           Increase (e.g. 800, 1024) for larger/higher-DPI displays.
+# RRDHEIGHT: increase (e.g. 200, 300) for taller graphs.
 RRDHEIGHT="120"
-RRDWIDTH="576"		# The RRD's contain 576 data points, so this is a good value
+RRDWIDTH="576"
+
+# HiDPI/Retina graph rendering. When set, passes --zoom to rrdtool, which scales
+# the entire graph (data area, fonts, line widths) proportionally. The browser
+# scales the image back to fit the page, giving crisp rendering on high-DPI screens.
+# Requires rrdtool 1.2+. Leave unset for standard 1x rendering (default).
+# RRDGRAPHZOOM="2"
 
 # TEST2RRD defines the status- and data-messages you want to collect RRD data
 # about. You will normally not need to modify this, unless you have added a
