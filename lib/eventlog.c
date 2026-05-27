@@ -818,7 +818,7 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 			fprintf(output, "<td><a href=\"%s\">",
 				histlogurl(hostname, ewalk->service->name, ewalk->changetime, NULL));
 			fprintf(output, "%s</a>\n", coloricon(ewalk->oldcolor, 0, 0));
-			fprintf(output, "<i class=\"fa-solid fa-arrow-right mx-1\"></i>\n");
+			fprintf(output, "<i class=\"fa-solid fa-arrow-right xymon-event-arrow\"></i>\n");
 			fprintf(output, "<a href=\"%s\">",
 				histlogurl(hostname, ewalk->service->name, ewalk->eventtime, NULL));
 			fprintf(output, "%s</a></td>\n", coloricon(ewalk->newcolor, 0, 0));

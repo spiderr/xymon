@@ -555,10 +555,10 @@ void print_columndocs(void)
 	for (i=0, cwalk=chead; (cwalk); cwalk=cwalk->next,i++) clist[i] = cwalk;
 	qsort(&clist[0], ccount, sizeof(coltext_t **), coltext_compare);
 
-	fprintf(stdout, "<div class=\"card mb-4\" style=\"page-break-before:always\">\n");
+	fprintf(stdout, "<div class=\"card xymon-confreport-section\" style=\"page-break-before:always\">\n");
 	fprintf(stdout, "<div class=\"card-header fw-semibold\">Xymon column descriptions</div>\n");
 	fprintf(stdout, "<div class=\"card-body\">\n");
-	fprintf(stdout, "<dl class=\"row mb-0\">\n");
+	fprintf(stdout, "<dl class=\"row xymon-confreport-dl\">\n");
 	for (i=0; (i<ccount); i++) {
 		if (clist[i]->used) {
 			fprintf(stdout, "<dt class=\"col-sm-2\">%s</dt><dd class=\"col-sm-10\">%s</dd>\n",

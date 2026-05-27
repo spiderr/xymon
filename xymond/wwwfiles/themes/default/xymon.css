@@ -103,7 +103,7 @@ body.status-blue   .xymon-brand-icon { color: #00b0ff; }
 body.status-purple .xymon-brand-icon { color: #e040fb; }
 
 /* Status duration clock icon — color matches the page status */
-.xymon-status-duration i           { color: #9e9e9e; } /* default/clear */
+.xymon-status-duration i           { color: #9e9e9e; margin-right: 0.25rem; }
 body.status-green  .xymon-status-duration i { color: #00e676; }
 body.status-yellow .xymon-status-duration i { color: #ffd600; }
 body.status-red    .xymon-status-duration i { color: #ff1744; }
@@ -130,11 +130,19 @@ body.status-purple .xymon-status-duration i { color: #e040fb; }
   gap: .5rem;
 }
 
+/* Icon inside header action buttons — space between icon and label */
+#xymon-hdr-right .btn i { margin-right: 0.25rem; }
+
+/* ── Page chrome ── */
+/* Vertical padding on the main page container */
+.container-fluid { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+
+/* Footer attribution bar */
+.xymon-footer-bar { margin-top: 1.5rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+
 /* ── RRD graph panels ── */
-/* Spacing between stacked graph panels (replaces mb-2 utility class) */
-div[data-graph] {
-  margin-bottom: 0.5rem;
-}
+/* Spacing between stacked graph panels */
+div[data-graph] { margin-bottom: 0.5rem; }
 
 /* Zoom overlay button — inset, square, semi-transparent info color */
 .graph-zoom-btn {
@@ -148,3 +156,104 @@ div[data-graph] {
   --bs-btn-active-bg:        rgba(var(--bs-info-rgb), 0.9);
 }
 
+/* Graph menu item row */
+.graph-item { gap: 0.5rem; }
+
+/* ── Status log (htmllog.c) ── */
+.xymon-log-table-wrap { margin-bottom: 1rem; }
+.xymon-log-cards { --bs-gutter-x: 1rem; --bs-gutter-y: 1rem; margin-bottom: 1rem; }
+.xymon-section-hr { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.xymon-log-alert { margin-bottom: 0.5rem; }
+.xymon-log-alert pre { margin-top: 0.25rem; margin-bottom: 0; }
+.xymon-log-sender { margin-bottom: 0.5rem; }
+.xymon-log-body { padding: 1rem; border-radius: 0.375rem; overflow: auto; }
+.xymon-log-ack { margin-top: 0.5rem; margin-bottom: 0; }
+
+/* History inline button — compact height */
+.xymon-history-btn { padding-top: 0; padding-bottom: 0; }
+
+/* ── Event log ── */
+.xymon-event-arrow { margin-left: 0.25rem; margin-right: 0.25rem; }
+
+/* ── Service status info ── */
+.svcinfo-toggles { gap: 0.5rem; margin-top: 0.5rem; }
+.svcinfo-table { width: 100%; }
+
+/* ── History page ── */
+.xymon-hist-entry { margin-bottom: 1rem; }
+.xymon-hist-header { padding-bottom: 0.25rem; }
+.xymon-hist-nav { gap: 0.5rem; }
+.xymon-hist-title { margin-bottom: 1rem; }
+
+/* ── Configuration report ── */
+.xymon-confreport-section { margin-bottom: 1.5rem; }
+.xymon-confreport-dl { margin-bottom: 0; }
+
+/* ── Status overview / pagegen ── */
+.xymon-group-table { margin-bottom: 1rem; }
+.xymon-page-pretitle { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.xymon-subpages { gap: 1rem; margin-top: 1rem; margin-bottom: 1rem; }
+.xymon-subpage-break { width: 100%; }
+.xymon-subpage-break hr { margin-top: 0; }
+.xymon-page-entry { gap: 0.25rem; }
+
+/* ── Forms ── */
+/* Outer card bottom spacing */
+.xymon-form-card { margin-bottom: 1rem; }
+
+/* Form field group spacing */
+.xymon-field { margin-bottom: 1rem; }
+.xymon-field-compact { margin-bottom: 0.5rem; }
+
+/* Grid row variants: gutter + bottom margin */
+.xymon-field-row       { --bs-gutter-x: 1rem;  --bs-gutter-y: 1rem;  margin-bottom: 1rem; }
+.xymon-field-row-sm    { --bs-gutter-x: 1rem;  --bs-gutter-y: 1rem;  margin-bottom: 0.5rem; }
+.xymon-field-row-tight { --bs-gutter-x: 0.5rem; --bs-gutter-y: 0.5rem; margin-bottom: 1rem; }
+
+/* Flex row variants */
+.xymon-btn-row    { gap: 0.5rem; margin-bottom: 1rem; }   /* quick-select button rows */
+.xymon-action-row { gap: 1rem;   margin-bottom: 1rem; }   /* form submit/action button rows */
+.xymon-date-row   { gap: 1rem; align-items: flex-end; margin-bottom: 1rem; } /* date-picker rows */
+
+/* Inline option/choice groups */
+.xymon-choices     { gap: 1.5rem; }   /* wide-spaced radio/checkbox groups */
+.xymon-option-group { gap: 0.5rem; }  /* compact inline option groups */
+.xymon-item-group  { gap: 0.5rem; }   /* generic inline flex group */
+
+/* Indented sub-fields (nested under a radio/checkbox) */
+.xymon-field-indent         { margin-left: 1.5rem; margin-top: 0.25rem; gap: 0.5rem; }
+.xymon-field-indent-compact { margin-left: 1.5rem; margin-top: 0.25rem; gap: 0.25rem; }
+
+/* "to" separator label in date-range rows */
+.xymon-field-to-label { padding-bottom: 0.5rem; }
+
+/* Card body with reduced bottom padding */
+.xymon-card-body-trim { padding-bottom: 0.25rem; }
+
+/* Card subtitle spacing */
+.xymon-form-subtitle { margin-bottom: 1rem; }
+
+/* Inline label before button groups */
+.xymon-option-label { margin-right: 0.5rem; }
+
+/* Checkbox/radio modifiers */
+.xymon-inline-check  { margin-bottom: 0; }     /* removes default form-check bottom margin */
+.xymon-check-spaced  { margin-top: 1.5rem; }   /* pushes a check down to align with a grid row */
+
+/* Bottom action row with extra top spacing */
+.xymon-btn-spacer { gap: 1.5rem; margin-top: 1.5rem; }
+
+/* Table inside card: remove default table bottom margin */
+.xymon-card-table { margin-bottom: 0; }
+
+/* Section heading within a form group */
+.xymon-field-section { margin-bottom: 0.5rem; }
+
+/* Compact card body for dense content (replaces p-2) */
+.xymon-card-body-compact { padding: 0.5rem; }
+
+/* Table inside a card with a separator margin below */
+.xymon-section-table { margin-bottom: 1rem; }
+
+/* Compact label inside a dense filter card (replaces form-label mb-1) */
+.xymon-filter-label { margin-bottom: 0.25rem; }

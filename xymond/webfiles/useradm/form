@@ -1,6 +1,6 @@
-<div class="card card-body mb-3">
+<div class="card card-body xymon-form-card">
   <form method="POST" action="&SCRIPT_NAME">
-    <div class="row g-2 align-items-end mb-3">
+    <div class="row align-items-end xymon-field-row-tight">
       <div class="col-auto">
         <label class="form-label">Username</label>
         <input type="text" name="USERNAME" value="" maxlength="10" class="form-control">
@@ -16,7 +16,7 @@
 
     <hr>
 
-    <div class="row g-2 align-items-end">
+    <div class="row align-items-end xymon-field-row-tight">
       <div class="col-auto">
         <label class="form-label">User</label>
         <select name="USERLIST" class="form-select">

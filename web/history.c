@@ -214,18 +214,18 @@ static void generate_colorbar(
 		tm = localtime(&begintime); strftime(bdate, sizeof(bdate), "%a %b %d %H:%M %Y", tm);
 		tm = localtime(&endtime);   strftime(edate, sizeof(edate), "%a %b %d %H:%M %Y", tm);
 
-		fprintf(htmlrep, "<div class=\"mb-3\">\n");
+		fprintf(htmlrep, "<div class=\"xymon-hist-entry\">\n");
 
 		/* nav — full-width flex row */
-		fprintf(htmlrep, "<div class=\"d-flex align-items-center justify-content-between pb-1\">\n");
-		fprintf(htmlrep, "<div class=\"d-flex align-items-center gap-2\">\n");
+		fprintf(htmlrep, "<div class=\"d-flex align-items-center justify-content-between xymon-hist-header\">\n");
+		fprintf(htmlrep, "<div class=\"d-flex align-items-center xymon-hist-nav\">\n");
 		fprintf(htmlrep, "<a href=\"%s&amp;ENDTIME=%u\" class=\"text-decoration-none\" title=\"Previous period\">",
 			selfurl, calc_time(endtime, -changeval, changealign, END_UNCHANGED));
 		fprintf(htmlrep, "<i class=\"fa-solid fa-chevron-left\"></i></a>\n");
 		fprintf(htmlrep, "<small class=\"text-muted\">%s</small>\n", bdate);
 		fprintf(htmlrep, "</div>\n");
 		fprintf(htmlrep, "<strong>%s</strong>\n", caption);
-		fprintf(htmlrep, "<div class=\"d-flex align-items-center gap-2\">\n");
+		fprintf(htmlrep, "<div class=\"d-flex align-items-center xymon-hist-nav\">\n");
 		fprintf(htmlrep, "<small class=\"text-muted\">%s</small>\n", edate);
 		fprintf(htmlrep, "<a href=\"%s&amp;ENDTIME=%u\" class=\"text-decoration-none\" title=\"Next period\">",
 			selfurl, calc_time(endtime, +changeval, changealign, END_UNCHANGED));
@@ -425,7 +425,7 @@ void generate_history(FILE *htmlrep, 			/* output file */
 
 	fprintf(htmlrep, "\n");
 	if (wantserviceid) {
-		fprintf(htmlrep, "<p class=\"fw-semibold mb-3\">%s &mdash; %s</p>\n",
+		fprintf(htmlrep, "<p class=\"fw-semibold xymon-hist-title\">%s &mdash; %s</p>\n",
 			htmlquoted(displayname), htmlquoted(service));
 	}
 

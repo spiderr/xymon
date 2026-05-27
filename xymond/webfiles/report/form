@@ -1,7 +1,7 @@
-<div class="card card-body mb-3">
+<div class="card card-body xymon-form-card">
   <h5 class="card-title">Xymon Availability Report</h5>
   <form method="GET" action="&SCRIPT_NAME">
-    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+    <div class="d-flex flex-wrap align-items-end xymon-date-row">
       <div>
         <label class="form-label">From month</label>
         <select name="start-mon" class="form-select">&REPMONLIST</select>
@@ -14,7 +14,7 @@
         <label class="form-label">Year</label>
         <select name="start-yr" class="form-select">&REPYEARLIST</select>
       </div>
-      <div class="align-self-end pb-2 text-muted">to</div>
+      <div class="align-self-end text-muted xymon-field-to-label">to</div>
       <div>
         <label class="form-label">Month</label>
         <select name="end-mon" class="form-select">&REPMONLIST</select>
@@ -28,7 +28,7 @@
         <select name="end-yr" class="form-select">&REPYEARLIST</select>
       </div>
     </div>
-    <div class="mb-3">
+    <div class="xymon-field">
       <label class="form-label">Display style</label>
       <select name="style" class="form-select w-auto">
         <option value="crit" selected>Display only critical events</option>
@@ -37,7 +37,7 @@
       </select>
     </div>
     <input type="hidden" name="csvdelim" value=",">
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="d-flex flex-wrap xymon-btn-row">
       <button type="submit" name="DoReport" value="Generate Report" class="btn btn-primary">Generate Report</button>
       <button type="submit" name="DoCSV" value="Generate spreadsheet" class="btn btn-outline-secondary">Generate Spreadsheet</button>
     </div>

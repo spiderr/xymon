@@ -1,7 +1,7 @@
-<div class="card card-body mb-3">
+<div class="card card-body xymon-form-card">
   <form method="GET" action="&SCRIPT_NAME">
 
-    <div class="row g-3 mb-2">
+    <div class="row xymon-field-row-sm">
       <div class="col-md-4">
         <label class="form-label">Starting <span class="text-muted small">(Default 1440)</span></label>
         <div class="input-group">
@@ -10,8 +10,8 @@
         </div>
       </div>
     </div>
-    <div class="text-center text-muted mb-2">— or —</div>
-    <div class="row g-3 mb-2">
+    <div class="text-center text-muted xymon-field-compact">— or —</div>
+    <div class="row xymon-field-row-sm">
       <div class="col-md-6">
         <label class="form-label">From <span class="text-muted small">(ccyy/mm/dd@hh:mm:ss)</span></label>
         <input type="text" name="FROMTIME" id="starttime" class="form-control">
@@ -21,7 +21,7 @@
         <input type="text" name="TOTIME" id="endtime" class="form-control">
       </div>
     </div>
-    <div class="d-flex flex-wrap gap-2 mb-3">
+    <div class="d-flex flex-wrap xymon-btn-row">
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTYEARBEGIN'; document.getElementById('endtime').value='&EVENTCURRYEARBEGIN'; return false">Last year</button>
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTMONTHBEGIN'; document.getElementById('endtime').value='&EVENTCURRMONTHBEGIN'; return false">Last month</button>
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('starttime').value='&EVENTLASTWEEKBEGIN'; document.getElementById('endtime').value='&EVENTCURRWEEKBEGIN'; return false">Last week</button>
@@ -34,7 +34,7 @@
 
     <hr>
 
-    <div class="row g-3 mb-3">
+    <div class="row xymon-field-row">
       <div class="col-md-6">
         <label class="form-label">Max # of events <span class="text-muted small">(Default 100)</span></label>
         <input type="text" name="MAXCOUNT" value="100" class="form-control">
@@ -71,7 +71,7 @@
         <input type="text" name="COLORMATCH" class="form-control">
       </div>
       <div class="col-md-6">
-        <div class="form-check mt-4">
+        <div class="form-check xymon-check-spaced">
           <input type="checkbox" name="NODIALUPS" class="form-check-input" id="nodialups">
           <label class="form-check-label" for="nodialups">Ignore dialup hosts</label>
         </div>

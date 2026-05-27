@@ -1,19 +1,19 @@
-<div class="card card-body mb-3 chpasswd-form">
+<div class="card card-body chpasswd-form xymon-form-card">
   <form method="POST" action="&SCRIPT_NAME">
-    <div class="mb-3">
+    <div class="xymon-field">
       <label class="form-label">Current Username</label>
       <input type="text" name="USERNAME" value="" maxlength="20" class="form-control">
     </div>
-    <div class="mb-3">
+    <div class="xymon-field">
       <label class="form-label">Existing Password</label>
       <input type="password" name="PASSWORD" value="" maxlength="20" class="form-control">
     </div>
     <hr>
-    <div class="mb-3">
+    <div class="xymon-field">
       <label class="form-label">New Password</label>
       <input type="password" name="PASSWORD1" value="" maxlength="20" class="form-control">
     </div>
-    <div class="mb-3">
+    <div class="xymon-field">
       <label class="form-label">Repeat New Password</label>
       <input type="password" name="PASSWORD2" value="" maxlength="20" class="form-control">
     </div>

@@ -397,7 +397,7 @@ static void generate_xymon_statuslist(char *hostname, strbuffer_t *buf)
 
 		addtobuffer(buf, "<tr><td colspan=3>\n");
 
-		addtobuffer(buf, "<div class=\"svcinfo-toggles d-flex flex-wrap gap-2 mt-2\">\n");
+		addtobuffer(buf, "<div class=\"svcinfo-toggles d-flex flex-wrap\">\n");
 		addtobuffer(buf, "<em class=\"svcinfo-toggle-label\">Toggle tests to disable:</em>\n");
 		if (STRBUFLEN(servRed) > 0) {
 			addtobuffer(buf, "<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" onclick=\"mark4Disable('");
@@ -482,7 +482,7 @@ static void generate_xymon_disable(char *hostname, strbuffer_t *buf)
 	addtobuffer(buf, "</select></td>\n");
 
 	addtobuffer(buf, "<td>\n");
-	addtobuffer(buf, "   <table class=\"w-100\">\n");
+	addtobuffer(buf, "   <table class=\"svcinfo-table\">\n");
 	addtobuffer(buf, "      <tr> <td>Cause: <input class=\"form-control\" name=\"cause\" type=\"text\" maxlength=\"80\"></td> </tr>\n");
 	addtobuffer(buf, "      <tr>\n");
 	addtobuffer(buf, "         <td>\n");

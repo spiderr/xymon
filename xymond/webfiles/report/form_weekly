@@ -1,8 +1,8 @@
-<div class="card card-body mb-3 report-form-weekly">
+<div class="card card-body report-form-weekly xymon-form-card">
   <h5 class="card-title">Xymon Weekly Availability Report</h5>
   <form method="POST" action="&SCRIPT_NAME">
     <input type="hidden" name="type" value="week">
-    <div class="d-flex flex-wrap gap-3 align-items-end mb-3">
+    <div class="d-flex flex-wrap align-items-end xymon-date-row">
       <div>
         <label class="form-label">Week</label>
         <select name="week" class="form-select">&REPWEEKLIST</select>

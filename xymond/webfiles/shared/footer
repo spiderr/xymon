@@ -1,5 +1,5 @@
 &PAGEFOOTER
-<div class="border-top mt-4 pt-2 pb-2 text-end">
+<div class="border-top text-end xymon-footer-bar">
   <small><a href="http://xymon.sourceforge.net/" class="text-muted text-decoration-none">Xymon &XYMONDREL</a></small>
 </div>
 </div><!-- /.container-fluid -->

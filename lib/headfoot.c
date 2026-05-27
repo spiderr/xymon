@@ -766,7 +766,7 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					cgiurl);
 				fprintf(output,
 					"<button type=\"submit\""
-					" class=\"btn btn-outline-secondary btn-sm py-0\">"
+					" class=\"btn btn-outline-secondary btn-sm xymon-history-btn\">"
 					"History</button>");
 				fprintf(output,
 					"<input type=\"hidden\" name=\"HISTFILE\" value=\"%s.%s\">",

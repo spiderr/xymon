@@ -1,6 +1,6 @@
-<div class="card mb-3">
+<div class="card xymon-form-card">
   <div class="card-header fw-semibold">Explanation of Terms</div>
-  <div class="card-body pb-1">
+  <div class="card-body xymon-card-body-trim">
 
     <h6 class="fw-semibold">Basics</h6>
     <dl class="row">
@@ -29,7 +29,7 @@
     </dl>
 
     <h6 class="fw-semibold">Local tests</h6>
-    <dl class="row mb-0">
+    <dl class="row xymon-confreport-dl">
       <dt class="col-sm-3">Service</dt>
       <dd class="col-sm-9">Corresponds to the column-name on the Xymon webpage</dd>
       <dt class="col-sm-3">Critical</dt>

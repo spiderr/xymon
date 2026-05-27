@@ -1,10 +1,10 @@
-<div class="card mb-3">
+<div class="card xymon-form-card">
   <div class="card-header fw-semibold">Edit Critical Systems</div>
   <div class="card-body">
     <form method="GET" action="criticaleditor.sh">
 
       <!-- Host / service search -->
-      <div class="row g-2 align-items-end mb-2">
+      <div class="row align-items-end xymon-field-row-tight">
         <div class="col-auto">
           <label class="form-label">Host</label>
           <input name="HOSTNAME" type="text" value="&XYMWEBHOST" class="form-control">
@@ -18,20 +18,20 @@
           <button type="submit" name="Next" value="Next" class="btn btn-outline-secondary">Next</button>
         </div>
       </div>
-      <div class="mb-3 text-muted small">Last update by: &CRITEDITUPDINFO</div>
+      <div class="xymon-field text-muted small">Last update by: &CRITEDITUPDINFO</div>
 
       <hr>
 
       <!-- Priority -->
-      <div class="mb-3">
+      <div class="xymon-field">
         <label class="form-label">Priority</label>
         <select name="PRIORITY" class="form-select w-auto">&CRITEDITPRIOLIST</select>
       </div>
 
       <!-- Monitoring time -->
-      <div class="mb-3">
+      <div class="xymon-field">
         <label class="form-label">Monitoring time</label>
-        <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="d-flex flex-wrap align-items-center xymon-option-group">
           <select name="CRITWKDAYS" multiple size="3" class="form-select w-auto">&CRITEDITWKDAYS</select>
           <span class="text-muted">from</span>
           <select name="CRITSTARTHOUR" class="form-select w-auto">&CRITEDITSTART</select>
@@ -41,10 +41,10 @@
       </div>
 
       <!-- Start / stop monitoring dates -->
-      <div class="row g-3 mb-3">
+      <div class="row xymon-field-row">
         <div class="col-md-6">
           <label class="form-label">Start monitoring</label>
-          <div class="d-flex flex-wrap gap-1">
+          <div class="d-flex flex-wrap xymon-page-entry">
             <select name="start-day" class="form-select w-auto">&CRITEDITDAYLIST1</select>
             <select name="start-mon" class="form-select w-auto">&CRITEDITMONLIST1</select>
             <select name="start-yr" class="form-select w-auto">&CRITEDITYEARLIST1</select>
@@ -52,7 +52,7 @@
         </div>
         <div class="col-md-6">
           <label class="form-label">Stop monitoring</label>
-          <div class="d-flex flex-wrap gap-1">
+          <div class="d-flex flex-wrap xymon-page-entry">
             <select name="end-day" class="form-select w-auto">&CRITEDITDAYLIST2</select>
             <select name="end-mon" class="form-select w-auto">&CRITEDITMONLIST2</select>
             <select name="end-yr" class="form-select w-auto">&CRITEDITYEARLIST2</select>
@@ -61,7 +61,7 @@
       </div>
 
       <!-- Resolver group + instruction -->
-      <div class="row g-3 mb-3">
+      <div class="row xymon-field-row">
         <div class="col-md-4">
           <label class="form-label">Resolver group</label>
           <input name="GROUP" type="text" value="&CRITEDITGROUP" class="form-control">
@@ -75,11 +75,11 @@
       <hr>
 
       <!-- Update / Drop -->
-      <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+      <div class="d-flex flex-wrap align-items-center xymon-action-row">
         <button type="submit" name="Update" value="Update record" class="btn btn-primary">Update record</button>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center xymon-item-group">
           <button type="submit" name="Drop" value="Drop record" class="btn btn-danger">Drop record</button>
-          <div class="form-check mb-0">
+          <div class="form-check xymon-inline-check">
             <input type="checkbox" name="DROPEVENIFCLONED" class="form-check-input" id="dropevenifcloned">
             <label class="form-check-label" for="dropevenifcloned">Even if it has clones</label>
           </div>
@@ -89,14 +89,14 @@
       <hr>
 
       <!-- Clone management -->
-      <div class="row g-3">
+      <div class="row xymon-field-row">
         <div class="col-md-6">
           <label class="form-label">Clones of this host</label>
           <select name="CRITEDITCLONELIST" multiple size="5" class="form-select">&CRITEDITCLONELIST</select>
         </div>
         <div class="col-md-6">
           <label class="form-label">Clone this host to</label>
-          <input name="CRITEDITADDCLONES" type="text" class="form-control mb-2">
+          <input name="CRITEDITADDCLONES" type="text" class="form-control xymon-field-compact">
           <button type="submit" name="Clone" value="Add/remove clones" class="btn btn-outline-secondary">Add/remove clones</button>
         </div>
       </div>

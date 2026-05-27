@@ -197,7 +197,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		if (timesincechange && *timesincechange) {
 			n += snprintf(metabuf + n, sizeof(metabuf) - n,
 				"<small class=\"text-muted xymon-status-duration\">"
-				"<i class=\"fa-regular fa-clock me-1\"></i>%s</small>",
+				"<i class=\"fa-regular fa-clock\"></i>%s</small>",
 				timesincechange);
 		}
 		setenv("XYMONSTATUSMETA", (n > 0 ? metabuf : ""), 1);
@@ -271,7 +271,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		char receivedstr[200];
 		char untilstr[200];
 
-		fprintf(output, "<div class=\"table-responsive mb-3\"><table class=\"table table-sm table-bordered\">\n");
+		fprintf(output, "<div class=\"table-responsive xymon-log-table-wrap\"><table class=\"table table-sm table-bordered\">\n");
 		fprintf(output, "<thead><tr><th colspan=\"4\" class=\"text-center\">Acknowledgments</th></tr>\n");
 		fprintf(output, "<tr><th>Level</th><th>From</th><th>Validity</th><th>Message</th></tr></thead>\n");
 		fprintf(output, "<tbody>\n");
@@ -322,18 +322,18 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		}
 	}
 
-	fprintf(output, "<div class=\"row g-3 mb-3\">\n");
+	fprintf(output, "<div class=\"row xymon-log-cards\">\n");
 	fprintf(output, "<div class=\"%s\">\n", (rrd && graph) ? "col-sm-12 col-md-6" : "col-12");
 
 	if (wantserviceid) {
-		fprintf(output, "<h5 class=\"fw-semibold\">%s &mdash; %s</h5><hr class=\"my-2\">\n",
+		fprintf(output, "<h5 class=\"fw-semibold\">%s &mdash; %s</h5><hr class=\"xymon-section-hr\">\n",
 			htmlquoted(displayname), htmlquoted(service));
 	}
 
 	if (disabletime != 0) {
-		fprintf(output, "<div class=\"alert alert-info mb-2\"><strong>Disabled until %s</strong>",
+		fprintf(output, "<div class=\"alert alert-info xymon-log-alert\"><strong>Disabled until %s</strong>",
 			(disabletime == -1 ? "OK" : ctime(&disabletime)));
-		fprintf(output, "<pre class=\"mt-1 mb-0 bg-transparent border-0\">%s</pre></div>\n", htmlquoted(dismsg));
+		fprintf(output, "<pre class=\"bg-transparent border-0\">%s</pre></div>\n", htmlquoted(dismsg));
 		fprintf(output, "<p class=\"text-muted\">Current status message follows:</p>\n");
 
 		if (strlen(firstline)) {
@@ -346,7 +346,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		char *txt = skipword(firstline);
 
 		if (dismsg) {
-			fprintf(output, "<div class=\"alert alert-warning mb-2\">Planned downtime: %s</div>\n", htmlquoted(dismsg));
+			fprintf(output, "<div class=\"alert alert-warning xymon-log-alert\">Planned downtime: %s</div>\n", htmlquoted(dismsg));
 			fprintf(output, "<p class=\"text-muted\">Current status message follows:</p>\n");
 		}
 
@@ -400,7 +400,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 
 	/* Sender below the summary heading, above the message body */
 	if (sender) {
-		fprintf(output, "<p class=\"text-muted small mb-2\">");
+		fprintf(output, "<p class=\"text-muted small xymon-log-sender\">");
 		if (linktoclient)
 			fprintf(output, "<a class=\"text-muted\" href=\"%s\">Status</a> from %s",
 				linktoclient, htmlquoted(sender));
@@ -409,7 +409,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		fprintf(output, "</p>\n");
 	}
 
-	if (!htmlfmt) fprintf(output, "<pre class=\"bg-dark p-3 rounded border border-secondary overflow-auto\">\n");
+	if (!htmlfmt) fprintf(output, "<pre class=\"bg-dark border border-secondary xymon-log-body\">\n");
 	textwithcolorimg(restofmsg, output);
 	if (!htmlfmt) fprintf(output, "\n</pre>\n");
 
@@ -425,12 +425,12 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		ackedby = strstr(ackmsg, "\nAcked by:");
 		if (ackedby) {
 			*ackedby = '\0';
-			fprintf(output, "<div class=\"alert alert-info mt-2 mb-0\"><strong>Acknowledged:</strong> %s<br>%s<br>%s</div>\n",
+			fprintf(output, "<div class=\"alert alert-info xymon-log-ack\"><strong>Acknowledged:</strong> %s<br>%s<br>%s</div>\n",
 				htmlquoted(ackmsg), (ackedby+1), ackuntil);
 			*ackedby = '\n';
 		}
 		else {
-			fprintf(output, "<div class=\"alert alert-info mt-2 mb-0\"><strong>Acknowledged:</strong> %s<br>%s</div>\n",
+			fprintf(output, "<div class=\"alert alert-info xymon-log-ack\"><strong>Acknowledged:</strong> %s<br>%s</div>\n",
 				htmlquoted(ackmsg), ackuntil);
 		}
 

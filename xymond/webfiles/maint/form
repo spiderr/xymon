@@ -1,15 +1,15 @@
-<div class="row g-3">
+<div class="row xymon-field-row">
 
   <!-- Current status: disabled tests + scheduled actions -->
   <div class="col-12 col-lg-6">
-    <div class="card mb-3">
+    <div class="card xymon-form-card">
       <div class="card-header"><em>Current Status</em></div>
-      <div class="card-body p-2">
-        <table class="table table-sm table-bordered mb-3">
+      <div class="card-body xymon-card-body-compact">
+        <table class="table table-sm table-bordered xymon-section-table">
           <thead><tr><th colspan="3">Currently disabled tests</th></tr></thead>
           <tbody>&DISABLELIST</tbody>
         </table>
-        <table class="table table-sm table-bordered mb-0">
+        <table class="table table-sm table-bordered xymon-card-table">
           <thead><tr><th colspan="3">Scheduled actions</th></tr></thead>
           <tbody>&SCHEDULELIST</tbody>
         </table>
@@ -24,7 +24,7 @@
       <div class="card-body">
         <form method="POST" name="selectionform" action="&SCRIPT_NAME">
 
-          <div class="row g-2 mb-3">
+          <div class="row xymon-field-row-tight">
             <div class="col-6">
               <label class="form-label">Hosts</label>
               <select multiple name="hostname" size="12" class="form-select" onchange="updateOptions(window.document.selectionform.hostname.options[selectedIndex].text);">
@@ -39,25 +39,25 @@
             </div>
           </div>
 
-          <div class="card mb-3">
+          <div class="card xymon-form-card">
             <div class="card-header small"><em>Filter hostlist</em></div>
-            <div class="card-body p-2">
-              <div class="row g-2 align-items-end">
+            <div class="card-body xymon-card-body-compact">
+              <div class="row align-items-end xymon-field-row-tight">
                 <div class="col-9">
-                  <div class="mb-2">
-                    <label class="form-label small mb-1">Hostname pattern</label>
+                  <div class="xymon-field-compact">
+                    <label class="form-label small xymon-filter-label">Hostname pattern</label>
                     <input type="text" name="hostpattern" value="&HOSTFILTER" maxlength="80" class="form-control form-control-sm">
                   </div>
-                  <div class="mb-2">
-                    <label class="form-label small mb-1">Pagename pattern</label>
+                  <div class="xymon-field-compact">
+                    <label class="form-label small xymon-filter-label">Pagename pattern</label>
                     <input type="text" name="pagepattern" value="&PAGEFILTER" maxlength="80" class="form-control form-control-sm">
                   </div>
-                  <div class="mb-2">
-                    <label class="form-label small mb-1">IP address pattern</label>
+                  <div class="xymon-field-compact">
+                    <label class="form-label small xymon-filter-label">IP address pattern</label>
                     <input type="text" name="ippattern" value="&IPFILTER" maxlength="80" class="form-control form-control-sm">
                   </div>
                   <div>
-                    <label class="form-label small mb-1">Class pattern</label>
+                    <label class="form-label small xymon-filter-label">Class pattern</label>
                     <input type="text" name="classpattern" value="&CLASSFILTER" maxlength="80" class="form-control form-control-sm">
                   </div>
                 </div>
@@ -68,19 +68,19 @@
             </div>
           </div>
 
-          <div class="mb-3">
+          <div class="xymon-field">
             <label class="form-label">Cause</label>
             <input name="cause" type="text" maxlength="80" class="form-control">
           </div>
 
-          <div class="card mb-3">
-            <div class="card-body p-2">
-              <div class="mb-2">
+          <div class="card xymon-form-card">
+            <div class="card-body xymon-card-body-compact">
+              <div class="xymon-field-compact">
                 <div class="form-check">
                   <input name="go2" type="radio" value="Disable for" checked class="form-check-input" id="go2-for">
                   <label class="form-check-label" for="go2-for">Disable for</label>
                 </div>
-                <div class="d-flex align-items-center gap-2 ms-4 mt-1">
+                <div class="d-flex align-items-center xymon-field-indent">
                   <input name="duration" type="text" value="4" maxlength="5" class="form-control maint-duration">
                   <select name="scale" class="form-select w-auto">
                     <option value="1">minutes</option>
@@ -95,7 +95,7 @@
                   <input name="go2" type="radio" value="Disable until" class="form-check-input" id="go2-until">
                   <label class="form-check-label" for="go2-until">Disable until</label>
                 </div>
-                <div class="d-flex flex-wrap gap-1 align-items-center ms-4 mt-1">
+                <div class="d-flex flex-wrap align-items-center xymon-field-indent-compact">
                   <select name="endmonth" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&REPMONLIST</select>
                   <select name="endday" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&REPDAYLIST</select>
                   <select name="endyear" class="form-select w-auto" onclick="setcheck(this.form.go2,true)">&FUTUREYEARLIST</select>
@@ -108,9 +108,9 @@
             </div>
           </div>
 
-          <div class="card mb-3">
-            <div class="card-body p-2">
-              <div class="form-check mb-2">
+          <div class="card xymon-form-card">
+            <div class="card-body xymon-card-body-compact">
+              <div class="form-check xymon-field-section">
                 <input name="go" type="radio" value="Disable now" checked class="form-check-input" id="go-now">
                 <label class="form-check-label" for="go-now">Disable now</label>
               </div>
@@ -118,7 +118,7 @@
                 <input name="go" type="radio" value="Schedule disable" class="form-check-input" id="go-sched">
                 <label class="form-check-label" for="go-sched">Schedule disable at</label>
               </div>
-              <div class="d-flex flex-wrap gap-1 align-items-center ms-4 mt-1">
+              <div class="d-flex flex-wrap align-items-center xymon-field-indent-compact">
                 <select name="month" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&REPMONLIST</select>
                 <select name="day" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&REPDAYLIST</select>
                 <select name="year" class="form-select w-auto" onclick="setcheck(this.form.go,true)">&FUTUREYEARLIST</select>
@@ -128,9 +128,9 @@
             </div>
           </div>
 
-          <div class="d-flex align-items-center gap-3">
+          <div class="d-flex align-items-center xymon-action-row">
             <button name="apply" type="button" class="btn btn-primary" onclick="validateDisable(this.form)">Apply</button>
-            <div class="form-check mb-0">
+            <div class="form-check xymon-inline-check">
               <input type="checkbox" name="preview" class="form-check-input" id="preview">
               <label class="form-check-label" for="preview">Preview</label>
             </div>

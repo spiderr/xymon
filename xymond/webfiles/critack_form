@@ -1,5 +1,5 @@
-<div class="card mb-3">
-  <table class="table table-sm table-bordered mb-0">
+<div class="card xymon-form-card">
+  <table class="table table-sm table-bordered xymon-card-table">
     <thead class="table-dark">
       <tr>
         <th class="text-center">Priority</th>
@@ -22,9 +22,9 @@
       <tr>
         <td colspan="3">
           <form method="POST" action="&SECURECGIBINURL/ackinfo.sh">
-            <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="d-flex flex-wrap align-items-center xymon-option-group">
               <input type="text" name="NOTE" value="" maxlength="60" class="form-control critack-note" tabindex="0">
-              <div class="form-check mb-0">
+              <div class="form-check xymon-inline-check">
                 <input type="checkbox" name="ALLTESTS" value="OFF" class="form-check-input" id="critack-alltests">
                 <label class="form-check-label" for="critack-alltests">Host-ack</label>
               </div>

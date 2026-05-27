@@ -1,6 +1,6 @@
-<div class="card card-body mb-3">
+<div class="card card-body xymon-form-card">
   <form method="GET" action="&SCRIPT_NAME">
-    <div class="row g-3 mb-3">
+    <div class="row xymon-field-row">
       <div class="col-md-6">
         <label class="form-label">Hosts to match</label>
         <input type="text" name="HOST" class="form-control" placeholder="ex: ^host.*$">
@@ -31,13 +31,13 @@
         <input type="text" name="ENDTIME" id="ENDTIME" value="" class="form-control">
       </div>
     </div>
-    <div class="d-flex flex-wrap gap-2 mb-3">
+    <div class="d-flex flex-wrap xymon-btn-row">
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('STARTTIME').value='&EVENTLASTMONTHBEGIN'; document.getElementById('ENDTIME').value='&EVENTCURRMONTHBEGIN'; return false">Last month</button>
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('STARTTIME').value='&EVENTCURRMONTHBEGIN'; document.getElementById('ENDTIME').value='&EVENTNOW'; return false">Current month</button>
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('STARTTIME').value='&EVENTLASTWEEKBEGIN'; document.getElementById('ENDTIME').value='&EVENTCURRWEEKBEGIN'; return false">Last week</button>
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('STARTTIME').value='&EVENTCURRWEEKBEGIN'; document.getElementById('ENDTIME').value='&EVENTNOW'; return false">Current week</button>
     </div>
-    <div class="row g-3 mb-3">
+    <div class="row xymon-field-row">
       <div class="col-md-4">
         <label class="form-label">Format</label>
         <select name="FORMAT" class="form-select w-auto">

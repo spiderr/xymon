@@ -16,7 +16,7 @@
 
 &XYMONBODYHEADER
 
-<div class="container-fluid px-3 py-2">
+<div class="container-fluid">
 <header class="xymon-page-header d-flex">
   &XYMONPAGEHEADER
 </header>

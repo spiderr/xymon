@@ -466,7 +466,7 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 		width += 4;
 
 		/* Start the table ... */
-		fprintf(output, "<div class=\"table-responsive mb-3\"><table class=\"table table-sm table-hover align-middle\" summary=\"%s Group Block\">\n", safegrouptitle);
+		fprintf(output, "<div class=\"table-responsive xymon-group-table\"><table class=\"table table-sm table-hover align-middle\" summary=\"%s Group Block\">\n", safegrouptitle);
 
 		/* Generate the host rows */
 		if (sorthosts) {
@@ -675,7 +675,7 @@ void do_groups(group_t *head, FILE *output, FILE *rssoutput, char *pagepath)
 
 	for (g = head; (g); g = g->next) {
 		if (g->hosts && g->pretitle) {
-			fprintf(output, "<div class=\"text-center my-2\"><span class=\"fw-bold\">%s</span>%s</div>\n",
+			fprintf(output, "<div class=\"text-center xymon-page-pretitle\"><span class=\"fw-bold\">%s</span>%s</div>\n",
 				g->pretitle,
 				underlineheadings ? "<hr>" : "");
 		}
@@ -768,19 +768,19 @@ void do_page_subpages(FILE *output, xymongen_page_t *subs, char *pagepath)
 
 	if (subs) {
 		fprintf(output, "<a name=\"pages-blk\"></a>\n");
-		fprintf(output, "<div class=\"d-flex flex-wrap gap-3 my-3\">\n");
+		fprintf(output, "<div class=\"d-flex flex-wrap xymon-subpages\">\n");
 
 		for (p = subs; (p); p = p->next) {
 			if (p->pretitle) {
-				fprintf(output, "<div class=\"w-100 fw-bold\">%s%s</div>\n",
+				fprintf(output, "<div class=\"fw-bold xymon-subpage-break\">%s%s</div>\n",
 					p->pretitle,
-					underlineheadings ? "<hr class=\"mt-0\">" : "");
+					underlineheadings ? "<hr>" : "");
 			}
 
 			sprintf(pagelink, "%s/%s/%s/%s%s", xgetenv("XYMONWEB"), pagepath, p->name, p->name, htmlextension);
 			linkurl = hostlink(p->name);
 
-			fprintf(output, "<div class=\"d-flex align-items-center gap-1\">\n");
+			fprintf(output, "<div class=\"d-flex align-items-center xymon-page-entry\">\n");
 			fprintf(output, "  <a href=\"%s\" title=\"%s\">%s</a>\n",
 				cleanurl(pagelink), colorname(p->color),
 				coloricon(p->color, 0, ((reportstart > 0) ? 1 : p->oldage)));

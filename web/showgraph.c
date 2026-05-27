@@ -679,7 +679,7 @@ void graph_link(FILE *output, char *uri, char *grtype, time_t seconds)
 	time_t gstart, gend;
 	char *grtype_s;
 
-	fprintf(output, "<div class=\"graph-item d-flex align-items-center gap-2\">\n");
+	fprintf(output, "<div class=\"graph-item d-flex align-items-center\">\n");
 	grtype_s = htmlquoted(grtype);
 
 	switch (action) {

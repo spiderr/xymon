@@ -1,10 +1,10 @@
-<div class="card card-body mb-3">
+<div class="card card-body xymon-form-card">
   <form method="GET" action="&SCRIPT_NAME">
-    <div class="mb-3">
+    <div class="xymon-field">
       <label for="hostfield" class="form-label">Pattern to look for</label>
       <input type="text" name="host" id="hostfield" value="" maxlength="200" class="form-control">
     </div>
-    <div class="d-flex align-items-center gap-4 flex-wrap">
+    <div class="d-flex align-items-center flex-wrap xymon-choices">
       <div class="form-check">
         <input type="checkbox" name="case_sensitive" id="case_sensitive" class="form-check-input">
         <label for="case_sensitive" class="form-check-label">Case Sensitive</label>
