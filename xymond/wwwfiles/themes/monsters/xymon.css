@@ -1,0 +1,122 @@
+/* ------------------------------------------------------------------ */
+/* Xymon "monsters" theme  –  Halloween icon set                       */
+/*                                                                     */
+/* green  stable = shield-cat (fa-shield-cat) — protected, all OK     */
+/* green  recent = cat        (fa-cat)         — prowling, just changed*/
+/* yellow stable = spider     (fa-spider)      — lurking, watch out    */
+/* red    stable = skull      (fa-skull)       — dead, critical        */
+/* red    acked  = book-skull (fa-book-skull)  — documented death      */
+/* blue   stable = moon       (fa-moon)        — sleeping/maintenance  */
+/* purple stable = eye        (fa-eye)         — watching, no data     */
+/* clear  stable = hat-wizard (fa-hat-wizard)  — untested/unknown      */
+/* ------------------------------------------------------------------ */
+@import url("../default/xymon.css");
+
+/* ── Animations (recent states only — stable states are silent) ── */
+
+/* Green cat: gentle tail-wag */
+@keyframes xymon-tail-wag {
+  0%,100% { transform: rotate(0deg);  }
+  30%     { transform: rotate(-4deg); }
+  70%     { transform: rotate(4deg);  }
+}
+
+/* Yellow spider: frantic side-scurry */
+@keyframes xymon-scurry {
+  0%,100% { transform: translateX(0)    scaleX(1);   }
+  25%     { transform: translateX(-6px) scaleX(1.1); }
+  75%     { transform: translateX(6px)  scaleX(0.9); }
+}
+
+/* Red skull: rapid multi-axis rattle */
+@keyframes xymon-rattle {
+  0%,100% { transform: translate(0,0)     rotate(0deg);   }
+  15%     { transform: translate(-2px,-1px) rotate(-8deg); }
+  30%     { transform: translate(2px,1px)  rotate(8deg);  }
+  45%     { transform: translate(-2px,1px) rotate(-5deg); }
+  60%     { transform: translate(2px,-1px) rotate(5deg);  }
+  75%     { transform: translate(-1px,0)   rotate(-3deg); }
+}
+
+/* Blue moon: slow drift with slight tilt */
+@keyframes xymon-drift {
+  0%,100% { transform: translateY(0)    rotate(0deg); }
+  50%     { transform: translateY(-6px) rotate(8deg); }
+}
+
+/* Purple eye: triple nervous blink then pause */
+@keyframes xymon-stare {
+  0%,100%    { opacity: 1;   }
+  6%,16%,26% { opacity: 0.1; }
+  11%,21%,31%{ opacity: 1;   }
+  50%        { opacity: 1;   }
+}
+
+/* Clear hat-wizard: exaggerated sway */
+@keyframes xymon-sway {
+  0%,100% { transform: rotate(0deg);   }
+  30%     { transform: rotate(15deg);  }
+  70%     { transform: rotate(-6deg);  }
+}
+
+/* ── Green: shield-cat (stable) / cat (recent) ── */
+.xymon-green.xymon-stable::before  { content: "\e572"; }   /* fa-shield-cat */
+.xymon-green.xymon-recent::before  { content: "\f6be"; }   /* fa-cat */
+.xymon-green.xymon-recent          { display: inline-block; animation: xymon-tail-wag 2s ease-in-out infinite; }
+
+/* ── Yellow: spider ── */
+.xymon-yellow.xymon-stable::before { content: "\f717"; }   /* fa-spider */
+.xymon-yellow.xymon-recent::before { content: "\f717"; }   /* fa-spider */
+.xymon-yellow.xymon-recent         { display: inline-block; animation: xymon-scurry 0.6s ease-in-out infinite; }
+
+/* ── Red: skull / book-skull (acked) ── */
+.xymon-red.xymon-stable::before    { content: "\f54c"; }   /* fa-skull */
+.xymon-red.xymon-recent::before    { content: "\f54c"; }   /* fa-skull */
+.xymon-red.xymon-recent            { display: inline-block; animation: xymon-rattle 0.8s ease-in-out infinite; }
+.xymon-red.xymon-acked::before     { content: "\f6b7"; }   /* fa-book-skull */
+
+/* ── Blue: moon ── */
+.xymon-blue.xymon-stable::before   { content: "\f186"; }   /* fa-moon */
+.xymon-blue.xymon-recent::before   { content: "\f186"; }   /* fa-moon */
+.xymon-blue.xymon-recent           { display: inline-block; animation: xymon-drift 2s ease-in-out infinite; }
+
+/* ── Purple: eye ── */
+.xymon-purple.xymon-stable::before { content: "\f06e"; }   /* fa-eye */
+.xymon-purple.xymon-recent::before { content: "\f06e"; }   /* fa-eye */
+.xymon-purple.xymon-recent         { display: inline-block; animation: xymon-stare 2.5s ease-in-out infinite; }
+
+/* ── Clear: wizard hat ── */
+/* font-weight: 900 required — default sets 400 on clear for hollow circles; */
+/* hat-wizard only exists in the Solid (900) font.                            */
+.xymon-clear.xymon-stable::before  { font-weight: 900; content: "\f6e8"; }   /* fa-hat-wizard */
+.xymon-clear.xymon-recent::before  { font-weight: 900; content: "\f6e8"; }   /* fa-hat-wizard */
+.xymon-clear.xymon-recent          { display: inline-block; animation: xymon-sway 1.5s ease-in-out infinite; }
+
+/* ── Spiderweb background ── */
+/*
+ * SVG spider web: 8 spokes + 4 concentric octagon rings.
+ * Spoke endpoints are the outermost ring vertices — all rings
+ * intersect every spoke exactly. White at 7% opacity — barely
+ * visible on the dark body but clearly there if you look.
+ *
+ * Defined as a CSS custom property so each body.status-* rule
+ * can stack it with the inherited status gradient without
+ * repeating the full data URI.
+ */
+:root {
+  --bs-body-bg:     #0e0b14;
+  --bs-body-bg-rgb: 14, 11, 20;
+  --xymon-web: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg stroke='rgba(255,255,255,.07)' stroke-width='1' fill='none'%3E%3Cline x1='80' y1='80' x2='80' y2='5'/%3E%3Cline x1='80' y1='80' x2='133' y2='27'/%3E%3Cline x1='80' y1='80' x2='155' y2='80'/%3E%3Cline x1='80' y1='80' x2='133' y2='133'/%3E%3Cline x1='80' y1='80' x2='80' y2='155'/%3E%3Cline x1='80' y1='80' x2='27' y2='133'/%3E%3Cline x1='80' y1='80' x2='5' y2='80'/%3E%3Cline x1='80' y1='80' x2='27' y2='27'/%3E%3Cpolygon points='80,61 93,67 99,80 93,93 80,99 67,93 61,80 67,67'/%3E%3Cpolygon points='80,43 107,54 118,80 107,107 80,118 54,107 43,80 54,54'/%3E%3Cpolygon points='80,24 120,40 136,80 120,120 80,136 40,120 24,80 40,40'/%3E%3Cpolygon points='80,5 133,27 155,80 133,133 80,155 27,133 5,80 27,27'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+body {
+  background-image: var(--xymon-web);
+  background-size: 160px 160px;
+}
+
+/* Stack web over status gradient; explicit background-size for both layers */
+body.status-green  { background-image: var(--xymon-web), linear-gradient(to right, rgba(0,230,118,0.58)  1%, transparent 10%); background-size: 160px 160px, auto; }
+body.status-red    { background-image: var(--xymon-web), linear-gradient(to right, rgba(255,23,68,0.62)   1%, transparent 10%); background-size: 160px 160px, auto; }
+body.status-yellow { background-image: var(--xymon-web), linear-gradient(to right, rgba(255,204,0,0.58)  1%, transparent 10%); background-size: 160px 160px, auto; }
+body.status-blue   { background-image: var(--xymon-web), linear-gradient(to right, rgba(0,176,255,0.55)  1%, transparent 10%); background-size: 160px 160px, auto; }
+body.status-purple { background-image: var(--xymon-web), linear-gradient(to right, rgba(224,64,251,0.55) 1%, transparent 10%); background-size: 160px 160px, auto; }

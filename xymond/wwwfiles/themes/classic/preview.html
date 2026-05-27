@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classic Theme Preview</title>
+  <link rel="stylesheet" href="../../externals/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../../externals/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="./xymon.css">
+  <style>
+    .preview-cell    { text-align: center; padding: 0.75rem 0.5rem; min-width: 5rem; }
+    .preview-label   { font-size: 0.65rem; color: #888; margin-top: 0.35rem; font-family: monospace; }
+    .preview-icon    { font-size: 1.4rem; }
+    th               { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em;
+                       text-transform: uppercase; color: #aaa; vertical-align: bottom; padding: 0.5rem; }
+    td               { vertical-align: middle; }
+    .state-label     { font-size: 0.75rem; color: #aaa; white-space: nowrap; padding-right: 1rem; }
+    .note            { font-size: 0.72rem; color: #777; }
+    .override        { background-color: rgba(255,255,255,0.04); border-radius: 4px; }
+    .inherited       { opacity: 0.55; }
+    .anim-tag        { font-size: 0.6rem; color: #f39c12; font-family: monospace; display: block; margin-top: 0.2rem; }
+  </style>
+</head>
+<body class="p-4">
+
+<h4 class="mb-1">Classic Theme — Expressive Icons</h4>
+<p class="text-muted small mb-2">
+  Extends default: <code>@import url("../default/xymon.css")</code> then overrides specific
+  color+state combinations. Inherits everything else unchanged.
+</p>
+<p class="note mb-3">
+  <span style="background:rgba(255,255,255,0.04);padding:1px 6px;border-radius:4px">highlighted cells</span>
+  = override from default &nbsp;·&nbsp;
+  <span style="opacity:0.55">dimmed cells</span>
+  = inherited from default (circle / circle-dot / square-check)
+</p>
+
+<table class="table table-borderless table-sm">
+  <thead>
+    <tr>
+      <th></th>
+      <th class="preview-cell">green</th>
+      <th class="preview-cell">yellow</th>
+      <th class="preview-cell">red</th>
+      <th class="preview-cell">blue</th>
+      <th class="preview-cell">purple</th>
+      <th class="preview-cell">clear</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+      <td class="state-label">stable</td>
+      <!-- green: square rotated 45° = diamond -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-stable"></i></div>
+        <div class="preview-label">square f0c8<br>rotate 45°</div>
+      </td>
+      <!-- yellow: triangle-exclamation + pulse -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-stable"></i></div>
+        <div class="preview-label">triangle-excl f071</div>
+        <span class="anim-tag">pulse 2s</span>
+      </td>
+      <!-- red: circle-xmark + jolt -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-stable"></i></div>
+        <div class="preview-label">circle-xmark f057</div>
+        <span class="anim-tag">jolt 4s</span>
+      </td>
+      <!-- blue: bell-slash -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-stable"></i></div>
+        <div class="preview-label">bell-slash f1f6</div>
+      </td>
+      <!-- purple: inherited circle -->
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-stable"></i></div>
+        <div class="preview-label">circle f111<br>(default)</div>
+      </td>
+      <!-- clear: inherited hollow circle -->
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-stable"></i></div>
+        <div class="preview-label">circle f111<br>hollow (default)</div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="state-label">recent</td>
+      <!-- green: face-smile -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-recent"></i></div>
+        <div class="preview-label">face-smile f118</div>
+      </td>
+      <!-- yellow: face-meh -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-recent"></i></div>
+        <div class="preview-label">face-meh f11a</div>
+      </td>
+      <!-- red: face-angry -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-recent"></i></div>
+        <div class="preview-label">face-angry f556</div>
+      </td>
+      <!-- blue: face-meh-blank -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-recent"></i></div>
+        <div class="preview-label">face-meh-blank f5a4</div>
+      </td>
+      <!-- purple: face-dizzy -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-recent"></i></div>
+        <div class="preview-label">face-dizzy f567</div>
+      </td>
+      <!-- clear: face-rolling-eyes -->
+      <td class="preview-cell override">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-recent"></i></div>
+        <div class="preview-label">face-rolling-eyes f5a5</div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="state-label">acked</td>
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br>(default)</div>
+      </td>
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br>(default)</div>
+      </td>
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br>(default)</div>
+      </td>
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br>(default)</div>
+      </td>
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br>(default)</div>
+      </td>
+      <td class="preview-cell inherited">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br>hollow (default)</div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="state-label">unknown</td>
+      <td colspan="6" class="preview-cell inherited" style="text-align:left; padding-left:0.5rem;">
+        <i class="fa-solid xymon-icon xymon-unknown xymon-stable"></i>
+        <span class="preview-label ms-2">circle-question f29c — inherited from default</span>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+
+<hr class="my-4">
+<p class="text-muted small mb-1">Animations</p>
+<p class="note mb-0">
+  <code>xymon-pulse</code> — yellow stable: scale 1→1.18 + opacity fade, 2s loop<br>
+  <code>xymon-jolt</code> — red stable: intermittent rotation burst (quiet 80% of cycle), 4s loop<br>
+  All other states: no animation (inherited silent default)
+</p>
+
+</body>
+</html>

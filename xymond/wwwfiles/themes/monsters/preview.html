@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monsters Theme Preview</title>
+  <link rel="stylesheet" href="../../externals/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../../externals/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="./xymon.css">
+  <style>
+    .preview-cell    { text-align: center; padding: 0.75rem 0.5rem; min-width: 5rem; }
+    .preview-label   { font-size: 0.65rem; color: #888; margin-top: 0.35rem; font-family: monospace; }
+    .preview-icon    { font-size: 1.4rem; }
+    .section-heading { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+                       text-transform: uppercase; color: #666; padding: 0.5rem 0 0.25rem; }
+    th               { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em;
+                       text-transform: uppercase; color: #aaa; vertical-align: bottom; padding: 0.5rem; }
+    td               { vertical-align: middle; }
+    .state-label     { font-size: 0.75rem; color: #aaa; white-space: nowrap; padding-right: 1rem; }
+  </style>
+</head>
+<body class="p-4">
+
+<h4 class="mb-1">Monsters Theme — Icon Preview</h4>
+<p class="text-muted small mb-4">
+  All FA6 Free Solid. Stable = silent. Recent = animated. Acked overrides on red only.
+</p>
+
+<table class="table table-borderless table-sm">
+  <thead>
+    <tr>
+      <th></th>
+      <th class="preview-cell">green</th>
+      <th class="preview-cell">yellow</th>
+      <th class="preview-cell">red</th>
+      <th class="preview-cell">blue</th>
+      <th class="preview-cell">purple</th>
+      <th class="preview-cell">clear</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- stable -->
+    <tr>
+      <td class="state-label">stable</td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-stable"></i></div>
+        <div class="preview-label">shield-cat e572</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-stable"></i></div>
+        <div class="preview-label">spider f717</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-stable"></i></div>
+        <div class="preview-label">skull f54c</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-stable"></i></div>
+        <div class="preview-label">moon f186</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-stable"></i></div>
+        <div class="preview-label">eye f06e</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-stable"></i></div>
+        <div class="preview-label">hat-wizard f6e8</div>
+      </td>
+    </tr>
+
+    <!-- recent -->
+    <tr>
+      <td class="state-label">recent<br><span style="font-size:0.65rem;color:#555">animated</span></td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-recent"></i></div>
+        <div class="preview-label">cat f6be<br>tail-wag 2s</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-recent"></i></div>
+        <div class="preview-label">spider f717<br>scurry 0.6s</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-recent"></i></div>
+        <div class="preview-label">skull f54c<br>rattle 0.8s</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-recent"></i></div>
+        <div class="preview-label">moon f186<br>drift 2s</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-recent"></i></div>
+        <div class="preview-label">eye f06e<br>stare 2.5s</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-recent"></i></div>
+        <div class="preview-label">hat-wizard f6e8<br>sway 1.5s</div>
+      </td>
+    </tr>
+
+    <!-- acked -->
+    <tr>
+      <td class="state-label">acked</td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-acked"></i></div>
+        <div class="preview-label">circle-check<br>(default)</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-acked"></i></div>
+        <div class="preview-label">circle-check<br>(default)</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-acked"></i></div>
+        <div class="preview-label">book-skull f6b7<br>(override)</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-acked"></i></div>
+        <div class="preview-label">circle-check<br>(default)</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-acked"></i></div>
+        <div class="preview-label">circle-check<br>(default)</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-acked"></i></div>
+        <div class="preview-label">circle-check<br>(default)</div>
+      </td>
+    </tr>
+
+    <!-- unknown -->
+    <tr>
+      <td class="state-label">unknown</td>
+      <td colspan="6" class="preview-cell" style="text-align:left; padding-left: 0.5rem;">
+        <i class="fa-solid xymon-icon xymon-unknown xymon-stable"></i>
+        <span class="preview-label ms-2">circle-question f29c (default)</span>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+
+<hr class="my-4">
+<p class="text-muted small mb-1">Background pattern (visible on body below)</p>
+<p class="text-muted" style="font-size:0.65rem">
+  Inline SVG spider web · 8 spokes + 4 concentric octagon rings · white 7% opacity · 160×160px tile<br>
+  Body base: <code>#0e0b14</code> — status gradient stacked over web via CSS multi-background
+</p>
+
+</body>
+</html>

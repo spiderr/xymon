@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Default Theme Preview</title>
+  <link rel="stylesheet" href="../../externals/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../../externals/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="./xymon.css">
+  <style>
+    .preview-cell    { text-align: center; padding: 0.75rem 0.5rem; min-width: 5rem; }
+    .preview-label   { font-size: 0.65rem; color: #888; margin-top: 0.35rem; font-family: monospace; }
+    .preview-icon    { font-size: 1.4rem; }
+    th               { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em;
+                       text-transform: uppercase; color: #aaa; vertical-align: bottom; padding: 0.5rem; }
+    td               { vertical-align: middle; }
+    .state-label     { font-size: 0.75rem; color: #aaa; white-space: nowrap; padding-right: 1rem; }
+    .note            { font-size: 0.72rem; color: #777; }
+  </style>
+</head>
+<body class="p-4">
+
+<h4 class="mb-1">Default Theme — Base Icon Set</h4>
+<p class="text-muted small mb-2">
+  Foundation for all themes. Every other theme starts with <code>@import url("../default/xymon.css")</code>
+  and overrides only what it needs.
+</p>
+<p class="note mb-4">
+  Shape encodes state — circle = stable, circle-dot = recent, square-check = acked.
+  Color encodes severity. Clear uses hollow (weight&nbsp;400) variants. No animations.
+</p>
+
+<table class="table table-borderless table-sm">
+  <thead>
+    <tr>
+      <th></th>
+      <th class="preview-cell">green</th>
+      <th class="preview-cell">yellow</th>
+      <th class="preview-cell">red</th>
+      <th class="preview-cell">blue</th>
+      <th class="preview-cell">purple</th>
+      <th class="preview-cell">clear</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+      <td class="state-label">stable</td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-stable"></i></div>
+        <div class="preview-label">circle f111</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-stable"></i></div>
+        <div class="preview-label">circle f111</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-stable"></i></div>
+        <div class="preview-label">circle f111</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-stable"></i></div>
+        <div class="preview-label">circle f111</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-stable"></i></div>
+        <div class="preview-label">circle f111</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-stable"></i></div>
+        <div class="preview-label">circle f111<br><span style="color:#555">hollow wt 400</span></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="state-label">recent</td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-recent"></i></div>
+        <div class="preview-label">circle-dot f192</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-recent"></i></div>
+        <div class="preview-label">circle-dot f192</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-recent"></i></div>
+        <div class="preview-label">circle-dot f192</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-recent"></i></div>
+        <div class="preview-label">circle-dot f192</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-recent"></i></div>
+        <div class="preview-label">circle-dot f192</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-recent"></i></div>
+        <div class="preview-label">circle-dot f192<br><span style="color:#555">hollow wt 400</span></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="state-label">acked</td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-green xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-yellow xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-red xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-blue xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-purple xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a</div>
+      </td>
+      <td class="preview-cell">
+        <div class="preview-icon"><i class="fa-solid xymon-icon xymon-clear xymon-acked"></i></div>
+        <div class="preview-label">square-check f14a<br><span style="color:#555">hollow wt 400</span></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="state-label">unknown</td>
+      <td colspan="6" class="preview-cell" style="text-align:left; padding-left:0.5rem;">
+        <i class="fa-solid xymon-icon xymon-unknown xymon-stable"></i>
+        <span class="preview-label ms-2">circle-question f29c — color #9e9e9e</span>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+
+<hr class="my-4">
+<p class="text-muted small mb-1">Background</p>
+<p class="note">
+  Body: <code>#111111</code> (Bootstrap dark). Status pages add a left-edge gradient splash
+  per color via <code>body.status-{color}</code> rules.
+  No theme-specific pattern — just the base dark canvas.
+</p>
+
+</body>
+</html>
