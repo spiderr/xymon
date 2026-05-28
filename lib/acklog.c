@@ -202,41 +202,32 @@ void do_acklog(FILE *output, int maxcount, int maxminutes)
 
 		snprintf(title, sizeof(title), "%d events acknowledged in the past %u minutes", ackintime_count, period);
 
-		fprintf(output, "<BR><BR>\n");
-		fprintf(output, "<TABLE SUMMARY=\"%s\" BORDER=0>\n", title);
-		fprintf(output, "<TR BGCOLOR=\"#333333\">\n");
-		fprintf(output, "<TD ALIGN=CENTER COLSPAN=6><FONT SIZE=-1 COLOR=\"#33ebf4\">%s</FONT></TD></TR>\n", title);
+		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-striped xymon-ack-recent\">\n");
+		fprintf(output, "<caption class=\"xymon-ack-recent-summary\">%s</caption>\n", title);
+		fprintf(output, "<thead><tr><th>Time</th><th>Host</th><th>Service</th><th>Status</th><th>Acknowledged By</th><th>Message</th></tr></thead>\n");
+		fprintf(output, "<tbody>\n");
 
 		for (num = lastack; (ackintime_count); ackintime_count--, num = ((num == 0) ? (maxcount-1) : (num - 1)) ) {
-			fprintf(output, "<TR BGCOLOR=#000000>\n");
-
-			fprintf(output, "<TD ALIGN=CENTER><FONT COLOR=white>%s</FONT></TD>\n", ctime(&acks[num].acktime));
-			fprintf(output, "<TD ALIGN=CENTER BGCOLOR=%s><FONT COLOR=black>%s</FONT></TD>\n", colorname(acks[num].color), acks[num].hostname);
-			fprintf(output, "<TD ALIGN=CENTER><FONT COLOR=white>%s</FONT></TD>\n", acks[num].testname);
-
-			if (acks[num].color != -1) {
-   				fprintf(output, "<TD ALIGN=CENTER><IMG SRC=\"%s/%s\"></TD>\n", 
-					xgetenv("XYMONSKIN"), 
-					dotgiffilename(acks[num].color, acks[num].ackvalid, 1));
-			}
+			fprintf(output, "<tr>\n");
+			fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", ctime(&acks[num].acktime));
+			fprintf(output, "<td>%s</td>\n", acks[num].hostname);
+			fprintf(output, "<td>%s</td>\n", acks[num].testname);
+			if (acks[num].color != -1)
+				fprintf(output, "<td>%s</td>\n", coloricon(acks[num].color, acks[num].ackvalid, 1));
 			else
-   				fprintf(output, "<TD ALIGN=CENTER><FONT COLOR=white>&nbsp;</FONT></TD>\n");
-
-			fprintf(output, "<TD ALIGN=LEFT BGCOLOR=#000033>%s</TD>\n", acks[num].ackedby);
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD></TR>\n", acks[num].ackmsg);
+				fprintf(output, "<td></td>\n");
+			fprintf(output, "<td>%s</td>\n", acks[num].ackedby);
+			fprintf(output, "<td>%s</td>\n", acks[num].ackmsg);
+			fprintf(output, "</tr>\n");
 		}
 
+		fprintf(output, "</tbody></table></div>\n");
 	}
 	else {
 		snprintf(title, sizeof(title), "No events acknowledged in the last %u minutes", maxminutes);
 
-		fprintf(output, "<BR><BR>\n");
-		fprintf(output, "<TABLE SUMMARY=\"%s\" BORDER=0>\n", title);
-		fprintf(output, "<TR BGCOLOR=\"#333333\">\n");
-		fprintf(output, "<TD ALIGN=CENTER COLSPAN=6><FONT SIZE=-1 COLOR=\"#33ebf4\">%s</FONT></TD></TR>\n", title);
+		fprintf(output, "<p class=\"xymon-ack-recent-summary\">%s</p>\n", title);
 	}
-
-	fprintf(output, "</TABLE>\n");
 
 	fclose(acklog);
 }

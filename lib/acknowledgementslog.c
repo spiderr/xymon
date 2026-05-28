@@ -334,49 +334,44 @@ void do_acknowledgementslog(FILE *output,
 	}
 
 	if (head) {
-		char *bgcolors[2] = { "#000000", "#000066" };
-		int  bgcolor = 0;
 		int  count;
 		struct acknowledgements_t *lasttoshow = head;
 
 		count=0;
-		walk=head; 
+		walk=head;
 		do {
 			count++;
 			lasttoshow = walk;
 			walk = walk->next;
 		} while (walk && (count<maxcount));
 
-		if (maxminutes)  { 
-			snprintf(title, sizeof(title), "%d acknowledgements in the past %u minutes", 
+		if (maxminutes)  {
+			snprintf(title, sizeof(title), "%d acknowledgements in the past %u minutes",
 				count, (unsigned int)((getcurrenttime(NULL) - lasttoshow->eventtime) / 60));
 		}
 		else {
 			snprintf(title, sizeof(title), "%d events acknowledged.", count);
 		}
 
-		fprintf(output, "<BR><BR>\n");
-		fprintf(output, "<TABLE SUMMARY=\"Acknowledgements log\" BORDER=0>\n");
-		fprintf(output, "<TR BGCOLOR=\"#333333\">\n");
-		fprintf(output, "<TD ALIGN=CENTER COLSPAN=6><FONT SIZE=-1 COLOR=\"#33ebf4\">%s</FONT></TD></TR>\n", htmlquoted(title));
-		fprintf(output, "<TR BGCOLOR=\"#333333\"><TH>Time</TH><TH>Valid Until</TH><TH>Host</TH><TH>Service</TH><TH>Acknowledged By</TH><TH>Message</TH></TR>\n");
+		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-striped xymon-ack-log\">\n");
+		fprintf(output, "<caption class=\"xymon-ack-summary\">%s</caption>\n", htmlquoted(title));
+		fprintf(output, "<thead><tr><th>Time</th><th>Valid Until</th><th>Host</th><th>Service</th><th>Acknowledged By</th><th>Message</th></tr></thead>\n");
+		fprintf(output, "<tbody>\n");
 
 		for (walk=head; (walk != lasttoshow->next); walk=walk->next) {
 			char *hostname = xmh_item(walk->host, XMH_HOSTNAME);
 
-			fprintf(output, "<TR BGCOLOR=%s>\n", bgcolors[bgcolor]);
-			bgcolor = ((bgcolor + 1) % 2);
-
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", ctime(&walk->eventtime));
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", ctime(&walk->validity));
-
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", hostname);
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", walk->service->name);
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", walk->recipient);
-			fprintf(output, "<TD ALIGN=LEFT>%s</TD>\n", walk->message);
+			fprintf(output, "<tr>\n");
+			fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", ctime(&walk->eventtime));
+			fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", ctime(&walk->validity));
+			fprintf(output, "<td>%s</td>\n", hostname);
+			fprintf(output, "<td>%s</td>\n", walk->service->name);
+			fprintf(output, "<td>%s</td>\n", walk->recipient);
+			fprintf(output, "<td>%s</td>\n", walk->message);
+			fprintf(output, "</tr>\n");
 		}
 
-		fprintf(output, "</TABLE>\n");
+		fprintf(output, "</tbody></table></div>\n");
 
 		/* Clean up */
 		walk = head;
@@ -396,13 +391,7 @@ void do_acknowledgementslog(FILE *output,
 		else
 			strncpy(title, "No acknowledgements logged", sizeof(title));
 
-		fprintf(output, "<CENTER><BR>\n");
-		fprintf(output, "<TABLE SUMMARY=\"%s\" BORDER=0>\n", title);
-		fprintf(output, "<TR BGCOLOR=\"#333333\">\n");
-		fprintf(output, "<TD ALIGN=CENTER COLSPAN=6><FONT SIZE=-1 COLOR=\"#33ebf4\">%s</FONT></TD>\n", htmlquoted(title));
-		fprintf(output, "</TR>\n");
-		fprintf(output, "</TABLE>\n");
-		fprintf(output, "</CENTER>\n");
+		fprintf(output, "<p class=\"xymon-ack-summary\">%s</p>\n", htmlquoted(title));
 	}
 
 	if (acknowledgementslog) fclose(acknowledgementslog);

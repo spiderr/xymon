@@ -363,7 +363,7 @@ static void generate_histlog_table(FILE *htmlrep,
 {
 	replog_t *walk;
 
-	fprintf(htmlrep, "<table class=\"table table-sm table-striped\">\n");
+	fprintf(htmlrep, "<div class=\"table-responsive\"><table class=\"table table-sm table-striped xymon-hist-entries\">\n");
 	fprintf(htmlrep, "<caption class=\"caption-top\">\n");
 	if (entrycount) {
 		fprintf(htmlrep, "<strong>Last %d log entries</strong> ", entrycount);
@@ -392,7 +392,7 @@ static void generate_histlog_table(FILE *htmlrep,
 		fprintf(htmlrep, "</tr>\n");
 	}
 
-	fprintf(htmlrep, "</tbody></table>\n");
+	fprintf(htmlrep, "</tbody></table></div>\n");
 }
 
 
