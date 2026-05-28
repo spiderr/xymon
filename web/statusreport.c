@@ -58,10 +58,10 @@ int main(int argc, char *argv[])
 		}
 		else if ( argnmatch(argv[argi], "--column=") || argnmatch(argv[argi], "--test=")) {
 			char *p = strchr(argv[argi], '=');
-			int needed, curlen = (filter ? strlen(filter) : 0);
-			
-			needed = 10 + strlen(p); if (filter) needed += curlen;
-			if (filter) {
+			int needed, curlen = (filter && *filter ? strlen(filter) : 0);
+
+			needed = 10 + strlen(p); if (filter && *filter) needed += curlen;
+			if (filter && *filter) {
 				SBUF_REALLOC(filter, needed);
 			}
 			else {
@@ -77,10 +77,10 @@ int main(int argc, char *argv[])
 		}
 		else if (argnmatch(argv[argi], "--filter=")) {
 			char *p = strchr(argv[argi], '=');
-			int needed, curlen = (filter ? strlen(filter) : 0);
+			int needed, curlen = (filter && *filter ? strlen(filter) : 0);
 
-			needed = 10 + strlen(p); if (filter) needed += curlen;
-			if (filter) {
+			needed = 10 + strlen(p); if (filter && *filter) needed += curlen;
+			if (filter && *filter) {
 				SBUF_REALLOC(filter, needed);
 			}
 			else {
@@ -156,12 +156,17 @@ int main(int argc, char *argv[])
 
 	if (!embedded) {
 		printf("Content-type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
-
-		printf("<html><head><title>%s</title></head>\n", htmlquoted(heading));
-		printf("<body>");
-		printf("<table border=1 cellpadding=5><tr><th>%s</th><th align=left>Status</th></tr>\n",
-		       (showcolumn ? "Host/Column" : "Host"));
+		printf("<!DOCTYPE html>\n");
+		printf("<html lang=\"en\" data-bs-theme=\"dark\">\n");
+		printf("<head><meta charset=\"utf-8\">\n");
+		printf("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
+		printf("<title>%s</title>\n", htmlquoted(heading));
+		printf("<link rel=\"stylesheet\" href=\"%s/bootstrap/css/bootstrap.min.css\">\n", xgetenv("XYMONEXTERNALS"));
+		printf("</head>\n<body>\n<div class=\"container-fluid\">\n");
 	}
+	printf("<div class=\"table-responsive\"><table class=\"table table-sm table-bordered xymon-statusreport\">\n");
+	printf("<thead><tr><th>%s</th><th>Status</th></tr></thead>\n<tbody>\n",
+	       (showcolumn ? "Host/Column" : "Host"));
 
 	l = board;
 	while (l && *l) {
@@ -182,26 +187,26 @@ int main(int argc, char *argv[])
 				/* Skip the first status line */
 				msg = msgeol + 1;
 			}
-			printf("<tr><td align=left valign=top><b>");
+			printf("<tr><td class=\"xymon-statusreport-host\">");
 
-			if (addlink) 
+			if (addlink)
 				printf("<a href=\"%s\">%s</a>", hostsvcurl(hostname, xgetenv("INFOCOLUMN"), 1), htmlquoted(hostname));
-			else 
+			else
 				printf("%s", htmlquoted(hostname));
 
 			if (showcolumn) {
-				printf("<br>");
-				if (addlink) 
+				printf(" / ");
+				if (addlink)
 					printf("<a href=\"%s\">%s</a>", hostsvcurl(hostname, testname, 1), htmlquoted(testname));
 				else
 					printf("%s", htmlquoted(testname));
 			}
 
-			if (showcolors) printf("&nbsp;-&nbsp;%s", colorstr);
+			if (showcolors) printf(" &mdash; %s", colorstr);
 
-			printf("</b></td>\n");
+			printf("</td>\n");
 
-			printf("<td><pre>\n");
+			printf("<td><pre class=\"xymon-statusreport-msg\">\n");
 
 			if (summary) {
 				int firstline = 1;
@@ -234,7 +239,8 @@ int main(int argc, char *argv[])
 		if (eoln) l = eoln+1; else l = NULL;
 	}
 
-	if (!embedded) printf("</table></body></html>\n");
+	printf("</tbody></table></div>\n");
+	if (!embedded) printf("</div></body></html>\n");
 
 	return 0;
 }
