@@ -192,6 +192,11 @@ div[data-graph] { margin-bottom: 0.5rem; }
 /* ── Status overview / pagegen ── */
 .xymon-group-table { margin-bottom: 1rem; }
 .xymon-page-pretitle { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.xymon-host-cell { white-space: nowrap; }
+.xymon-metacol-cell { white-space: nowrap; }
+.xymon-metacol-link { display: inline-block; color: var(--bs-secondary-color); font-size: 1.0rem; padding: 0rem 0.3rem; opacity: 0.6; text-decoration: none; }
+.xymon-metacol-link:hover { opacity: 1; }
+.xymon-metacol-absent { display: inline-block; color: var(--bs-secondary-color); font-size: 1.2rem; padding: 0.2rem 0.3rem; opacity: 0.15; }
 .xymon-subpages { gap: 1rem; margin-top: 1rem; margin-bottom: 1rem; }
 .xymon-subpage-break { width: 100%; }
 .xymon-subpage-break hr { margin-top: 0; }

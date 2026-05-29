@@ -73,11 +73,23 @@ void select_headers_and_footers(char *prefix)
 }
 
 
+static int host_has_column(host_t *h, const char *colname) {
+	entry_t *e;
+	for (e = h->entries; e; e = e->next)
+		if (strcmp(e->column->name, colname) == 0) return 1;
+	return 0;
+}
+
 int interesting_column(int pagetype, int color, int alert, xymongen_col_t *column, char *onlycols, char *exceptcols)
 {
 	/*
 	 * Decides if a given column is to be included on a page.
 	 */
+
+	/* Meta-columns are rendered as inline icons in the hostname cell, never as grid columns */
+	if (strcmp(column->name, xgetenv("INFOCOLUMN")) == 0) return 0;
+	if (strcmp(column->name, xgetenv("TRENDSCOLUMN")) == 0) return 0;
+	if (strcmp(column->name, xgetenv("CLIENTCOLUMN")) == 0) return 0;
 
 	if (pagetype == PAGE_NORMAL) {
 		/* Fast-path the Xymon page. */
@@ -111,11 +123,6 @@ int interesting_column(int pagetype, int color, int alert, xymongen_col_t *colum
 	}
 
 	/* pagetype is now known NOT to be PAGE_NORMAL */
-
-	/* CLIENT, TRENDS and INFO columns are always included on non-Xymon pages */
-	if (strcmp(column->name, xgetenv("INFOCOLUMN")) == 0) return 1;
-	if (strcmp(column->name, xgetenv("TRENDSCOLUMN")) == 0) return 1;
-	if (strcmp(column->name, xgetenv("CLIENTCOLUMN")) == 0) return 1;
 
 	if (includecolumns) {
 		int result;
@@ -491,7 +498,7 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 
 			if (h->pretitle && (pagetype == PAGE_NORMAL)) {
 				fprintf(output, "<tr><td colspan=%d class=\"text-center\"><small class=\"text-muted\">%s</small></td></tr>\n",
-						columncount+1, h->pretitle);
+						columncount+2, h->pretitle);
 				rowcount = 0;
 			}
 
@@ -503,10 +510,11 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 					fprintf(output, "<th class=\"text-center\"><a href=\"%s\">%s</a></th>\n",
 						columnlink(gc->column->name), gc->column->name);
 				}
+				fprintf(output, "<th class=\"xymon-metacol-cell\"></th>");
 				fprintf(output, "</tr></thead>\n<tbody>\n");
 			}
 
-			fprintf(output, "<tr>\n <td class=\"text-nowrap\"><a name=\"%s\"></a>\n", h->hostname);
+			fprintf(output, "<tr>\n <td class=\"text-nowrap xymon-host-cell\"><a name=\"%s\"></a>\n", h->hostname);
 			if (maxrowsbeforeheading) rowcount = (rowcount + 1) % maxrowsbeforeheading;
 			else rowcount++;
 
@@ -643,6 +651,27 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 				}
 				fprintf(output, "</td>\n");
 			}
+
+			/* Meta-column icons cell */
+			fprintf(output, "<td class=\"xymon-metacol-cell\">");
+			if (host_has_column(h, xgetenv("INFOCOLUMN")))
+				fprintf(output, "<a href=\"%s\" title=\"Info\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-circle-info\"></i></a>",
+					hostsvcurl(h->hostname, xgetenv("INFOCOLUMN"), 1));
+			else
+				fprintf(output, "<span title=\"Info\" class=\"xymon-metacol-absent\"><i class=\"fa-solid fa-circle-info\"></i></span>");
+
+			if (host_has_column(h, xgetenv("TRENDSCOLUMN")))
+				fprintf(output, "<a href=\"%s\" title=\"Trends\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-chart-line\"></i></a>",
+					hostsvcurl(h->hostname, xgetenv("TRENDSCOLUMN"), 1));
+			else
+				fprintf(output, "<span title=\"Trends\" class=\"xymon-metacol-absent\"><i class=\"fa-solid fa-chart-line\"></i></span>");
+
+			if (host_has_column(h, xgetenv("CLIENTCOLUMN")))
+				fprintf(output, "<a href=\"%s\" title=\"Client Log\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-file-lines\"></i></a>",
+					hostsvcurl(h->hostname, xgetenv("CLIENTCOLUMN"), 1));
+			else
+				fprintf(output, "<span title=\"Client Log\" class=\"xymon-metacol-absent\"><i class=\"fa-solid fa-file-lines\"></i></span>");
+			fprintf(output, "</td>\n");
 
 			fprintf(output, "</tr>\n");
 		}
