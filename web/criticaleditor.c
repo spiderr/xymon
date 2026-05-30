@@ -106,6 +106,15 @@ static void parse_query(void)
 		else if (strcasecmp(cwalk->name, "start-yr") == 0) {
 			rq_startyear = atoi(cwalk->value);
 		}
+		else if (strcasecmp(cwalk->name, "start-date") == 0) {
+			/* YYYY-MM-DD from <input type="date">; empty string means cleared */
+			if (*cwalk->value) {
+				int y = 0, m = 0, d = 0;
+				if (sscanf(cwalk->value, "%d-%d-%d", &y, &m, &d) == 3) {
+					rq_startyear = y; rq_startmon = m; rq_startday = d;
+				}
+			}
+		}
 		else if (strcasecmp(cwalk->name, "end-day") == 0) {
 			rq_endday = atoi(cwalk->value);
 		}
@@ -114,6 +123,15 @@ static void parse_query(void)
 		}
 		else if (strcasecmp(cwalk->name, "end-yr") == 0) {
 			rq_endyear = atoi(cwalk->value);
+		}
+		else if (strcasecmp(cwalk->name, "end-date") == 0) {
+			/* YYYY-MM-DD from <input type="date">; empty string means cleared */
+			if (*cwalk->value) {
+				int y = 0, m = 0, d = 0;
+				if (sscanf(cwalk->value, "%d-%d-%d", &y, &m, &d) == 3) {
+					rq_endyear = y; rq_endmon = m; rq_endday = d;
+				}
+			}
 		}
 		else if (strcasecmp(cwalk->name, "EXTRA") == 0) {
 			if (*cwalk->value) rq_extra = strdup(cwalk->value);

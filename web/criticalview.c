@@ -36,7 +36,7 @@ static time_t oldlimit = 3600;
 static int critacklevel = 1;
 static int usetooltips = 0;
 static time_t maxage = INT_MAX;
-static time_t pagecolor = COL_GREEN;
+static time_t pagecolor = COL_CLEAR;
 
 void errormsg(char *s)
 {
@@ -192,8 +192,8 @@ void print_colheaders(FILE *output, void * rbcolumns)
 
 	/* Group column headings */
 	fprintf(output, "<tr>");
-	fprintf(output, "<td rowspan=\"2\">&nbsp;</td>\n");	/* For the prio column - in both row headers+dash rows */
-	fprintf(output, "<td rowspan=\"2\">&nbsp;</td>\n");	/* For the host column - in both row headers+dash rows */
+	fprintf(output, "<td rowspan=\"2\"></td>\n");	/* For the prio column - in both row headers+dash rows */
+	fprintf(output, "<td rowspan=\"2\"></td>\n");	/* For the host column - in both row headers+dash rows */
 	for (colhandle = xtreeFirst(rbcolumns); (colhandle != xtreeEnd(rbcolumns)); colhandle = xtreeNext(rbcolumns, colhandle)) {
 		char *colname;
 
@@ -220,20 +220,15 @@ void print_hoststatus(FILE *output, hstatus_t *itm, void * statetree, void * col
 
 	/* Print the priority */
 	fprintf(output, "<td class=\"text-nowrap\">");
-	if (firsthost)
+	if (firsthost) {
 		if (prio == 99) {
-			if (firsthostever)
-				/* Only non-prioritised hosts, so just drop that text */
-				fprintf(output, "&nbsp;");
-			else
+			if (!firsthostever)
 				fprintf(output, "<span class=\"critical-prio-label\">No priority</span>");
 		}
 		else {
 			fprintf(output, "<span class=\"critical-prio-label\">PRIO %d</span>", prio);
 		}
-
-	else
-		fprintf(output, "&nbsp;");
+	}
 	fprintf(output, "</td>\n");
 
 	/* Print the hostname with a link to the critical systems info page */
@@ -270,11 +265,11 @@ void print_hoststatus(FILE *output, hstatus_t *itm, void * statetree, void * col
 				htmlackstr = (column->ackmsg ? column->ackmsg : "");
 				htmlgroupstr = strdup(urlencode(column->config->ttgroup ? column->config->ttgroup : ""));
 				htmlextrastr = strdup(urlencode(column->config->ttextra ? column->config->ttextra : ""));
-				fprintf(output, "<A HREF=\"%s&amp;NKPRIO=%d&amp;NKTTGROUP=%s&amp;NKTTEXTRA=%s\">",
+				fprintf(output, "<a href=\"%s&amp;NKPRIO=%d&amp;NKTTGROUP=%s&amp;NKTTEXTRA=%s\">",
 					hostsvcurl(itm->hostname, colname, 1),
-					prio, 
+					prio,
 					htmlgroupstr, htmlextrastr);
-				fprintf(output, "%s</A>",
+				fprintf(output, "%s</a>",
 					coloricon(column->color, (column->acktime > 0), (age > oldlimit)));
 				xfree(htmlgroupstr);
 				xfree(htmlextrastr);
@@ -313,7 +308,7 @@ void print_oneprio(FILE *output, void * statetree, void * hoptree, void * rbcolu
 	}
 
 	/* If we did output any hosts, make some room for the next priority */
-	if (!firsthostthisprio) fprintf(output, "<tr><td>&nbsp;</td></tr>\n");
+	if (!firsthostthisprio) fprintf(output, "<tr><td></td></tr>\n");
 }
 
 
@@ -347,8 +342,7 @@ void generate_critpage(void * statetree, void * hoptree, FILE *output, char *hea
 		xtreeDestroy(rbcolumns);
         }
         else {
-                /* "All Monitored Systems OK */
-		fprintf(output, "%s", xgetenv("XYMONALLOKTEXT"));
+		fprintf(output, "<p class=\"text-muted\">No systems currently have a critical priority schedule.</p>\n");
         }
 
 	if (evcount > 0) {

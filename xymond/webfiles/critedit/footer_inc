@@ -1,0 +1,197 @@
+<script>
+(function () {
+  'use strict';
+
+  var MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+  var DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  function parseIso(s) {
+    if (!s) return null;
+    var p = s.split('-');
+    if (p.length !== 3) return null;
+    var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function toIso(dt) {
+    return dt.getFullYear() + '-' +
+           String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+           String(dt.getDate()).padStart(2, '0');
+  }
+
+  function toDisplay(dt) {
+    return MONTHS[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
+  }
+
+  function sameDay(a, b) {
+    return a && b &&
+           a.getFullYear() === b.getFullYear() &&
+           a.getMonth()    === b.getMonth() &&
+           a.getDate()     === b.getDate();
+  }
+
+  function closeAll() {
+    document.querySelectorAll('.critedit-cal-drop').forEach(function (d) {
+      d.classList.remove('critedit-cal-open');
+    });
+  }
+
+  function closePicker(picker) {
+    picker.querySelector('.critedit-cal-drop').classList.remove('critedit-cal-open');
+  }
+
+  function buildCalendar(picker, year, month) {
+    var drop    = picker.querySelector('.critedit-cal-drop');
+    var hidden  = picker.querySelector('.critedit-date-hidden');
+    var display = picker.querySelector('.critedit-date-display');
+    var selected = parseIso(hidden.value);
+    var today    = new Date();
+
+    drop.innerHTML = '';
+
+    /* ── Header: prev / Month Year / next ── */
+    var hdr = document.createElement('div');
+    hdr.className = 'critedit-cal-header';
+
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'btn btn-sm btn-outline-secondary';
+    prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'fw-semibold';
+    titleSpan.textContent = MONTHS[month] + ' ' + year;
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'btn btn-sm btn-outline-secondary';
+    nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+
+    hdr.appendChild(prevBtn);
+    hdr.appendChild(titleSpan);
+    hdr.appendChild(nextBtn);
+    drop.appendChild(hdr);
+
+    prevBtn.addEventListener('click', function () {
+      var m = month - 1, y = year;
+      if (m < 0) { m = 11; y--; }
+      buildCalendar(picker, y, m);
+    });
+    nextBtn.addEventListener('click', function () {
+      var m = month + 1, y = year;
+      if (m > 11) { m = 0; y++; }
+      buildCalendar(picker, y, m);
+    });
+
+    /* ── Day-of-week header row ── */
+    var table = document.createElement('table');
+    table.className = 'critedit-cal-grid';
+    var thead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+    DOW.forEach(function (d) {
+      var th = document.createElement('th');
+      th.textContent = d;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    /* ── Day grid ── */
+    var tbody = document.createElement('tbody');
+    var startDow    = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var row = document.createElement('tr');
+    var col = 0;
+
+    for (var blank = 0; blank < startDow; blank++) {
+      row.appendChild(document.createElement('td'));
+      col++;
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      if (col === 7) { tbody.appendChild(row); row = document.createElement('tr'); col = 0; }
+
+      var td  = document.createElement('td');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = day;
+      btn.className = 'critedit-cal-day';
+
+      var dt = new Date(year, month, day);
+      if (sameDay(dt, selected)) btn.classList.add('selected');
+      else if (sameDay(dt, today)) btn.classList.add('today');
+
+      /* IIFE captures correct day value per iteration */
+      (function (d) {
+        btn.addEventListener('click', function () {
+          var newDt = new Date(year, month, d);
+          hidden.value  = toIso(newDt);
+          display.value = toDisplay(newDt);
+          closePicker(picker);
+        });
+      }(day));
+
+      td.appendChild(btn);
+      row.appendChild(td);
+      col++;
+    }
+    while (col < 7) { row.appendChild(document.createElement('td')); col++; }
+    tbody.appendChild(row);
+    table.appendChild(tbody);
+    drop.appendChild(table);
+
+    /* ── Footer: "Clear date" link ── */
+    var foot = document.createElement('div');
+    foot.className = 'critedit-cal-footer';
+    var clearLink = document.createElement('button');
+    clearLink.type = 'button';
+    clearLink.className = 'btn btn-sm btn-link text-muted p-0';
+    clearLink.textContent = 'Clear date';
+    clearLink.addEventListener('click', function () {
+      hidden.value  = '';
+      display.value = '';
+      closePicker(picker);
+    });
+    foot.appendChild(clearLink);
+    drop.appendChild(foot);
+  }
+
+  function openPicker(picker) {
+    closeAll();
+    var hidden = picker.querySelector('.critedit-date-hidden');
+    var date   = parseIso(hidden.value) || new Date();
+    buildCalendar(picker, date.getFullYear(), date.getMonth());
+    picker.querySelector('.critedit-cal-drop').classList.add('critedit-cal-open');
+  }
+
+  /* ── Wire up each picker ── */
+  document.querySelectorAll('.critedit-date-picker').forEach(function (picker) {
+    var hidden  = picker.querySelector('.critedit-date-hidden');
+    var display = picker.querySelector('.critedit-date-display');
+    var calBtn  = picker.querySelector('.critedit-date-btn');
+    var clearBtn = picker.querySelector('.critedit-date-clear');
+
+    var existing = parseIso(hidden.value);
+    if (existing) display.value = toDisplay(existing);
+
+    calBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var drop = picker.querySelector('.critedit-cal-drop');
+      if (drop.classList.contains('critedit-cal-open')) closePicker(picker);
+      else openPicker(picker);
+    });
+
+    clearBtn.addEventListener('click', function () {
+      hidden.value  = '';
+      display.value = '';
+      closePicker(picker);
+    });
+
+    /* Clicks inside picker don't bubble to the document close handler */
+    picker.addEventListener('click', function (e) { e.stopPropagation(); });
+  });
+
+  document.addEventListener('click', closeAll);
+}());
+</script>

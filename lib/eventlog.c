@@ -741,14 +741,15 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 			/* Request for a specific service, show breakdown by host */
 			for (cwalk = hostcounthead; (cwalk); cwalk = cwalk->next) totalcount += cwalk->total;
 			fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm event-breakdown\">\n");
-			fprintf(output, "<tr><th>Host</th><th colspan=\"2\">%s</th></tr>\n",
+			fprintf(output, "<thead class=\"table-dark\"><tr><th>Host</th><th colspan=\"2\">%s</th></tr></thead>\n",
 				(counttype == XYMON_COUNT_EVENTS) ? "State changes" : "Seconds red/yellow");
-			fprintf(output, "<tr><td colspan=\"3\"><hr></td></tr>\n");
+			fprintf(output, "<tbody>\n");
 			for (cwalk = hostcounthead; (cwalk && (cwalk->total > 0)); cwalk = cwalk->next) {
 				fprintf(output, "<tr><td>%s</td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
 					xmh_item(cwalk->src, XMH_HOSTNAME),
 					cwalk->total, ((100.0 * cwalk->total) / totalcount));
 			}
+			fprintf(output, "</tbody>\n");
 			fprintf(output, "</table></div>\n");
 			break;
 
@@ -756,14 +757,15 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 			/* Request for a specific host, show breakdown by service */
 			for (cwalk = svccounthead; (cwalk); cwalk = cwalk->next) totalcount += cwalk->total;
 			fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm event-breakdown\">\n");
-			fprintf(output, "<tr><th>Service</th><th colspan=\"2\">%s</th></tr>\n",
+			fprintf(output, "<thead class=\"table-dark\"><tr><th>Service</th><th colspan=\"2\">%s</th></tr></thead>\n",
 				(counttype == XYMON_COUNT_EVENTS) ? "State changes" : "Seconds red/yellow");
-			fprintf(output, "<tr><td colspan=\"3\"><hr></td></tr>\n");
+			fprintf(output, "<tbody>\n");
 			for (cwalk = svccounthead; (cwalk && (cwalk->total > 0)); cwalk = cwalk->next) {
 				fprintf(output, "<tr><td>%s</td><td class=\"text-end\">%lu</td><td class=\"text-end\">(%6.2f %%)</td></tr>\n",
 					((htnames_t *)cwalk->src)->name,
 					cwalk->total, ((100.0 * cwalk->total) / totalcount));
 			}
+			fprintf(output, "</tbody>\n");
 			fprintf(output, "</table></div>\n");
 			break;
 

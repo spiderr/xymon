@@ -155,7 +155,7 @@ char *criticalval(char *hname, char *tname, char *alerts)
 
 			tspec = (critrec->crittime ? timespec_text(critrec->crittime) : "24x7");
 			SBUF_MALLOC(result, strlen(tspec) + 30);
-			snprintf(result, result_buflen, "%s&nbsp;prio&nbsp;%d", tspec, critrec->priority);
+			snprintf(result, result_buflen, "%s prio %d", tspec, critrec->priority);
 		}
 		xfree(key);
 	}
@@ -181,8 +181,7 @@ static void print_host(hostlist_t *host, htnames_t *testnames[], int testcount)
 	activealerts_t *alert;
 	strbuffer_t *buf = newstrbuffer(0); 
 
-	fprintf(stdout, "<p style=\"page-break-before: always\">\n"); 
-	fprintf(stdout, "<div class=\"table-responsive\"><table class=\"table table-sm table-bordered confreport-host\">\n");
+	fprintf(stdout, "<div class=\"table-responsive xymon-page-break\"><table class=\"table table-sm table-bordered confreport-host\">\n");
 
 	pagepathtitle = xmh_item(hinfo, XMH_PAGEPATHTITLE);
 	if (!pagepathtitle || (strlen(pagepathtitle) == 0)) pagepathtitle = "Top page";
@@ -366,7 +365,7 @@ addtolist:
 	if (taghead) {
 		fprintf(stdout, "<tr>\n");
 		fprintf(stdout, "<th>Network tests");
-		if (net) fprintf(stdout, "<br>(from %s)", net);
+		if (net) fprintf(stdout, " <small class=\"text-muted\">(from %s)</small>", net);
 		fprintf(stdout, "</th>\n");
 
 		fprintf(stdout, "<td><table class=\"table table-sm confreport-tests\">\n");
@@ -440,24 +439,30 @@ addtolist:
 		else if (strcmp(testnames[testi]->name, "procs") == 0) {
 			htnames_t *walk;
 
-			if (!host->procs) fprintf(stdout, "No processes monitored<br>\n");
-
-			for (walk = host->procs; (walk); walk = walk->next) {
-				fprintf(stdout, "%s<br>\n", walk->name);
+			if (!host->procs) {
+				fprintf(stdout, "<span class=\"text-muted fst-italic\">No processes monitored</span>\n");
+			}
+			else {
+				fprintf(stdout, "<ul class=\"xymon-confreport-list\">\n");
+				for (walk = host->procs; (walk); walk = walk->next)
+					fprintf(stdout, "<li>%s</li>\n", walk->name);
+				fprintf(stdout, "</ul>\n");
 			}
 		}
 		else if (strcmp(testnames[testi]->name, "svcs") == 0) {
 			htnames_t *walk;
 
-			if (!host->svcs) fprintf(stdout, "No services monitored<br>\n");
-
-			for (walk = host->svcs; (walk); walk = walk->next) {
-				fprintf(stdout, "%s<br>\n", walk->name);
+			if (!host->svcs) {
+				fprintf(stdout, "<span class=\"text-muted fst-italic\">No services monitored</span>\n");
+			}
+			else {
+				fprintf(stdout, "<ul class=\"xymon-confreport-list\">\n");
+				for (walk = host->svcs; (walk); walk = walk->next)
+					fprintf(stdout, "<li>%s</li>\n", walk->name);
+				fprintf(stdout, "</ul>\n");
 			}
 		}
-		else {
-			fprintf(stdout, "&nbsp;");
-		}
+		/* else: no default description for this column type */
 		fprintf(stdout, "</td>");
 
 		fprintf(stdout, "</tr>");
@@ -555,7 +560,7 @@ void print_columndocs(void)
 	for (i=0, cwalk=chead; (cwalk); cwalk=cwalk->next,i++) clist[i] = cwalk;
 	qsort(&clist[0], ccount, sizeof(coltext_t **), coltext_compare);
 
-	fprintf(stdout, "<div class=\"card xymon-confreport-section\" style=\"page-break-before:always\">\n");
+	fprintf(stdout, "<div class=\"card xymon-confreport-section xymon-page-break\">\n");
 	fprintf(stdout, "<div class=\"card-header fw-semibold\">Xymon column descriptions</div>\n");
 	fprintf(stdout, "<div class=\"card-body\">\n");
 	fprintf(stdout, "<dl class=\"row xymon-confreport-dl\">\n");

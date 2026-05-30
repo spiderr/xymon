@@ -44,19 +44,29 @@
       <div class="row xymon-field-row">
         <div class="col-md-6">
           <label class="form-label">Start monitoring</label>
-          <div class="d-flex flex-wrap xymon-page-entry">
-            <select name="start-day" class="form-select w-auto">&CRITEDITDAYLIST1</select>
-            <select name="start-mon" class="form-select w-auto">&CRITEDITMONLIST1</select>
-            <select name="start-yr" class="form-select w-auto">&CRITEDITYEARLIST1</select>
+          <div class="critedit-date-picker">
+            <div class="input-group">
+              <input type="text" class="form-control critedit-date-display" placeholder="Not set — starts immediately" readonly>
+              <button type="button" class="btn btn-outline-secondary critedit-date-btn" title="Pick date"><i class="fa-solid fa-calendar-days"></i></button>
+              <button type="button" class="btn btn-outline-secondary critedit-date-clear" title="Clear"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" name="start-date" value="&CRITEDITSTART_DATE" class="critedit-date-hidden">
+            <div class="critedit-cal-drop"></div>
           </div>
+          <div class="form-text">Leave blank to start immediately</div>
         </div>
         <div class="col-md-6">
           <label class="form-label">Stop monitoring</label>
-          <div class="d-flex flex-wrap xymon-page-entry">
-            <select name="end-day" class="form-select w-auto">&CRITEDITDAYLIST2</select>
-            <select name="end-mon" class="form-select w-auto">&CRITEDITMONLIST2</select>
-            <select name="end-yr" class="form-select w-auto">&CRITEDITYEARLIST2</select>
+          <div class="critedit-date-picker">
+            <div class="input-group">
+              <input type="text" class="form-control critedit-date-display" placeholder="Not set — no end date" readonly>
+              <button type="button" class="btn btn-outline-secondary critedit-date-btn" title="Pick date"><i class="fa-solid fa-calendar-days"></i></button>
+              <button type="button" class="btn btn-outline-secondary critedit-date-clear" title="Clear"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" name="end-date" value="&CRITEDITEND_DATE" class="critedit-date-hidden">
+            <div class="critedit-cal-drop"></div>
           </div>
+          <div class="form-text">Leave blank to monitor indefinitely</div>
         </div>
       </div>
 

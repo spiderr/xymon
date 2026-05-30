@@ -66,9 +66,11 @@ int	dojump     = 0;				/* If set and there is only one page, go directly to it *
 
 void errormsg(char *msg)
 {
+	sethostenv("", "", "", colorname(COL_RED), NULL);
 	printf("Content-type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
-	printf("<html><head><title>Xymon FindHost Error</title></head>\n");
-	printf("<body><BR><BR><BR>%s</body></html>\n", msg);
+	headfoot(stdout, "findhost", "", "header", COL_RED);
+	printf("<div class=\"alert alert-danger\">%s</div>\n", msg);
+	headfoot(stdout, "findhost", "", "footer", COL_RED);
 	exit(1);
 }
 
@@ -265,14 +267,21 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	print_header();
 	if (!gotany) {
-		printf("<tr><td>%s</td><td>Not found</td></tr>\n", htmlquoted(pSearchPat));
+		sethostenv("", "", "", colorname(COL_BLUE), NULL);
+		printf("Content-Type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
+		headfoot(stdout, "findhost", "", "header", COL_BLUE);
+		printf("<div class=\"xymon-empty-state\">"
+		       "<i class=\"fa-solid fa-magnifying-glass fa-2x text-muted\"></i>"
+		       "<p>No host found matching <strong>%s</strong>.</p>"
+		       "</div>\n", htmlquoted(pSearchPat));
+		headfoot(stdout, "findhost", "", "footer", COL_BLUE);
 	}
 	else {
+		print_header();
 		printf("%s", grabstrbuffer(outbuf));
+		print_footer();
 	}
-	print_footer();
 
 	/* [wm] - Free the strdup allocated memory */
 	if (pSearchPat) xfree(pSearchPat);

@@ -1,1 +1,6 @@
 <h1>&XYMONPAGETITLE</h1>
+<div class="ms-auto d-flex" id="xymon-hdr-right">
+  <a class="btn btn-outline-secondary btn-sm" href="ghostlist.sh?TEXT">
+    <i class="fa-solid fa-file-lines"></i>Text report
+  </a>
+</div>

@@ -125,14 +125,28 @@ int main(int argc, char *argv[])
 
 	parse_query();
 
-	/* Now generate the webpage */
-	headfoot(stdout, "acknowledgements", "", "header", COL_GREEN);
-	do_acknowledgementslog(stdout, maxcount, maxminutes, fromtime, totime,
-			pageregex, expageregex,
-			hostregex, exhostregex,
-			testregex, extestregex,
-			rcptregex, exrcptregex);
-	headfoot(stdout, "acknowledgements", "", "footer", COL_GREEN);
+	/* Buffer body so we can pick bgcolor based on whether there are any records */
+	{
+		char *body = NULL;
+		size_t bodysz = 0;
+		FILE *bodyfp = open_memstream(&body, &bodysz);
+		int color;
+
+		do_acknowledgementslog(bodyfp, maxcount, maxminutes, fromtime, totime,
+				pageregex, expageregex,
+				hostregex, exhostregex,
+				testregex, extestregex,
+				rcptregex, exrcptregex);
+		fflush(bodyfp);
+		fclose(bodyfp);
+
+		color = (body && strstr(body, "<table")) ? COL_YELLOW : COL_CLEAR;
+
+		headfoot(stdout, "acknowledgements", "", "header", color);
+		if (body && bodysz > 0) fwrite(body, 1, bodysz, stdout);
+		free(body);
+		headfoot(stdout, "acknowledgements", "", "footer", color);
+	}
 
 	return 0;
 }

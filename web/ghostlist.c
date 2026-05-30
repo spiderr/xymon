@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 	int argi;
 	char *envarea = NULL;
 	char *hffile = "ghosts";
-	int bgcolor = COL_BLUE;
+	int bgcolor = COL_CLEAR;
 	char *ghosts = NULL;
 	sendreturn_t *sres;
 
@@ -156,122 +156,138 @@ int main(int argc, char *argv[])
 	load_hostnames(xgetenv("HOSTSCFG"), NULL, get_fqdn());
 	parse_query();
 
-	switch (outform) {
-	  case O_HTML:
-		fprintf(stdout, "Content-type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
-		headfoot(stdout, hffile, "", "header", bgcolor);
-		break;
-	  case O_TXT:
-		fprintf(stdout, "Content-type: text/plain\n\n");
-		break;
-	}
-
+	/* Query xymond first so we can set bgcolor based on whether there are any ghosts */
 	sres = newsendreturnbuf(1, NULL);
-
-	if (sendmessage("ghostlist", NULL, XYMON_TIMEOUT, sres) == XYMONSEND_OK) {
+	{
 		char *bol, *eoln, *name, *sender, *timestr;
-		time_t tstamp, now;
-		int count, idx;
-		ghost_t *ghosttable;
+		time_t tstamp, now = 0;
+		int count = 0, idx = 0;
+		ghost_t *ghosttable = NULL;
+		int send_ok;
 
-		ghosts = getsendreturnstr(sres, 1);
+		send_ok = (sendmessage("ghostlist", NULL, XYMON_TIMEOUT, sres) == XYMONSEND_OK);
 
-		/* Count the number of lines */
-		for (bol = ghosts, count=0; (bol); bol = strchr(bol, '\n')) {
-			if (*bol == '\n') bol++;
-			count++;
-		}
-		ghosttable = (ghost_t *)calloc(count+1, sizeof(ghost_t));
+		if (send_ok) {
+			ghosts = getsendreturnstr(sres, 1);
+			now = getcurrenttime(NULL);
 
-		idx = count = 0;
-		tstamp = now = getcurrenttime(NULL);
-		bol = ghosts;
-		while (bol) {
-			name = sender = timestr = NULL;
-
-			eoln = strchr(bol, '\n'); if (eoln) *eoln = '\0';
-			name = strtok(bol, "|");
-			if (name) sender = strtok(NULL, "|");
-			if (sender) timestr = strtok(NULL, "|");
-
-			if (timestr) tstamp = atol(timestr);
-
-			if (name && sender && timestr && (tstamp > (now - maxage))) {
-				int i1, i2, i3, i4;
-
-				sscanf(sender, "%d.%d.%d.%d", &i1, &i2, &i3, &i4);
-				ghosttable[idx].sender = sender;
-				ghosttable[idx].senderval = (i1 << 24) + (i2 << 16) + (i3 << 8) + i4;
-				ghosttable[idx].name = name;
-				ghosttable[idx].tstamp = tstamp;
-				find_candidate(&ghosttable[idx]);
-				idx++; count++;
+			/* Count lines for allocation */
+			for (bol = ghosts, count=0; (bol); bol = strchr(bol, '\n')) {
+				if (*bol == '\n') bol++;
+				count++;
 			}
+			ghosttable = (ghost_t *)calloc(count+1, sizeof(ghost_t));
 
-			if (eoln) eoln++;
-			bol = eoln;
-		}
+			idx = count = 0;
+			tstamp = now;
+			bol = ghosts;
+			while (bol) {
+				name = sender = timestr = NULL;
 
-		switch (sorttype) {
-		  case S_NAME:
-			qsort(&ghosttable[0], count, sizeof(ghost_t), hostname_compare);
-			break;
+				eoln = strchr(bol, '\n'); if (eoln) *eoln = '\0';
+				name = strtok(bol, "|");
+				if (name) sender = strtok(NULL, "|");
+				if (sender) timestr = strtok(NULL, "|");
 
-		  case S_SENDER:
-			qsort(&ghosttable[0], count, sizeof(ghost_t), sender_compare);
-			break;
+				if (timestr) tstamp = atol(timestr);
 
-		  case S_TIME:
-			qsort(&ghosttable[0], count, sizeof(ghost_t), time_compare);
-			break;
-		}
+				if (name && sender && timestr && (tstamp > (now - maxage))) {
+					int i1, i2, i3, i4;
 
-		if (outform == O_HTML) {
-			fprintf(stdout, "<div class=\"table-responsive\"><table class=\"table table-sm table-hover ghost-list\">\n");
-			fprintf(stdout, "<tr>");
-			fprintf(stdout, "<th><a href=\"ghostlist.sh?SORT=sender&MAXAGE=%d\">Sender</a></th>", maxage);
-			fprintf(stdout, "<th><a href=\"ghostlist.sh?SORT=name&MAXAGE=%d\">Hostname</a></th>", maxage);
-			fprintf(stdout, "<th>Candidate</th>");
-			fprintf(stdout, "<th class=\"text-end\"><a href=\"ghostlist.sh?SORT=time&MAXAGE=%d\">Report age</a></th>", maxage);
-			fprintf(stdout, "</tr>\n");
-		}
-
-		for (idx = 0; (idx < count); idx++) {
-			if (!ghosttable[idx].name) continue;
-			if (!ghosttable[idx].sender) continue;
-
-			switch (outform) {
-			  case O_HTML:
-				fprintf(stdout, "<tr><td>%s</td><td>%s</td>",
-					ghosttable[idx].sender, 
-					htmlquoted(ghosttable[idx].name));
-
-				if (ghosttable[idx].candidate) {
-					fprintf(stdout, "<td><a href=\"%s\">%s</a></td>",
-						hostsvcurl(xmh_item(ghosttable[idx].candidate, XMH_HOSTNAME), xgetenv("INFOCOLUMN"), 1),
-						xmh_item(ghosttable[idx].candidate, XMH_HOSTNAME));
-				}
-				else {
-					fprintf(stdout, "<td>&nbsp;</td>");
+					sscanf(sender, "%d.%d.%d.%d", &i1, &i2, &i3, &i4);
+					ghosttable[idx].sender = sender;
+					ghosttable[idx].senderval = (i1 << 24) + (i2 << 16) + (i3 << 8) + i4;
+					ghosttable[idx].name = name;
+					ghosttable[idx].tstamp = tstamp;
+					find_candidate(&ghosttable[idx]);
+					idx++; count++;
 				}
 
-				fprintf(stdout, "<td class=\"text-end\">%ld:%02ld</td></tr>\n",
-					(now - ghosttable[idx].tstamp)/60, (now - ghosttable[idx].tstamp)%60);
+				if (eoln) eoln++;
+				bol = eoln;
+			}
+
+			switch (sorttype) {
+			  case S_NAME:
+				qsort(&ghosttable[0], count, sizeof(ghost_t), hostname_compare);
 				break;
 
-			  case O_TXT:
-				fprintf(stdout, "%s\t\t%s\n", ghosttable[idx].sender, ghosttable[idx].name);
+			  case S_SENDER:
+				qsort(&ghosttable[0], count, sizeof(ghost_t), sender_compare);
+				break;
+
+			  case S_TIME:
+				qsort(&ghosttable[0], count, sizeof(ghost_t), time_compare);
 				break;
 			}
+
+			bgcolor = (count > 0) ? COL_PURPLE : COL_CLEAR;
 		}
 
-		if (outform == O_HTML) {
-			fprintf(stdout, "</table></div>\n");
-			fprintf(stdout, "<p><a href=\"ghostlist.sh?SORT=%s&MAXAGE=%d&TEXT\">Text report</a></p>\n", htmlquoted(sortstring), maxage);
+		switch (outform) {
+		  case O_HTML:
+			fprintf(stdout, "Content-type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
+			headfoot(stdout, hffile, "", "header", bgcolor);
+			break;
+		  case O_TXT:
+			fprintf(stdout, "Content-type: text/plain\n\n");
+			break;
 		}
+
+		if (send_ok) {
+			if (outform == O_HTML && count == 0) {
+				fprintf(stdout, "<p class=\"text-muted\">No ghost hosts found in the last %d minutes.</p>\n", maxage);
+			}
+
+			if (outform == O_HTML && count > 0) {
+				fprintf(stdout, "<div class=\"table-responsive\"><table class=\"table table-sm table-hover ghost-list\">\n");
+				fprintf(stdout, "<thead class=\"table-dark\"><tr>");
+				fprintf(stdout, "<th><a href=\"ghostlist.sh?SORT=sender&MAXAGE=%d\">Sender</a></th>", maxage);
+				fprintf(stdout, "<th><a href=\"ghostlist.sh?SORT=name&MAXAGE=%d\">Hostname</a></th>", maxage);
+				fprintf(stdout, "<th>Candidate</th>");
+				fprintf(stdout, "<th class=\"text-end\"><a href=\"ghostlist.sh?SORT=time&MAXAGE=%d\">Report age</a></th>", maxage);
+				fprintf(stdout, "</tr></thead>\n<tbody>\n");
+			}
+
+			for (idx = 0; (idx < count); idx++) {
+				if (!ghosttable[idx].name) continue;
+				if (!ghosttable[idx].sender) continue;
+
+				switch (outform) {
+				  case O_HTML:
+					fprintf(stdout, "<tr><td>%s</td><td>%s</td>",
+						ghosttable[idx].sender,
+						htmlquoted(ghosttable[idx].name));
+
+					if (ghosttable[idx].candidate) {
+						fprintf(stdout, "<td><a href=\"%s\">%s</a></td>",
+							hostsvcurl(xmh_item(ghosttable[idx].candidate, XMH_HOSTNAME), xgetenv("INFOCOLUMN"), 1),
+							xmh_item(ghosttable[idx].candidate, XMH_HOSTNAME));
+					}
+					else {
+						fprintf(stdout, "<td></td>");
+					}
+
+					fprintf(stdout, "<td class=\"text-end\">%ld:%02ld</td></tr>\n",
+						(now - ghosttable[idx].tstamp)/60, (now - ghosttable[idx].tstamp)%60);
+					break;
+
+				  case O_TXT:
+					fprintf(stdout, "%s\t\t%s\n", ghosttable[idx].sender, ghosttable[idx].name);
+					break;
+				}
+			}
+
+			if (outform == O_HTML && count > 0) {
+				fprintf(stdout, "</tbody></table></div>\n");
+			}
+		}
+		else {
+			fprintf(stdout, "<div class=\"alert alert-danger\">Failed to retrieve ghost host list from the Xymon server.</div>\n");
+		}
+
+		if (ghosttable) free(ghosttable);
 	}
-	else
-		fprintf(stdout, "<h3>Failed to retrieve ghostlist from server</h3>\n");
 
 	freesendreturnbuf(sres);
 
