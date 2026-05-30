@@ -1,1 +1,6 @@
 <h1>&XYMONPAGETITLE</h1>
+<div class="ms-auto d-flex" id="xymon-hdr-right">
+  <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#disable-modal">
+    <i class="fa-solid fa-bell-slash"></i>Disable
+  </button>
+</div>

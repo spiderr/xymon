@@ -186,6 +186,25 @@ void parse_cgi(void)
 		else if (strcmp(pwalk->name, "minute") == 0) {
 			schedtm.tm_min = atoi(pwalk->value);
 		}
+		else if (strcmp(pwalk->name, "sched-date") == 0) {
+			if (*pwalk->value) {
+				int y = 0, m = 0, d = 0;
+				if (sscanf(pwalk->value, "%d-%d-%d", &y, &m, &d) == 3) {
+					schedtm.tm_year = y - 1900;
+					schedtm.tm_mon  = m - 1;
+					schedtm.tm_mday = d;
+				}
+			}
+		}
+		else if (strcmp(pwalk->name, "sched-time") == 0) {
+			if (*pwalk->value) {
+				int h = 0, mn = 0;
+				if (sscanf(pwalk->value, "%d:%d", &h, &mn) == 2) {
+					schedtm.tm_hour = h;
+					schedtm.tm_min  = mn;
+				}
+			}
+		}
 
 		/* Until start */
 		else if (strcmp(pwalk->name, "endyear") == 0) {
@@ -203,7 +222,25 @@ void parse_cgi(void)
 		else if (strcmp(pwalk->name, "endminute") == 0) {
 			endtm.tm_min = atoi(pwalk->value);
 		}
-		/* Until end */
+		else if (strcmp(pwalk->name, "end-date") == 0) {
+			if (*pwalk->value) {
+				int y = 0, m = 0, d = 0;
+				if (sscanf(pwalk->value, "%d-%d-%d", &y, &m, &d) == 3) {
+					endtm.tm_year = y - 1900;
+					endtm.tm_mon  = m - 1;
+					endtm.tm_mday = d;
+				}
+			}
+		}
+		else if (strcmp(pwalk->name, "end-time") == 0) {
+			if (*pwalk->value) {
+				int h = 0, mn = 0;
+				if (sscanf(pwalk->value, "%d:%d", &h, &mn) == 2) {
+					endtm.tm_hour = h;
+					endtm.tm_min  = mn;
+				}
+			}
+		}
 
 		else if (strcmp(pwalk->name, "canceljob") == 0) {
 			cancelid = atoi(pwalk->value);
@@ -222,6 +259,12 @@ void parse_cgi(void)
 		}
 		else if ((strcmp(pwalk->name, "classpattern") == 0)   && pwalk->value && strlen(pwalk->value)) {
 			classpattern = strdup(pwalk->value);
+		}
+		else if ((strcmp(pwalk->name, "preselecthost") == 0) && pwalk->value && strlen(pwalk->value)) {
+			setenv("PRESELECTHOST", pwalk->value, 1);
+		}
+		else if ((strcmp(pwalk->name, "preselecttest") == 0) && pwalk->value && strlen(pwalk->value)) {
+			setenv("PRESELECTTEST", pwalk->value, 1);
 		}
 
 		pwalk = pwalk->next;
@@ -416,8 +459,8 @@ int main(int argc, char *argv[])
 	}
 
         /* It's ok with these hardcoded values, as they are not used for this page */
-	sethostenv("", "", "", colorname(COL_BLUE), NULL);
-	if (preview) headfoot(stdout, "maintact", "", "header", COL_BLUE);
+	sethostenv("", "", "", colorname(COL_CLEAR), NULL);
+	if (preview) headfoot(stdout, "maintact", "", "header", COL_CLEAR);
 
 	if (debug) {
 		printf("<pre>\n");
@@ -490,10 +533,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (preview) {
-		printf("<tr><td><form method=\"GET\" action=\"%s\"><button type=\"submit\" class=\"btn btn-primary\">Continue</button></form></td></tr>\n", xgetenv("HTTP_REFERER"));
+		printf("<tr><td><form method=\"GET\" action=\"%s\"><button type=\"submit\" class=\"btn btn-sm btn-primary\">Continue</button></form></td></tr>\n", xgetenv("HTTP_REFERER"));
 		printf("</table></div>\n");
 
-		headfoot(stdout, "maintact", "", "footer", COL_BLUE);
+		headfoot(stdout, "maintact", "", "footer", COL_CLEAR);
 	}
 
 	return 0;

@@ -9,7 +9,7 @@ Array.prototype.unique = function() {
 };
 &JSHOSTLIST
 function updateOptions() {
-  var sel = window.document.selectionform.hostname;
+  var sel = document.getElementById('selectionform').hostname;
   var chosen = [];
   for (var i = 0; i < sel.options.length; i++) {
     if (sel.options[i].selected) chosen.push(sel.options[i].text);
@@ -17,7 +17,7 @@ function updateOptions() {
   swapOptions(chosen);
 }
 function swapOptions(arrayNames) {
-  var dt = window.document.selectionform.disabletest;
+  var dt = document.getElementById('selectionform').disabletest;
   while (dt.options.length > 0) dt.options[0] = null;
   var merged = [];
   for (var j = 0; j < arrayNames.length; j++) {
@@ -26,19 +26,18 @@ function swapOptions(arrayNames) {
   merged = merged.unique();
   for (var i = 0; i < merged.length; i++) dt.options[i] = new Option(merged[i]);
 }
-function setcheck(field, val) {
-  var len = field.length;
-  if (len) { for (var i = 0; i < len; i++) field[i].checked = val; }
-  else field.checked = val;
+function checkRadio(id) {
+  var r = document.getElementById(id);
+  if (r) r.checked = true;
 }
 function ispositive(v) {
   var s = v.toString();
   for (var i = 0; i < s.length; i++) { if (s[i] < '0' || s[i] > '9') return false; }
   return parseInt(s, 10) >= 1;
 }
-function disableButtons(f, action) {
-  for (var i = 0; i < f.length; i++) {
-    if (f.elements[i].type.toLowerCase() === 'button') f.elements[i].disabled = action;
+function disableButtons(f) {
+  for (var i = 0; i < f.elements.length; i++) {
+    if (f.elements[i].type.toLowerCase() === 'button') f.elements[i].disabled = true;
   }
 }
 function validateDisable(theform) {
@@ -57,7 +56,7 @@ function validateDisable(theform) {
     theform.cause.focus();
     return false;
   }
-  if (!ispositive(theform.duration.value)) {
+  if (theform.go2.value === 'Disable for' && !ispositive(theform.duration.value)) {
     alert('Duration must be a positive integer.');
     return false;
   }
@@ -66,7 +65,34 @@ function validateDisable(theform) {
       !confirm('Do you really want to disable ALL Hosts? This could take a while.')) {
     return false;
   }
-  disableButtons(theform, true);
+  disableButtons(theform);
   theform.submit();
 }
+(function() {
+  var sentinel = document.getElementById('xymon-maint-filtered');
+  if (!sentinel || !sentinel.dataset.active) return;
+  var preselectHost = sentinel.dataset.preselecthost || '';
+  var preselectTest = sentinel.dataset.preselecttest || '';
+  if (preselectHost) {
+    var sel = document.getElementById('selectionform').hostname;
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].text === preselectHost || sel.options[i].value === preselectHost) {
+        sel.options[i].selected = true;
+        break;
+      }
+    }
+    updateOptions();
+    if (preselectTest) {
+      var dt = document.getElementById('selectionform').disabletest;
+      for (var j = 0; j < dt.options.length; j++) {
+        if (dt.options[j].text === preselectTest || dt.options[j].value === preselectTest) {
+          dt.options[j].selected = true;
+          break;
+        }
+      }
+    }
+  }
+  var el = document.getElementById('disable-modal');
+  if (el) new bootstrap.Modal(el).show();
+})();
 </script>
