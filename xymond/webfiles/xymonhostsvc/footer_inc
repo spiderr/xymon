@@ -1,0 +1,47 @@
+<div class="modal fade" id="xymon-disable-modal" tabindex="-1" aria-labelledby="xymon-disable-modal-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="xymon-disable-modal-label">
+          <i class="fa-solid fa-bell-slash text-warning"></i> Disable Test
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="&XYMONSERVERSECURECGIURL/enadis.sh">
+        <input type="hidden" name="hostname"    value="&XYMWEBHOST">
+        <input type="hidden" name="disabletest" value="&XYMWEBSVC">
+        <input type="hidden" name="go"          value="Disable now">
+        <input type="hidden" name="go2"         value="Disable for">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Host &amp; Test</label>
+            <div class="text-muted small">&XYMWEBHOST &mdash; &XYMWEBSVC</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Duration</label>
+            <div class="d-flex gap-2 align-items-center">
+              <input type="number" name="duration" value="4" min="1" class="form-control maint-duration">
+              <select name="scale" class="form-select w-auto">
+                <option value="1">minutes</option>
+                <option value="60" selected>hours</option>
+                <option value="1440">days</option>
+                <option value="10080">weeks</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="xymon-disable-cause" class="form-label fw-semibold">Reason</label>
+            <textarea name="cause" id="xymon-disable-cause" class="form-control" rows="3" required
+                      placeholder="Describe why this test is being disabled"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm">
+            <i class="fa-solid fa-bell-slash"></i>Disable
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
