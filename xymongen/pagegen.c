@@ -654,17 +654,17 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 
 			/* Meta-column icons cell */
 			fprintf(output, "<td class=\"xymon-metacol-cell\">");
-			if (host_has_column(h, xgetenv("INFOCOLUMN")))
-				fprintf(output, "<a href=\"%s\" title=\"Info\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-circle-info\"></i></a>",
-					hostsvcurl(h->hostname, xgetenv("INFOCOLUMN"), 1));
-			else
-				fprintf(output, "<span title=\"Info\" class=\"xymon-metacol-absent\"><i class=\"fa-solid fa-circle-info\"></i></span>");
-
 			if (host_has_column(h, xgetenv("TRENDSCOLUMN")))
 				fprintf(output, "<a href=\"%s\" title=\"Trends\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-chart-line\"></i></a>",
 					hostsvcurl(h->hostname, xgetenv("TRENDSCOLUMN"), 1));
 			else
 				fprintf(output, "<span title=\"Trends\" class=\"xymon-metacol-absent\"><i class=\"fa-solid fa-chart-line\"></i></span>");
+
+			if (host_has_column(h, xgetenv("INFOCOLUMN")))
+				fprintf(output, "<a href=\"%s\" title=\"Info\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-circle-info\"></i></a>",
+					hostsvcurl(h->hostname, xgetenv("INFOCOLUMN"), 1));
+			else
+				fprintf(output, "<span title=\"Info\" class=\"xymon-metacol-absent\"><i class=\"fa-solid fa-circle-info\"></i></span>");
 
 			if (host_has_column(h, xgetenv("CLIENTCOLUMN")))
 				fprintf(output, "<a href=\"%s\" title=\"Client Log\" class=\"xymon-metacol-link\"><i class=\"fa-solid fa-file-lines\"></i></a>",
