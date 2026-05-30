@@ -42,6 +42,7 @@ body.status-red    { background-image: linear-gradient(to right, rgba(255,23,68,
 body.status-yellow { background-image: linear-gradient(to right, rgba(255,204,0,0.58) 1%, transparent 10%); }
 body.status-blue   { background-image: linear-gradient(to right, rgba(0,176,255,0.55) 1%, transparent 10%); }
 body.status-purple { background-image: linear-gradient(to right, rgba(224,64,251,0.55) 1%, transparent 10%); }
+body.status-clear  { background-image: linear-gradient(to right, rgba(158,158,158,0.30) 1%, transparent 10%); }
 
 /* ── Semantic status icon classes ── */
 .xymon-icon {
@@ -169,8 +170,9 @@ div[data-graph] { margin-bottom: 0.5rem; }
 .xymon-log-body { padding: 1rem; border-radius: 0.375rem; overflow: auto; }
 .xymon-log-ack { margin-top: 0.5rem; margin-bottom: 0; }
 
-/* History inline button — compact height */
-.xymon-history-btn { padding-top: 0; padding-bottom: 0; }
+/* Scale FA icons inside btn-sm so they don't inflate button height */
+.btn-sm .fa-solid,
+.btn-sm .fa-regular { font-size: .8em; vertical-align: -0.05em; }
 
 /* ── Event log ── */
 .xymon-event-arrow { margin-left: 0.25rem; margin-right: 0.25rem; }
@@ -188,6 +190,48 @@ div[data-graph] { margin-bottom: 0.5rem; }
 /* ── Configuration report ── */
 .xymon-confreport-section { margin-bottom: 1.5rem; }
 .xymon-confreport-dl { margin-bottom: 0; }
+
+/* ── Status overview color filter ── */
+/* Inactive buttons are dimmed; checked buttons are full opacity */
+.xymon-color-filter .btn                      { opacity: 0.4; }
+.xymon-color-filter .btn-check:checked + .btn { opacity: 1; }
+
+/* When any filter toggle is on, hide filterable rows … */
+body:has(.xymon-filter-btn:checked) .xymon-host-row,
+body:has(.xymon-filter-btn:checked) .event-log        tr:has(.xymon-icon),
+body:has(.xymon-filter-btn:checked) .xymon-ack-recent tr:has(.xymon-icon),
+body:has(.xymon-filter-btn:checked) .xymon-hist-entries tr:has(.xymon-icon) { display: none; }
+
+/* … then show back rows containing an icon of each checked color */
+body:has(#filter-red:checked) .xymon-host-row:has(.xymon-red),
+body:has(#filter-red:checked) .event-log        tr:has(.xymon-icon):has(.xymon-red),
+body:has(#filter-red:checked) .xymon-ack-recent tr:has(.xymon-icon):has(.xymon-red),
+body:has(#filter-red:checked) .xymon-hist-entries tr:has(.xymon-icon):has(.xymon-red)   { display: table-row; }
+
+body:has(#filter-yellow:checked) .xymon-host-row:has(.xymon-yellow),
+body:has(#filter-yellow:checked) .event-log        tr:has(.xymon-icon):has(.xymon-yellow),
+body:has(#filter-yellow:checked) .xymon-ack-recent tr:has(.xymon-icon):has(.xymon-yellow),
+body:has(#filter-yellow:checked) .xymon-hist-entries tr:has(.xymon-icon):has(.xymon-yellow) { display: table-row; }
+
+body:has(#filter-green:checked) .xymon-host-row:has(.xymon-green),
+body:has(#filter-green:checked) .event-log        tr:has(.xymon-icon):has(.xymon-green),
+body:has(#filter-green:checked) .xymon-ack-recent tr:has(.xymon-icon):has(.xymon-green),
+body:has(#filter-green:checked) .xymon-hist-entries tr:has(.xymon-icon):has(.xymon-green) { display: table-row; }
+
+body:has(#filter-blue:checked) .xymon-host-row:has(.xymon-blue),
+body:has(#filter-blue:checked) .event-log        tr:has(.xymon-icon):has(.xymon-blue),
+body:has(#filter-blue:checked) .xymon-ack-recent tr:has(.xymon-icon):has(.xymon-blue),
+body:has(#filter-blue:checked) .xymon-hist-entries tr:has(.xymon-icon):has(.xymon-blue)  { display: table-row; }
+
+body:has(#filter-purple:checked) .xymon-host-row:has(.xymon-purple),
+body:has(#filter-purple:checked) .event-log        tr:has(.xymon-icon):has(.xymon-purple),
+body:has(#filter-purple:checked) .xymon-ack-recent tr:has(.xymon-icon):has(.xymon-purple),
+body:has(#filter-purple:checked) .xymon-hist-entries tr:has(.xymon-icon):has(.xymon-purple) { display: table-row; }
+
+body:has(#filter-clear:checked) .xymon-host-row:has(.xymon-clear),
+body:has(#filter-clear:checked) .event-log        tr:has(.xymon-icon):has(.xymon-clear),
+body:has(#filter-clear:checked) .xymon-ack-recent tr:has(.xymon-icon):has(.xymon-clear),
+body:has(#filter-clear:checked) .xymon-hist-entries tr:has(.xymon-icon):has(.xymon-clear) { display: table-row; }
 
 /* ── Status overview / pagegen ── */
 .xymon-group-table { margin-bottom: 1rem; }
@@ -262,3 +306,36 @@ div[data-graph] { margin-bottom: 0.5rem; }
 
 /* Compact label inside a dense filter card (replaces form-label mb-1) */
 .xymon-filter-label { margin-bottom: 0.25rem; }
+
+/* Empty state: centered icon + message when a page has no data to display */
+.xymon-empty-state          { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; text-align: center; color: var(--bs-secondary-color); gap: 0.75rem; }
+.xymon-empty-state p        { margin: 0; }
+
+/* Page-break separator for print-oriented report pages */
+.xymon-page-break           { page-break-before: always; }
+
+/* Event group separator: top border instead of an <hr> inside a table cell */
+.xymon-event-group-sep > td { border-top: 2px solid var(--bs-border-color) !important; }
+
+/* confreport process/service list */
+.xymon-confreport-list      { margin: 0; padding-left: 1.25rem; }
+
+/* criticaleditor date-picker calendar popup */
+.critedit-date-picker                    { position: relative; }
+.critedit-cal-drop                       { display: none; position: absolute; z-index: 1050; min-width: 260px; padding: 0.75rem; background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 0.375rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.35); margin-top: 0.25rem; }
+.critedit-cal-drop.critedit-cal-open     { display: block; }
+.critedit-cal-header                     { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.critedit-cal-grid                       { width: 100%; border-collapse: collapse; }
+.critedit-cal-grid th                    { text-align: center; font-size: 0.72rem; padding: 0.15rem 0; color: var(--bs-secondary-color); font-weight: 600; }
+.critedit-cal-grid td                    { text-align: center; padding: 0.1rem; }
+.critedit-cal-day                        { width: 2rem; height: 2rem; padding: 0; font-size: 0.82rem; border: none; background: transparent; border-radius: 50%; cursor: pointer; color: var(--bs-body-color); line-height: 2rem; }
+.critedit-cal-day:hover                  { background: var(--bs-secondary-bg); }
+.critedit-cal-day.today                  { border: 1px solid var(--bs-primary); color: var(--bs-primary); font-weight: 600; }
+.critedit-cal-day.selected               { background: var(--bs-primary); color: #fff; }
+.critedit-cal-day.selected:hover         { background: var(--bs-primary); }
+.critedit-cal-footer                     { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--bs-border-color); text-align: right; }
+
+/* enadis maintenance page */
+.maint-duration                               { width: 5rem; }
+.xymon-disable-table th:last-child,
+.xymon-disable-table td:last-child            { width: 7rem; }
