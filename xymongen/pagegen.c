@@ -514,7 +514,7 @@ void do_hosts(host_t *head, int sorthosts, char *onlycols, char *exceptcols, FIL
 				fprintf(output, "</tr></thead>\n<tbody>\n");
 			}
 
-			fprintf(output, "<tr>\n <td class=\"text-nowrap xymon-host-cell\"><a name=\"%s\"></a>\n", h->hostname);
+			fprintf(output, "<tr class=\"xymon-host-row\">\n <td class=\"text-nowrap xymon-host-cell\"><a name=\"%s\"></a>\n", h->hostname);
 			if (maxrowsbeforeheading) rowcount = (rowcount + 1) % maxrowsbeforeheading;
 			else rowcount++;
 
@@ -943,6 +943,7 @@ void do_one_page(xymongen_page_t *page, dispsummary_t *sums, int embedded)
 
 	setup_htaccess(pagepath);
 
+	setenv("XYMONPAGETITLE", (page->title && *page->title) ? page->title : "Xymon", 1);
 	headfoot(output, "xymonnormal", pagepath, "header", page->color);
 	do_rss_header(rssoutput);
 

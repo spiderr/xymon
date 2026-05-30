@@ -1,5 +1,6 @@
-<h1>Current Critical Systems</h1>
-<div class="ms-auto d-flex" id="xymon-hdr-right">
+<h1>&XYMONPAGETITLE</h1>
+<div class="ms-auto d-flex gap-2" id="xymon-hdr-right">
+  &XYMONCOLORFILTER
   <a class="btn btn-outline-secondary btn-sm" href="&XYMONSERVERSECURECGIURL/criticaleditor.sh">
     <i class="fa-solid fa-pen-to-square"></i>Edit
   </a>

@@ -434,7 +434,7 @@ static void fetch_board(void)
 	if (haveboard) return;
 
 	sres = newsendreturnbuf(1, NULL);
-	if (sendmessage("xymondboard fields=hostname,testname,disabletime,dismsg", 
+	if (sendmessage("xymondboard fields=hostname,testname,disabletime,dismsg,lastchange,line1",
 			NULL, XYMON_TIMEOUT, sres) != XYMONSEND_OK) {
 		freesendreturnbuf(sres);
 		return;
@@ -624,6 +624,8 @@ typedef struct distest_t {
 	char *name;
 	char *cause;
 	time_t until;
+	time_t disstarted;
+	int color;
 	struct distest_t *next;
 } distest_t;
 
@@ -766,8 +768,8 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					cgiurl);
 				fprintf(output,
 					"<button type=\"submit\""
-					" class=\"btn btn-outline-secondary btn-sm xymon-history-btn\">"
-					"History</button>");
+					" class=\"btn btn-outline-secondary btn-sm\">"
+					"<i class=\"fa-solid fa-clock-rotate-left\"></i>History</button>");
 				fprintf(output,
 					"<input type=\"hidden\" name=\"HISTFILE\" value=\"%s.%s\">",
 					histhost, hostenv_svc);
@@ -779,6 +781,72 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					"<input type=\"hidden\" name=\"DISPLAYNAME\" value=\"%s\">",
 					hostenv_host);
 				fprintf(output, "</form>");
+			}
+		}
+		else if (strcmp(t_start, "XYMONCOLORFILTER") == 0) {
+			fprintf(output,
+				"<div class=\"btn-group xymon-color-filter\""
+				" role=\"group\" aria-label=\"Filter by status color\">"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-red\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-red\">"
+				"<i class=\"fa-solid fa-circle xymon-red\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-yellow\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-yellow\">"
+				"<i class=\"fa-solid fa-circle xymon-yellow\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-green\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-green\">"
+				"<i class=\"fa-solid fa-circle xymon-green\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-blue\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-blue\">"
+				"<i class=\"fa-solid fa-circle xymon-blue\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-purple\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-purple\">"
+				"<i class=\"fa-solid fa-circle xymon-purple\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-clear\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-clear\">"
+				"<i class=\"fa-regular fa-circle xymon-clear\"></i></label>"
+				"</div>");
+		}
+		else if (strcmp(t_start, "XYMONCOLORFILTERNOGREEN") == 0) {
+			fprintf(output,
+				"<div class=\"btn-group xymon-color-filter\""
+				" role=\"group\" aria-label=\"Filter by status color\">"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-red\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-red\">"
+				"<i class=\"fa-solid fa-circle xymon-red\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-yellow\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-yellow\">"
+				"<i class=\"fa-solid fa-circle xymon-yellow\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-blue\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-blue\">"
+				"<i class=\"fa-solid fa-circle xymon-blue\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-purple\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-purple\">"
+				"<i class=\"fa-solid fa-circle xymon-purple\"></i></label>"
+				"<input type=\"checkbox\" class=\"btn-check xymon-filter-btn\""
+				" id=\"filter-clear\" autocomplete=\"off\">"
+				"<label class=\"btn btn-sm btn-outline-secondary\" for=\"filter-clear\">"
+				"<i class=\"fa-regular fa-circle xymon-clear\"></i></label>"
+				"</div>");
+		}
+		else if (strcmp(t_start, "XYMONDISABLEBUTTON") == 0) {
+			if (hostenv_host && *hostenv_host && hostenv_svc && *hostenv_svc) {
+				fprintf(output,
+					"<button type=\"button\""
+					" class=\"btn btn-outline-warning btn-sm\""
+					" data-bs-toggle=\"modal\""
+					" data-bs-target=\"#xymon-disable-modal\">"
+					"<i class=\"fa-solid fa-bell-slash\"></i>Disable</button>");
 			}
 		}
 		else if ((strcmp(t_start, "XYMWEBCOLOR") == 0) || (strcmp(t_start, "BBCOLOR") == 0))
@@ -1065,17 +1133,30 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 				eoln = strchr(walk, '\n'); if (eoln) *eoln = '\0';
 				if (*walk) {
 					char *buf, *hname, *tname, *dismsg, *p;
-					time_t distime;
+					time_t distime, disstarted;
+					int discolor;
 					xtreePos_t thandle;
 					treerec_t *rec;
 
 					buf = strdup(walk);
-					hname = tname = dismsg = NULL; distime = 0;
+					hname = tname = dismsg = NULL; distime = disstarted = 0; discolor = COL_BLUE;
 
 					hname = gettok(buf, "|");
 					if (hname) tname = gettok(NULL, "|");
 					if (tname) { p = gettok(NULL, "|"); if (p) distime = atol(p); }
-					if (distime) dismsg = gettok(NULL, "|\n");
+					if (distime) dismsg = gettok(NULL, "|");
+					if (dismsg) { p = gettok(NULL, "|"); if (p) disstarted = atol(p); }
+					if (disstarted || dismsg) {
+						/* line1 is last field; not pipe-encoded, split on \n only */
+						p = gettok(NULL, "\n");
+						if (p && *p) {
+							char *sp = strchr(p, ' ');
+							if (sp) *sp = '\0';
+							int c = parse_color(p);
+							if (c != -1) discolor = c;
+							if (sp) *sp = ' ';
+						}
+					}
 
 					if (hname && tname && (distime != 0) && dismsg && wanted_host(hname)) {
 						nldecode(dismsg);
@@ -1099,6 +1180,8 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 						twalk->name = strdup(tname);
 						twalk->cause = strdup(dismsg);
 						twalk->until = distime;
+						twalk->disstarted = disstarted;
+						twalk->color = discolor;
 						twalk->next = hwalk->tests;
 						hwalk->tests = twalk;
 
@@ -1122,96 +1205,93 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 			}
 
 			if (dhosts) {
-				/* Insert the "All hosts" record first. */
-				hwalk = (dishost_t *)calloc(1, sizeof(dishost_t));
-				hwalk->next = dhosts;
-				dhosts = hwalk;
+				fprintf(output,
+					"<div class=\"table-responsive\">"
+					"<table class=\"table table-sm table-hover xymon-disable-table\">\n"
+					"<thead class=\"table-dark\"><tr>"
+					"<th></th><th>Host</th><th>Test</th><th>Disabled By</th>"
+					"<th>Since</th><th>Until</th><th>Reason</th><th></th>"
+					"</tr></thead>\n<tbody>\n");
+				for (hwalk = dhosts; hwalk; hwalk = hwalk->next) {
+					for (twalk = hwalk->tests; twalk; twalk = twalk->next) {
+						char *reason, *reasonend, untilbuf[64], sinbuf[64], bybuf[128], *nl;
 
-				for (hwalk = dhosts; (hwalk); hwalk = hwalk->next) {
-					fprintf(output, "<TR>");
-					fprintf(output, "<TD>");
-					fprintf(output,"<form method=\"post\" action=\"%s/enadis.sh\">\n",
-						xgetenv("SECURECGIBINURL"));
-
-					fprintf(output, "<table summary=\"%s disabled tests\" width=\"100%%\">\n", 
-						(hwalk->name ? hwalk->name : ""));
-
-					fprintf(output, "<tr>\n");
-					fprintf(output, "<TH COLSPAN=3><I>%s</I></TH>", 
-							(hwalk->name ? hwalk->name : "All hosts"));
-					fprintf(output, "</tr>\n");
-
-
-					fprintf(output, "<tr>\n");
-
-					fprintf(output, "<td>\n");
-					if (hwalk->name) {
-						fprintf(output, "<input name=\"hostname\" type=hidden value=\"%s\">\n", 
-							hwalk->name);
-
-						fprintf(output, "<textarea name=\"%s causes\" rows=\"8\" cols=\"50\" readonly style=\"font-size: 10pt\">\n", hwalk->name);
-						for (twalk = hwalk->tests; (twalk); twalk = twalk->next) {
-							char *msg = twalk->cause;
-							msg += strspn(msg, "0123456789 ");
-							fprintf(output, "%s\n%s\nUntil: %s\n---------------------\n", 
-								twalk->name, msg, 
-								(twalk->until == -1) ? "OK" : ctime(&twalk->until));
+						/* Extract "Disabled by: ..." from cause */
+						strncpy(bybuf, "—", sizeof(bybuf));
+						char *byline = strstr(twalk->cause, "Disabled by: ");
+						if (byline) {
+							byline += strlen("Disabled by: ");
+							char *byend = strchr(byline, '\n');
+							if (!byend) byend = byline + strlen(byline);
+							while (byend > byline && (*(byend-1) == ' ' || *(byend-1) == '\r')) byend--;
+							int bylen = (int)(byend - byline);
+							if (bylen >= (int)sizeof(bybuf)) bylen = sizeof(bybuf) - 1;
+							strncpy(bybuf, byline, bylen);
+							bybuf[bylen] = '\0';
 						}
-						fprintf(output, "</textarea>\n");
-					}
-					else {
-						dishost_t *hw2;
-						fprintf(output, "<select multiple size=8 name=\"hostname\">\n");
-						for (hw2 = hwalk->next; (hw2); hw2 = hw2->next)
-							fprintf(output, "<option value=\"%s\">%s</option>\n", 
-								hw2->name, hw2->name);
-						fprintf(output, "</select>\n");
-					}
-					fprintf(output, "</td>\n");
 
-					fprintf(output, "<td align=center>\n");
-					fprintf(output, "<select multiple size=8 name=\"enabletest\">\n");
-					fprintf(output, "<option value=\"*\" selected>ALL</option>\n");
-					if (hwalk->tests) {
-						for (twalk = hwalk->tests; (twalk); twalk = twalk->next) {
-							fprintf(output, "<option value=\"%s\">%s</option>\n",
-								twalk->name, twalk->name);
+						/* Format "since" (when disabled) from lastchange */
+						strncpy(sinbuf, "—", sizeof(sinbuf));
+						if (twalk->disstarted > 0) {
+							char *t = ctime(&twalk->disstarted);
+							snprintf(sinbuf, sizeof(sinbuf), "%s", t ? t : "");
+							nl = strchr(sinbuf, '\n'); if (nl) *nl = '\0';
 						}
-					}
-					else {
-						xtreePos_t tidx;
-						treerec_t *rec;
 
-						for (tidx = xtreeFirst(testnames); (tidx != xtreeEnd(testnames)); tidx = xtreeNext(testnames, tidx)) {
-							rec = xtreeData(testnames, tidx);
-							if (rec->flag == 0) continue;
-
-							fprintf(output, "<option value=\"%s\">%s</option>\n",
-								rec->name, rec->name);
+						/* Format "until" (re-enable time) */
+						if (twalk->until == -1) {
+							snprintf(untilbuf, sizeof(untilbuf), "until OK");
+						} else {
+							char *t = ctime(&twalk->until);
+							snprintf(untilbuf, sizeof(untilbuf), "%s", t ? t : "");
+							nl = strchr(untilbuf, '\n'); if (nl) *nl = '\0';
 						}
+
+						/* Extract reason text */
+						reason = strstr(twalk->cause, "Reason: ");
+						if (reason) {
+							reason += strlen("Reason: ");
+						} else {
+							reason = twalk->cause;
+							reason += strspn(reason, "0123456789 ");
+						}
+						reasonend = reason + strcspn(reason, "\n");
+
+						fprintf(output, "<tr>\n<td class=\"text-center\">%s</td>\n",
+							coloricon(twalk->color, 0, 1));
+						fprintf(output,
+							"<td class=\"fw-bold\">%s</td>\n"
+							"<td><a href=\"%s/svcstatus.sh?HOST=%s&amp;SERVICE=%s\">%s</a></td>\n"
+							"<td class=\"small\">%s</td>\n"
+							"<td class=\"text-muted small text-nowrap\">%s</td>\n"
+							"<td class=\"text-muted small text-nowrap\">%s</td>\n"
+							"<td class=\"small\">%.*s</td>\n"
+							"<td class=\"text-end\">"
+							"<form method=\"post\" action=\"%s/enadis.sh\" class=\"d-inline\">"
+							"<input name=\"hostname\" type=\"hidden\" value=\"%s\">"
+							"<input name=\"enabletest\" type=\"hidden\" value=\"%s\">"
+							"<button name=\"go\" type=\"submit\" value=\"enable\" "
+							"class=\"btn btn-sm btn-outline-success\">Enable</button>"
+							"</form></td>\n"
+							"</tr>\n",
+							hwalk->name,
+							xgetenv("CGIBINURL"), hwalk->name, twalk->name, twalk->name,
+							bybuf, sinbuf, untilbuf,
+							(int)(reasonend - reason), reason,
+							xgetenv("SECURECGIBINURL"),
+							hwalk->name, twalk->name);
 					}
-					fprintf(output, "</select>\n");
-					fprintf(output, "</td>\n");
-
-					fprintf(output, "<td align=center>\n");
-					fprintf(output, "<input name=\"go\" type=submit value=\"Enable\">\n");
-					fprintf(output, "</td>\n");
-
-					fprintf(output, "</tr>\n");
-
-					fprintf(output, "</table>\n");
-					fprintf(output, "</form>\n");
-					fprintf(output, "</td>\n");
-					fprintf(output, "</TR>\n");
 				}
+				fprintf(output, "</tbody></table></div>\n");
 			}
 			else {
-				fprintf(output, "<tr><th align=center colspan=3><i>No tests disabled</i></th></tr>\n");
+				fprintf(output, "<p class=\"text-muted\">No tests currently disabled.</p>\n");
 			}
 		}
 		else if (strcmp(t_start, "SCHEDULELIST") == 0) {
 			char *walk, *eoln;
 			int gotany = 0;
+			strbuffer_t *rows = newstrbuffer(0);
 
 			fetch_board();
 
@@ -1221,7 +1301,8 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 				if (*walk) {
 					int id = 0;
 					time_t executiontime = 0;
-					char *sender = NULL, *cmd = NULL, *buf, *p, *eoln;
+					char *sender = NULL, *cmd = NULL, *buf, *p, *cmdeoln;
+					char rowbuf[2048];
 
 					buf = strdup(walk);
 					p = gettok(buf, "|");
@@ -1231,30 +1312,34 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					if (p) { cmd = p; }
 
 					if (id && executiontime && sender && cmd) {
+						char timebuf[64], *nl;
+						char *t = ctime(&executiontime);
 						gotany = 1;
 						nldecode(cmd);
-						fprintf(output, "<TR>\n");
+						snprintf(timebuf, sizeof(timebuf), "%s", t ? t : "");
+						nl = strchr(timebuf, '\n'); if (nl) *nl = '\0';
 
-						fprintf(output, "<TD>%s</TD>\n", ctime(&executiontime));
-
-						fprintf(output, "<TD>");
+						addtobuffer(rows, "<tr>\n<td class=\"text-muted small\">");
+						addtobuffer(rows, timebuf);
+						addtobuffer(rows, "</td>\n<td class=\"small font-monospace\">");
 						p = cmd;
-						while ((eoln = strchr(p, '\n')) != NULL) {
-							*eoln = '\0';
-							fprintf(output, "%s<BR>", p);
-							p = (eoln + 1);
+						while ((cmdeoln = strchr(p, '\n')) != NULL) {
+							*cmdeoln = '\0';
+							addtobuffer(rows, htmlquoted(p));
+							addtobuffer(rows, "<br>");
+							p = (cmdeoln + 1);
 						}
-						fprintf(output, "</TD>\n");
-
-						fprintf(output, "<td>\n");
-						fprintf(output, "<form method=\"post\" action=\"%s/enadis.sh\">\n",
-							xgetenv("SECURECGIBINURL"));
-						fprintf(output, "<input name=canceljob type=hidden value=\"%d\">\n", 
-							id);
-						fprintf(output, "<input name=go type=submit value=\"Cancel\">\n");
-						fprintf(output, "</form></td>\n");
-
-						fprintf(output, "</TR>\n");
+						if (*p) addtobuffer(rows, htmlquoted(p));
+						snprintf(rowbuf, sizeof(rowbuf),
+							"</td>\n"
+							"<td class=\"text-end\">"
+							"<form method=\"post\" action=\"%s/enadis.sh\" class=\"d-inline\">"
+							"<input name=\"canceljob\" type=\"hidden\" value=\"%d\">"
+							"<button name=\"go\" type=\"submit\" value=\"cancel\" "
+							"class=\"btn btn-sm btn-outline-danger\">Cancel</button>"
+							"</form></td>\n</tr>\n",
+							xgetenv("SECURECGIBINURL"), id);
+						addtobuffer(rows, rowbuf);
 					}
 					xfree(buf);
 				}
@@ -1268,9 +1353,18 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 				}
 			}
 
-			if (!gotany) {
-				fprintf(output, "<tr><th align=center colspan=3><i>No tasks scheduled</i></th></tr>\n");
+			if (gotany) {
+				fprintf(output,
+					"<h6 class=\"text-muted xymon-section-label\">Scheduled actions</h6>\n"
+					"<div class=\"table-responsive\">"
+					"<table class=\"table table-sm table-hover xymon-schedule-table\">\n"
+					"<thead class=\"table-dark\"><tr>"
+					"<th>Scheduled at</th><th>Action</th><th></th>"
+					"</tr></thead>\n<tbody>\n");
+				fprintf(output, "%s", grabstrbuffer(rows));
+				fprintf(output, "</tbody></table></div>\n");
 			}
+			freestrbuffer(rows);
 		}
 
 		else if (strncmp(t_start, "GENERICLIST", strlen("GENERICLIST")) == 0) {
@@ -1422,6 +1516,24 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 			for (i=beginyear; (i <= endyear); i++) {
 				selstr = ( (t && (tm.tm_year == (i - 1900))) ? " selected" : "");
 				fprintf(output, "<option value=\"%d\"%s>%d</option>\n", i, selstr, i);
+			}
+		}
+
+		else if (strcmp(t_start, "CRITEDITSTART_DATE") == 0) {
+			if (criteditstarttime > 0) {
+				char buf[11];
+				struct tm *tm = localtime(&criteditstarttime);
+				strftime(buf, sizeof(buf), "%Y-%m-%d", tm);
+				fprintf(output, "%s", buf);
+			}
+		}
+
+		else if (strcmp(t_start, "CRITEDITEND_DATE") == 0) {
+			if (criteditendtime > 0) {
+				char buf[11];
+				struct tm *tm = localtime(&criteditendtime);
+				strftime(buf, sizeof(buf), "%Y-%m-%d", tm);
+				fprintf(output, "%s", buf);
 			}
 		}
 
@@ -1728,7 +1840,9 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 		for (i = 0; titles[i].t; i++)
 			if (strcmp(template, titles[i].t) == 0) { title = titles[i].p; break; }
 		if (title) {
-			setenv("XYMONPAGETITLE", title, 1);
+			/* xymonnormal: pagegen.c sets XYMONPAGETITLE from page->title before
+			 * calling headfoot() — use overwrite=0 so that takes precedence. */
+			setenv("XYMONPAGETITLE", title, strcmp(template, "xymonnormal") != 0);
 		} else if (hostenv_host && hostenv_svc) {
 			snprintf(buf, sizeof(buf), "%s \xe2\x80\x94 %s", hostenv_host, hostenv_svc);
 			setenv("XYMONPAGETITLE", buf, 1);

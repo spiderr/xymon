@@ -1,5 +1,6 @@
 <h1>Most Changing Hosts &amp; Services</h1>
-<div class="ms-auto d-flex" id="xymon-hdr-right">
+<div class="ms-auto d-flex gap-2" id="xymon-hdr-right">
+  &XYMONCOLORFILTER
   <a class="btn btn-outline-secondary btn-sm" href="&XYMONSERVERCGIURL/eventlog.sh">
     <i class="fa-solid fa-sliders"></i>Filter
   </a>

@@ -1,1 +1,4 @@
-<h1>Snapshot &mdash; All Non-green Systems</h1>
+<h1>&XYMONPAGETITLE</h1>
+<div class="ms-auto d-flex gap-2" id="xymon-hdr-right">
+  &XYMONCOLORFILTERNOGREEN
+</div>
