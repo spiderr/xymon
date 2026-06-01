@@ -362,11 +362,15 @@ int main(int argc, char *argv[])
 		acking_user = "";
 
 		/* We only want to accept posts from certain pages */
-		{ 
-			char cgisource[1024]; char *p;
+		{
+			char cgisource[1024], cgisource2[1024]; char *p;
 			p = csp_header("acknowledge"); if (p) fprintf(stdout, "%s", p);
-			snprintf(cgisource, sizeof(cgisource), "%s/%s", xgetenv("SECURECGIBINURL"), "acknowledge");
-			if (!cgi_refererok(cgisource)) {
+			snprintf(cgisource,  sizeof(cgisource),  "%s/%s", xgetenv("SECURECGIBINURL"), "acknowledge");
+			/* cgisource2: allow the quick-ack modal on svcstatus.sh to POST here.
+			 * Remove cgisource2 once the bulk-ack redesign replaces the modal with
+			 * a direct link to acknowledge.sh */
+			snprintf(cgisource2, sizeof(cgisource2), "%s/%s", xgetenv("CGIBINURL"), "svcstatus");
+			if (!cgi_refererok(cgisource) && !cgi_refererok(cgisource2)) {
 				fprintf(stdout, "Location: %s.sh?\n\n", cgisource);
 				return 0;
 			}
