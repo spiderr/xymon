@@ -1,5 +1,0 @@
-<div class="text-center mt-3 mb-2">
-  <a class="btn btn-outline-secondary btn-sm" href="&XYMONSERVERCGIURL/eventlog.sh">
-    <i class="fa-solid fa-list"></i>Full event log
-  </a>
-</div>

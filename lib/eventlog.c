@@ -797,8 +797,14 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 		}
 
 		fprintf(output, "<div class=\"table-responsive\"><table class=\"table table-sm table-dark table-striped event-log\">\n");
-		fprintf(output, "<tr>\n");
-		fprintf(output, "<td colspan=\"6\" class=\"text-center\"><span class=\"event-title\">%s</span></td></tr>\n", htmlquoted(title));
+		fprintf(output, "<thead><tr>");
+		fprintf(output, "<th colspan=\"3\">%s</th>", htmlquoted(title));
+		fprintf(output, "<th class=\"text-end\">"
+			"<a class=\"btn btn-outline-light btn-sm\" href=\"%s/eventlog.sh?MAXCOUNT=100\">"
+			"<i class=\"fa-solid fa-list\"></i>"
+			"<span class=\"d-none d-sm-inline\"> Full event log</span></a></th>",
+			xgetenv("CGIBINURL"));
+		fprintf(output, "</tr></thead>\n");
 
 		for (ewalk=eventhead; (ewalk); ewalk=ewalk->next) {
 			char *hostname = xmh_item(ewalk->host, XMH_HOSTNAME);
