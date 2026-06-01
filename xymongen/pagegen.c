@@ -1218,13 +1218,13 @@ int do_nongreen_page(char *nssidebarfilename, int summarytype, char *filenamebas
 		do_nongreenext(output, "XYMONNONGREENEXT", "mkbb");
 
 		/* Don't redo the eventlog or acklog things */
+		if (nongreenacklog && !havedoneacklog) do_acklog(output, nongreenacklogmaxcount, nongreenacklogmaxtime);
 		if (nongreeneventlog && !havedoneeventlog) {
-			do_eventlog(output, nongreeneventlogmaxcount, nongreeneventlogmaxtime, 
-				    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, nongreennodialups, 
+			do_eventlog(output, nongreeneventlogmaxcount, nongreeneventlogmaxtime,
+				    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, nongreennodialups,
 				    host_exists,
 				    NULL, NULL, NULL, XYMON_COUNT_NONE, XYMON_S_NONE, NULL);
 		}
-		if (nongreenacklog && !havedoneacklog) do_acklog(output, nongreenacklogmaxcount, nongreenacklogmaxtime);
 	}
 
 	headfoot(output, hf_prefix[summarytype], "", "footer", nongreenpage.color);
