@@ -409,10 +409,6 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		fprintf(output, "</p>\n");
 	}
 
-	if (!htmlfmt) fprintf(output, "<pre class=\"bg-dark border border-secondary xymon-log-body\">\n");
-	textwithcolorimg(restofmsg, output);
-	if (!htmlfmt) fprintf(output, "\n</pre>\n");
-
 	if (ackmsg) {
 		char *ackedby;
 		char ackuntil[200];
@@ -436,6 +432,10 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 
 		MEMUNDEFINE(ackuntil);
 	}
+
+	if (!htmlfmt) fprintf(output, "<pre class=\"bg-dark border border-secondary xymon-log-body\">\n");
+	textwithcolorimg(restofmsg, output);
+	if (!htmlfmt) fprintf(output, "\n</pre>\n");
 
 	fprintf(output, "</div>\n"); /* end message column */
 
