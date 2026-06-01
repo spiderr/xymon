@@ -51,6 +51,9 @@ static int hostenv_refresh = 60;
 static char *statusboard = NULL;
 static char *scheduleboard = NULL;
 
+static int  ackcookie_val  = 0;
+static int  have_ackcookie = 0;
+
 static char *hostpattern_text = NULL;
 static pcre2_code *hostpattern = NULL;
 static char *pagepattern_text = NULL;
@@ -115,6 +118,10 @@ void sethostenv(char *host, char *ip, char *svc, char *color, char *hikey)
 	hostenv_ip = strdup(htmlquoted(ip));
 	hostenv_svc = strdup(htmlquoted(svc));
 	hostenv_color = strdup(color);
+
+	/* Reset per-host ack-cookie cache whenever host/svc context changes. */
+	have_ackcookie = 0;
+	ackcookie_val  = 0;
 }
 
 void sethostenv_report(time_t reportstart, time_t reportend, double repwarn, double reppanic)
@@ -493,6 +500,48 @@ static void fetch_board(void)
 	freesendreturnbuf(sres);
 }
 
+static void fetch_ackcookie(void)
+{
+	char cmd[1024];
+	sendreturn_t *sres;
+	char *resp, *p;
+
+	if (have_ackcookie) return;
+	have_ackcookie = 1;
+
+	if (!hostenv_host || !*hostenv_host || !hostenv_svc || !*hostenv_svc) return;
+
+	/*
+	 * Fetch the xymond ack cookie for this specific host+service.
+	 *
+	 * The cookie is an integer xymond assigns when a test enters alert state.
+	 * acknowledge.c requires it as the NUMBER_1 form field; without it the
+	 * xymondack message cannot be constructed and the ack is silently dropped
+	 * (see acknowledge.c: "if (!awalk->acknum) ... NO ACK sent").
+	 *
+	 * Note: hostenv_host/svc are HTML-quoted, but hostnames never contain
+	 * HTML-special characters so the regex is safe to build directly.
+	 */
+	snprintf(cmd, sizeof(cmd),
+		"xymondboard fields=hostname,testname,cookie host=^%s$ test=^%s$",
+		hostenv_host, hostenv_svc);
+
+	sres = newsendreturnbuf(1, NULL);
+	if (sendmessage(cmd, NULL, XYMON_TIMEOUT, sres) != XYMONSEND_OK) {
+		freesendreturnbuf(sres);
+		return;
+	}
+
+	resp = getsendreturnstr(sres, 0);
+	if (resp) {
+		/* Response format: hostname|testname|cookie\n */
+		p = strchr(resp, '|'); if (p) p++;  /* skip hostname field */
+		p = strchr(p,   '|'); if (p) p++;  /* skip testname field */
+		if (p && *p) ackcookie_val = atoi(p);
+	}
+	freesendreturnbuf(sres);
+}
+
 static char *eventreport_timestring(time_t timestamp)
 {
 	static char result[20];
@@ -769,7 +818,8 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 				fprintf(output,
 					"<button type=\"submit\""
 					" class=\"btn btn-outline-secondary btn-sm\">"
-					"<i class=\"fa-solid fa-clock-rotate-left\"></i>History</button>");
+					"<i class=\"fa-solid fa-clock-rotate-left\"></i>"
+					"<span class=\"d-none d-sm-inline\">History</span></button>");
 				fprintf(output,
 					"<input type=\"hidden\" name=\"HISTFILE\" value=\"%s.%s\">",
 					histhost, hostenv_svc);
@@ -846,8 +896,29 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					" class=\"btn btn-outline-warning btn-sm\""
 					" data-bs-toggle=\"modal\""
 					" data-bs-target=\"#xymon-disable-modal\">"
-					"<i class=\"fa-solid fa-bell-slash\"></i>Disable</button>");
+					"<i class=\"fa-solid fa-bell-slash\"></i>"
+					"<span class=\"d-none d-sm-inline\">Disable</span></button>");
 			}
+		}
+		else if (strcmp(t_start, "XYMONACKNOWLEDGEBUTTON") == 0) {
+			fetch_ackcookie();
+			/* Only render when an active alert cookie exists — no cookie means
+			 * the test is not in alert state and there is nothing to acknowledge. */
+			if (ackcookie_val) {
+				fprintf(output,
+					"<button type=\"button\""
+					" class=\"btn btn-outline-success btn-sm\""
+					" data-bs-toggle=\"modal\""
+					" data-bs-target=\"#xymon-ack-modal\">"
+					"<i class=\"fa-solid fa-circle-check\"></i>"
+					"<span class=\"d-none d-sm-inline\">Ack</span></button>");
+			}
+		}
+		else if (strcmp(t_start, "XYMONACKCOOKIE") == 0) {
+			fetch_ackcookie();
+			/* NUMBER_1 hidden field in the ack modal form — see fetch_ackcookie()
+			 * for why this cookie is mandatory in the acknowledge.sh POST. */
+			fprintf(output, "%d", ackcookie_val);
 		}
 		else if ((strcmp(t_start, "XYMWEBCOLOR") == 0) || (strcmp(t_start, "BBCOLOR") == 0))
 			fprintf(output, "%s", hostenv_color);

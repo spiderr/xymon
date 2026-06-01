@@ -1,6 +1,7 @@
 <h1>&XYMWEBHOST &mdash; &XYMWEBSVC</h1>
 <div class="ms-auto d-flex gap-2" id="xymon-hdr-right">
   &XYMONSTATUSMETA
+  &XYMONACKNOWLEDGEBUTTON
   &XYMONDISABLEBUTTON
   &XYMONHISTORYBUTTON
 </div>
