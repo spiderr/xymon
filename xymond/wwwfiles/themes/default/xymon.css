@@ -70,6 +70,18 @@ body.status-clear  { background-image: linear-gradient(to right, rgba(158,158,15
 .xymon-clear   { color: #9e9e9e; }
 .xymon-unknown { color: #9e9e9e; }
 
+/* Alert banner tints — override Bootstrap's .alert-info colors with Xymon status colors.
+   Pairing .alert-info with one of these classes keeps Bootstrap's structural styles
+   (padding, border-radius, border-width) while replacing the color variables.
+   --bs-alert-color resets to body color so body text stays readable over the tint. */
+.alert-info.xymon-alert-green  { --bs-alert-bg: rgba(  0, 230, 118, 0.10); --bs-alert-border-color: rgba(  0, 230, 118, 0.40); --bs-alert-color: var(--bs-body-color); }
+.alert-info.xymon-alert-red    { --bs-alert-bg: rgba(255,  23,  68, 0.10); --bs-alert-border-color: rgba(255,  23,  68, 0.40); --bs-alert-color: var(--bs-body-color); }
+.alert-info.xymon-alert-yellow { --bs-alert-bg: rgba(255, 214,   0, 0.10); --bs-alert-border-color: rgba(255, 214,   0, 0.40); --bs-alert-color: var(--bs-body-color); }
+.alert-info.xymon-alert-blue   { --bs-alert-bg: rgba(  0, 176, 255, 0.10); --bs-alert-border-color: rgba(  0, 176, 255, 0.40); --bs-alert-color: var(--bs-body-color); }
+.alert-info.xymon-alert-purple { --bs-alert-bg: rgba(224,  64, 251, 0.10); --bs-alert-border-color: rgba(224,  64, 251, 0.40); --bs-alert-color: var(--bs-body-color); }
+.alert-info.xymon-alert-clear  { --bs-alert-bg: rgba(158, 158, 158, 0.10); --bs-alert-border-color: rgba(158, 158, 158, 0.40); --bs-alert-color: var(--bs-body-color); }
+.alert-info.xymon-alert-unknown{ --bs-alert-bg: rgba(158, 158, 158, 0.10); --bs-alert-border-color: rgba(158, 158, 158, 0.40); --bs-alert-color: var(--bs-body-color); }
+
 /* ── Tables ── */
 /* Bootstrap dark mode sets --bs-table-bg: transparent automatically. */
 /* thead: dark neutral header, no status color.                       */
@@ -160,6 +172,9 @@ div[data-graph] { margin-bottom: 0.5rem; }
 /* Graph menu item row */
 .graph-item { gap: 0.5rem; }
 
+/* ── nongreen "All OK" message ── */
+.xymon-allok { text-align: center; font-size: 1.5rem; padding: 2rem 0; }
+
 /* ── Status log (htmllog.c) ── */
 .xymon-log-table-wrap { margin-bottom: 1rem; }
 .xymon-log-cards { --bs-gutter-x: 1rem; --bs-gutter-y: 1rem; margin-bottom: 1rem; }
@@ -175,7 +190,9 @@ div[data-graph] { margin-bottom: 0.5rem; }
 .btn-sm .fa-regular { font-size: .8em; vertical-align: -0.05em; }
 
 /* ── Event log ── */
-.xymon-event-arrow { margin-left: 0.25rem; margin-right: 0.25rem; }
+.xymon-event-arrow    { margin-left: 0.25rem; margin-right: 0.25rem; }
+.xymon-event-pagination { margin: 0.5rem 0; }
+.xymon-event-pagination .page-link { font-size: 0.85rem; }
 
 /* ── Service status info ── */
 .svcinfo-toggles { gap: 0.5rem; margin-top: 0.5rem; }
