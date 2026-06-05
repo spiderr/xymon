@@ -53,6 +53,8 @@ static char *scheduleboard = NULL;
 
 static int  ackcookie_val  = 0;
 static int  have_ackcookie = 0;
+static int  have_ackmsg    = 0;  /* non-empty ackmsg → test already acknowledged */
+static int  is_disabled    = 0;  /* non-zero disabletime → test currently disabled */
 
 static char *hostpattern_text = NULL;
 static pcre2_code *hostpattern = NULL;
@@ -122,6 +124,8 @@ void sethostenv(char *host, char *ip, char *svc, char *color, char *hikey)
 	/* Reset per-host ack-cookie cache whenever host/svc context changes. */
 	have_ackcookie = 0;
 	ackcookie_val  = 0;
+	have_ackmsg    = 0;
+	is_disabled    = 0;
 }
 
 void sethostenv_report(time_t reportstart, time_t reportend, double repwarn, double reppanic)
@@ -512,18 +516,20 @@ static void fetch_ackcookie(void)
 	if (!hostenv_host || !*hostenv_host || !hostenv_svc || !*hostenv_svc) return;
 
 	/*
-	 * Fetch the xymond ack cookie for this specific host+service.
+	 * Fetch the xymond ack cookie, disable state, and ack state for this host+service.
 	 *
-	 * The cookie is an integer xymond assigns when a test enters alert state.
-	 * acknowledge.c requires it as the NUMBER_1 form field; without it the
-	 * xymondack message cannot be constructed and the ack is silently dropped
-	 * (see acknowledge.c: "if (!awalk->acknum) ... NO ACK sent").
+	 * cookie:      integer xymond assigns when a test enters alert state; 0 = not alerting.
+	 * disabletime: non-zero = test is currently disabled (blue).
+	 * ackmsg:      non-empty = test has already been acknowledged.
+	 *
+	 * disabletime is placed before ackmsg so its integer value is safe to parse even
+	 * if ackmsg contains '|' characters.
 	 *
 	 * Note: hostenv_host/svc are HTML-quoted, but hostnames never contain
 	 * HTML-special characters so the regex is safe to build directly.
 	 */
 	snprintf(cmd, sizeof(cmd),
-		"xymondboard fields=hostname,testname,cookie host=^%s$ test=^%s$",
+		"xymondboard fields=hostname,testname,cookie,disabletime,ackmsg host=^%s$ test=^%s$",
 		hostenv_host, hostenv_svc);
 
 	sres = newsendreturnbuf(1, NULL);
@@ -534,10 +540,19 @@ static void fetch_ackcookie(void)
 
 	resp = getsendreturnstr(sres, 0);
 	if (resp) {
-		/* Response format: hostname|testname|cookie\n */
-		p = strchr(resp, '|'); if (p) p++;  /* skip hostname field */
-		p = strchr(p,   '|'); if (p) p++;  /* skip testname field */
-		if (p && *p) ackcookie_val = atoi(p);
+		/* Response: hostname|testname|cookie|disabletime|ackmsg\n */
+		p = strchr(resp, '|'); if (p) p++;  /* skip hostname */
+		p = p ? strchr(p, '|') : NULL; if (p) p++;  /* skip testname */
+		if (p && *p) {
+			ackcookie_val = atoi(p);
+			p = strchr(p, '|'); if (p) p++;  /* skip cookie */
+		}
+		if (p && *p) {
+			if (atoi(p) != 0) is_disabled = 1;
+			p = strchr(p, '|'); if (p) p++;  /* skip disabletime */
+		}
+		/* ackmsg field: non-empty (not newline or NUL) means already acknowledged */
+		if (p && *p && *p != '\n') have_ackmsg = 1;
 	}
 	freesendreturnbuf(sres);
 }
@@ -819,7 +834,7 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					"<button type=\"submit\""
 					" class=\"btn btn-outline-secondary btn-sm\">"
 					"<i class=\"fa-solid fa-clock-rotate-left\"></i>"
-					"<span class=\"d-none d-sm-inline\">History</span></button>");
+					"<span class=\"d-none d-md-inline\">History</span></button>");
 				fprintf(output,
 					"<input type=\"hidden\" name=\"HISTFILE\" value=\"%s.%s\">",
 					histhost, hostenv_svc);
@@ -890,28 +905,29 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 				"</div>");
 		}
 		else if (strcmp(t_start, "XYMONDISABLEBUTTON") == 0) {
-			if (hostenv_host && *hostenv_host && hostenv_svc && *hostenv_svc) {
+			fetch_ackcookie();
+			/* Suppress if test is already disabled — button would be a no-op. */
+			if (hostenv_host && *hostenv_host && hostenv_svc && *hostenv_svc && !is_disabled) {
 				fprintf(output,
 					"<button type=\"button\""
-					" class=\"btn btn-outline-warning btn-sm\""
+					" class=\"btn btn-outline-secondary btn-sm\""
 					" data-bs-toggle=\"modal\""
 					" data-bs-target=\"#xymon-disable-modal\">"
 					"<i class=\"fa-solid fa-bell-slash\"></i>"
-					"<span class=\"d-none d-sm-inline\">Disable</span></button>");
+					"<span class=\"d-none d-md-inline\">Disable</span></button>");
 			}
 		}
 		else if (strcmp(t_start, "XYMONACKNOWLEDGEBUTTON") == 0) {
 			fetch_ackcookie();
-			/* Only render when an active alert cookie exists — no cookie means
-			 * the test is not in alert state and there is nothing to acknowledge. */
-			if (ackcookie_val) {
+			/* Render when an active alert cookie exists and not yet acknowledged. */
+			if (ackcookie_val && !have_ackmsg) {
 				fprintf(output,
 					"<button type=\"button\""
-					" class=\"btn btn-outline-success btn-sm\""
+					" class=\"btn btn-outline-secondary btn-sm\""
 					" data-bs-toggle=\"modal\""
 					" data-bs-target=\"#xymon-ack-modal\">"
 					"<i class=\"fa-solid fa-circle-check\"></i>"
-					"<span class=\"d-none d-sm-inline\">Ack</span></button>");
+					"<span class=\"d-none d-md-inline\">Ack</span></button>");
 			}
 		}
 		else if (strcmp(t_start, "XYMONACKCOOKIE") == 0) {

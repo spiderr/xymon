@@ -42,9 +42,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" name="Send_1" value="Send" class="btn btn-success btn-sm">
-            <i class="fa-solid fa-circle-check"></i>Acknowledge
-          </button>
+          <button type="submit" name="Send_1" value="Send" class="btn btn-primary btn-sm">Acknowledge</button>
         </div>
       </form>
     </div>
@@ -90,9 +88,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-warning btn-sm">
-            <i class="fa-solid fa-bell-slash"></i>Disable
-          </button>
+          <button type="submit" class="btn btn-primary btn-sm">Disable</button>
         </div>
       </form>
     </div>
