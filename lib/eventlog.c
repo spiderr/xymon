@@ -818,11 +818,16 @@ void do_eventlog(FILE *output, int maxcount, int maxminutes, char *fromtime, cha
 
 			fprintf(output, "<tr>\n");
 
-			fprintf(output, "<td>%s</td>\n", ctime(&ewalk->eventtime));
+			{
+				char evttime[32];
+				strftime(evttime, sizeof(evttime), "%b %d %H:%M", localtime(&ewalk->eventtime));
+				fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", evttime);
+			}
 
 			fprintf(output, "<td>%s</td>\n", hostname);
 
-			fprintf(output, "<td>%s</td>\n", ewalk->service->name);
+			fprintf(output, "<td><a href=\"%s/svcstatus.sh?HOST=%s&amp;SERVICE=%s\">%s</a></td>\n",
+				xgetenv("CGIBINURL"), hostname, ewalk->service->name, ewalk->service->name);
 			fprintf(output, "<td><a href=\"%s\">",
 				histlogurl(hostname, ewalk->service->name, ewalk->changetime, NULL));
 			fprintf(output, "%s</a>\n", coloricon(ewalk->oldcolor, 0, 0));

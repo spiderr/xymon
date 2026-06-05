@@ -31,7 +31,8 @@ static char rcsid[] = "$Id$";
 #include "libxymon.h"
 
 int	maxcount = 100;		/* Default: Include last 100 events */
-int	maxminutes = 240;	/* Default: for the past 4 hours */
+int	maxminutes = 0;		/* Default: 0 → 24-hour window (see do_eventlog else branch) */
+int	page_offset = 0;	/* Events to skip from newest — used for pagination */
 char	*totime = NULL;
 char	*fromtime = NULL;
 char	*hostregex = NULL;
@@ -94,6 +95,10 @@ static void parse_query(void)
 		}
 		else if (strcasecmp(cwalk->name, "COLORMATCH") == 0) {
 			if (*(cwalk->value)) colorregex = strdup(cwalk->value);
+		}
+		else if (strcasecmp(cwalk->name, "OFFSET") == 0) {
+			if (*(cwalk->value)) page_offset = atoi(cwalk->value);
+			if (page_offset < 0) page_offset = 0;
 		}
 		else if (strcasecmp(cwalk->name, "NODIALUPS") == 0) {
 			ignoredialups = 1;
@@ -292,6 +297,161 @@ void show_topchanges(FILE *output,
 	fprintf(output, "</div>\n");
 }
 
+static void emit_event_pagination_nav(FILE *output, const char *pbase,
+		int has_prev, int prev_off,
+		int has_next, int next_off,
+		const char *title)
+{
+	fprintf(output,
+		"<nav class=\"xymon-event-pagination\" aria-label=\"Event log pagination\">"
+		"<ul class=\"pagination pagination-sm justify-content-center\">\n");
+
+	if (has_prev)
+		fprintf(output,
+			"<li class=\"page-item\">"
+			"<a class=\"page-link\" href=\"%s&amp;OFFSET=%d\">"
+			"<i class=\"fa-solid fa-chevron-left\"></i> Newer</a></li>\n",
+			pbase, prev_off);
+	else
+		fprintf(output,
+			"<li class=\"page-item disabled\">"
+			"<span class=\"page-link\">"
+			"<i class=\"fa-solid fa-chevron-left\"></i> Newer</span></li>\n");
+
+	fprintf(output,
+		"<li class=\"page-item disabled\">"
+		"<span class=\"page-link\">%s</span></li>\n", title);
+
+	if (has_next)
+		fprintf(output,
+			"<li class=\"page-item\">"
+			"<a class=\"page-link\" href=\"%s&amp;OFFSET=%d\">"
+			"Older <i class=\"fa-solid fa-chevron-right\"></i></a></li>\n",
+			pbase, next_off);
+	else
+		fprintf(output,
+			"<li class=\"page-item disabled\">"
+			"<span class=\"page-link\">"
+			"Older <i class=\"fa-solid fa-chevron-right\"></i></span></li>\n");
+
+	fprintf(output, "</ul></nav>\n");
+}
+
+static void render_eventlog_paginated(FILE *output, event_t *events,
+		int offset, int perpage,
+		int maxminutes_arg, char *fromtime, char *totime,
+		char *hostregex_arg, char *exhostregex_arg,
+		char *testregex_arg, char *extestregex_arg,
+		char *pageregex_arg, char *expageregex_arg,
+		char *colorregex_arg, int ignoredialups_arg,
+		char *periodstring_arg)
+{
+	int total = 0;
+	event_t *ewalk;
+	char tmp[64];
+
+	for (ewalk = events; ewalk; ewalk = ewalk->next) total++;
+
+	int has_prev = (offset > 0);
+	int has_next = (total > offset + perpage);
+	int prev_off = (offset > perpage) ? offset - perpage : 0;
+	int next_off = offset + perpage;
+
+	/* Skip to page start */
+	ewalk = events;
+	for (int i = 0; i < offset && ewalk; i++) ewalk = ewalk->next;
+	event_t *pagestart = ewalk;
+
+	/* Count events on this page and terminate the list there */
+	int count = 0;
+	event_t *last_on_page = NULL;
+	while (ewalk && count < perpage) { last_on_page = ewalk; ewalk = ewalk->next; count++; }
+	if (last_on_page) last_on_page->next = NULL;
+
+	/* Build base URL (all current filter params except OFFSET) for pagination links */
+	strbuffer_t *pbase = newstrbuffer(512);
+	addtobuffer(pbase, xgetenv("CGIBINURL"));
+	addtobuffer(pbase, "/eventlog.sh?MAXCOUNT=");
+	snprintf(tmp, sizeof(tmp), "%d", perpage);
+	addtobuffer(pbase, tmp);
+
+	if (maxminutes_arg != 0) {
+		snprintf(tmp, sizeof(tmp), "%d", maxminutes_arg);
+		addtobuffer(pbase, "&amp;MAXTIME=");
+		addtobuffer(pbase, tmp);
+	}
+	if (fromtime)        { addtobuffer(pbase, "&amp;FROMTIME=");    addtobuffer(pbase, fromtime);        }
+	if (totime)          { addtobuffer(pbase, "&amp;TOTIME=");      addtobuffer(pbase, totime);          }
+	if (hostregex_arg)   { addtobuffer(pbase, "&amp;HOSTMATCH=");   addtobuffer(pbase, hostregex_arg);   }
+	if (exhostregex_arg) { addtobuffer(pbase, "&amp;EXHOSTMATCH="); addtobuffer(pbase, exhostregex_arg); }
+	if (pageregex_arg)   { addtobuffer(pbase, "&amp;PAGEMATCH=");   addtobuffer(pbase, pageregex_arg);   }
+	if (expageregex_arg) { addtobuffer(pbase, "&amp;EXPAGEMATCH="); addtobuffer(pbase, expageregex_arg); }
+	if (testregex_arg)   { addtobuffer(pbase, "&amp;TESTMATCH=");   addtobuffer(pbase, testregex_arg);   }
+	if (extestregex_arg) { addtobuffer(pbase, "&amp;EXTESTMATCH="); addtobuffer(pbase, extestregex_arg); }
+	if (colorregex_arg)  { addtobuffer(pbase, "&amp;COLORMATCH=");  addtobuffer(pbase, colorregex_arg);  }
+	if (ignoredialups_arg) addtobuffer(pbase, "&amp;NODIALUPS=on");
+
+	/* Period heading */
+	if (periodstring_arg)
+		fprintf(output, "<p class=\"event-period\"><strong>%s</strong></p>\n",
+			htmlquoted(periodstring_arg));
+
+	if (!pagestart) {
+		fprintf(output, "<p class=\"event-title\">No events found.</p>\n");
+		freestrbuffer(pbase);
+		return;
+	}
+
+	/* Title shown in table header and pagination controls */
+	char title[128];
+	snprintf(title, sizeof(title), "Events %d&ndash;%d%s",
+		offset + 1, offset + count, has_next ? "+" : "");
+
+	emit_event_pagination_nav(output, STRBUF(pbase),
+		has_prev, prev_off, has_next, next_off, title);
+
+	/* Event table */
+	fprintf(output,
+		"<div class=\"table-responsive\">"
+		"<table class=\"table table-sm table-dark table-striped event-log\">\n");
+	fprintf(output, "<thead><tr>");
+	fprintf(output, "<th colspan=\"3\">%s</th>", title);
+	fprintf(output,
+		"<th class=\"text-end\">"
+		"<a class=\"btn btn-outline-light btn-sm\" href=\"%s/eventlog.sh\">"
+		"<i class=\"fa-solid fa-filter\"></i>"
+		"<span class=\"d-none d-sm-inline\"> Filter</span></a></th>",
+		xgetenv("CGIBINURL"));
+	fprintf(output, "</tr></thead>\n");
+
+	for (ewalk = pagestart; ewalk; ewalk = ewalk->next) {
+		char *hostname = xmh_item(ewalk->host, XMH_HOSTNAME);
+		char evttime[32];
+		strftime(evttime, sizeof(evttime), "%b %d %H:%M", localtime(&ewalk->eventtime));
+		fprintf(output, "<tr>\n");
+		fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", evttime);
+		fprintf(output, "<td>%s</td>\n", hostname);
+		fprintf(output,
+			"<td><a href=\"%s/svcstatus.sh?HOST=%s&amp;SERVICE=%s\">%s</a></td>\n",
+			xgetenv("CGIBINURL"), hostname, ewalk->service->name, ewalk->service->name);
+		fprintf(output, "<td><a href=\"%s\">",
+			histlogurl(hostname, ewalk->service->name, ewalk->changetime, NULL));
+		fprintf(output, "%s</a>\n", coloricon(ewalk->oldcolor, 0, 0));
+		fprintf(output, "<i class=\"fa-solid fa-arrow-right xymon-event-arrow\"></i>\n");
+		fprintf(output, "<a href=\"%s\">",
+			histlogurl(hostname, ewalk->service->name, ewalk->eventtime, NULL));
+		fprintf(output, "%s</a></td>\n", coloricon(ewalk->newcolor, 0, 0));
+		fprintf(output, "</tr>\n");
+	}
+
+	fprintf(output, "</table></div>\n");
+
+	emit_event_pagination_nav(output, STRBUF(pbase),
+		has_prev, prev_off, has_next, next_off, title);
+
+	freestrbuffer(pbase);
+}
+
 int main(int argc, char *argv[])
 {
 	int argi;
@@ -358,10 +518,31 @@ int main(int argc, char *argv[])
 	/* Now generate the webpage */
 	headfoot(stdout, webfile_hf, "", "header", COL_GREEN);
 	if (topcount == 0) {
-		do_eventlog(stdout, maxcount, maxminutes, fromtime, totime, 
-			    pageregex, expageregex, hostregex, exhostregex, testregex, extestregex,
-			    colorregex, ignoredialups, NULL,
-			    NULL, NULL, NULL, counttype, summarybar, periodstring);
+		if (summarybar != XYMON_S_NONE) {
+			/* Summary breakdown: delegate to do_eventlog for rendering */
+			do_eventlog(stdout, maxcount, maxminutes, fromtime, totime,
+				    pageregex, expageregex, hostregex, exhostregex, testregex, extestregex,
+				    colorregex, ignoredialups, NULL,
+				    NULL, NULL, NULL, counttype, summarybar, periodstring);
+		}
+		else {
+			/* Paginated event table.
+			 * Load one extra event beyond what the current page needs so we can
+			 * detect whether an "Older" next page exists without a full log scan. */
+			int perpage = (maxcount > 0) ? maxcount : 100;
+			int load_count = page_offset + perpage + 1;
+			event_t *events = NULL;
+			do_eventlog(NULL, load_count, maxminutes, fromtime, totime,
+				    pageregex, expageregex, hostregex, exhostregex, testregex, extestregex,
+				    colorregex, ignoredialups, NULL,
+				    &events, NULL, NULL, counttype, XYMON_S_NONE, NULL);
+			render_eventlog_paginated(stdout, events,
+				page_offset, perpage,
+				maxminutes, fromtime, totime,
+				hostregex, exhostregex, testregex, extestregex,
+				pageregex, expageregex, colorregex, ignoredialups,
+				periodstring);
+		}
 	}
 	else {
 		countlist_t *hcounts, *scounts;
