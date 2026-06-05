@@ -361,14 +361,20 @@ void do_acknowledgementslog(FILE *output,
 		for (walk=head; (walk != lasttoshow->next); walk=walk->next) {
 			char *hostname = xmh_item(walk->host, XMH_HOSTNAME);
 
-			fprintf(output, "<tr>\n");
-			fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", ctime(&walk->eventtime));
-			fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", ctime(&walk->validity));
-			fprintf(output, "<td>%s</td>\n", hostname);
-			fprintf(output, "<td>%s</td>\n", walk->service->name);
-			fprintf(output, "<td>%s</td>\n", walk->recipient);
-			fprintf(output, "<td>%s</td>\n", walk->message);
-			fprintf(output, "</tr>\n");
+			{
+				char evttimebuf[32], validbuf[32];
+				strftime(evttimebuf, sizeof(evttimebuf), "%b %d %H:%M", localtime(&walk->eventtime));
+				strftime(validbuf,   sizeof(validbuf),   "%b %d %H:%M", localtime(&walk->validity));
+				fprintf(output, "<tr>\n");
+				fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", evttimebuf);
+				fprintf(output, "<td class=\"text-nowrap\">%s</td>\n", validbuf);
+				fprintf(output, "<td>%s</td>\n", hostname);
+				fprintf(output, "<td><a href=\"%s/svcstatus.sh?HOST=%s&amp;SERVICE=%s\">%s</a></td>\n",
+					xgetenv("CGIBINURL"), hostname, walk->service->name, walk->service->name);
+				fprintf(output, "<td>%s</td>\n", walk->recipient);
+				fprintf(output, "<td>%s</td>\n", walk->message);
+				fprintf(output, "</tr>\n");
+			}
 		}
 
 		fprintf(output, "</tbody></table></div>\n");
