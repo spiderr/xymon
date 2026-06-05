@@ -157,7 +157,7 @@ const static struct {
 	{ "XYMONBODYFOOTER", "" },
 	{ "LOGFETCHSKIPTEXT", "<...SKIPPED...>" },
 	{ "LOGFETCHCURRENTTEXT", "<...CURRENT...>" },
-	{ "XYMONALLOKTEXT", "<FONT SIZE=+2 FACE=\"Arial, Helvetica\"><BR><BR><I>All Monitored Systems OK</I></FONT><BR><BR>" },
+	{ "XYMONALLOKTEXT", "<p class=\"xymon-allok\"><i class=\"fa-solid fa-circle-check xymon-green\"></i> All Monitored Systems OK</p>" },
 	{ "HOSTPOPUP", "CDI" },
 	{ "STATUSLIFETIME", "30" },
 	{ "ACK_COOKIE_EXPIRATION", "86400" },
