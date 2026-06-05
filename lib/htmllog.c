@@ -196,7 +196,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 
 		if (timesincechange && *timesincechange) {
 			n += snprintf(metabuf + n, sizeof(metabuf) - n,
-				"<small class=\"text-muted xymon-status-duration\">"
+				"<small class=\"text-muted xymon-status-duration d-none d-md-inline\">"
 				"<i class=\"fa-regular fa-clock\"></i>%s</small>",
 				timesincechange);
 		}
@@ -331,9 +331,134 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 	}
 
 	if (disabletime != 0) {
-		fprintf(output, "<div class=\"alert alert-info xymon-log-alert\"><strong>Disabled until %s</strong>",
-			(disabletime == -1 ? "OK" : ctime(&disabletime)));
-		fprintf(output, "<pre class=\"bg-transparent border-0\">%s</pre></div>\n", htmlquoted(dismsg));
+		{
+			char untilbuf[64];
+			if (disabletime == -1) strncpy(untilbuf, "OK", sizeof(untilbuf));
+			else strftime(untilbuf, sizeof(untilbuf), "%a %b %d %H:%M:%S %Y", localtime(&disabletime));
+
+			/* dismsg format: "\nDisabled by: USER @ HOST\nDisabled at: DATE\nReason: TEXT\n"
+			 * Optional (5.0.1 fix): "\nAck-preserved-{reason,by,at,until}: ..." appended by enadis.c
+			 * when an active ack was present at disable time.
+			 * Do all pointer searches before any null-termination. */
+			char *dis_by  = dismsg ? strstr(dismsg, "Disabled by: ")  : NULL;
+			char *dis_at  = dismsg ? strstr(dismsg, "Disabled at: ")  : NULL;
+			char *dis_rsn = dismsg ? strstr(dismsg, "\nReason: ")      : NULL;
+			if (dis_by)  dis_by  += 13;  /* skip "Disabled by: " */
+			if (dis_at)  dis_at  += 13;  /* skip "Disabled at: " */
+			if (dis_rsn) dis_rsn +=  9;  /* skip "\nReason: "   */
+			char *dis_by_end  = dis_by  ? strchr(dis_by,  '\n') : NULL;
+			char *dis_at_end  = dis_at  ? strchr(dis_at,  '\n') : NULL;
+			char *dis_rsn_end = dis_rsn ? strchr(dis_rsn, '\n') : NULL;
+			if (dis_by_end)  *dis_by_end  = '\0';
+			if (dis_at_end)  *dis_at_end  = '\0';
+			if (dis_rsn_end) *dis_rsn_end = '\0';
+
+			fprintf(output, "<div class=\"alert alert-info xymon-log-alert xymon-alert-blue\">"
+				"<strong><i class=\"fa-solid fa-bell-slash xymon-blue\"></i> Disabled</strong><br>");
+			if (dis_by)  fprintf(output, "By: %s<br>",    htmlquoted(dis_by));
+			if (dis_at)  fprintf(output, "At: %s<br>",    dis_at);
+			fprintf(output, "Until: %s<br>", untilbuf);
+			if (dis_rsn) fprintf(output, "Reason: %s</div>\n", htmlquoted(dis_rsn));
+			else if (dismsg) fprintf(output, "Reason: %s</div>\n", htmlquoted(dismsg));
+			else         fprintf(output, "</div>\n");
+
+			if (dis_rsn_end) *dis_rsn_end = '\n';
+			if (dis_at_end)  *dis_at_end  = '\n';
+			if (dis_by_end)  *dis_by_end  = '\n';
+		}
+
+		/*
+		 * Fix (5.0.1): Xymon clears ackmsg the moment a test is disabled because
+		 * COL_BLUE is in OKCOLORS.  enadis.c now embeds the ack state into dismsg
+		 * using Ack-preserved-* fields before sending the disable command.
+		 * Render those here so the acknowledgement history is not lost.
+		 */
+		{
+			char *pr = dismsg ? strstr(dismsg, "\nAck-preserved-reason: ") : NULL;
+			if (pr) {
+				char *pb    = strstr(dismsg, "\nAck-preserved-by: ");
+				char *pa    = strstr(dismsg, "\nAck-preserved-at: ");
+				char *pu    = strstr(dismsg, "\nAck-preserved-until: ");
+				char prev_reason_buf[512] = "";
+				char prev_by_buf[256]     = "";
+				char prev_at_buf[128]     = "";
+				char prev_until_buf[64]   = "";
+				const char *p;
+
+				p = pr + strlen("\nAck-preserved-reason: ");
+				snprintf(prev_reason_buf, sizeof(prev_reason_buf), "%.*s", (int)strcspn(p, "\n"), p);
+				if (pb) {
+					p = pb + strlen("\nAck-preserved-by: ");
+					snprintf(prev_by_buf, sizeof(prev_by_buf), "%.*s", (int)strcspn(p, "\n"), p);
+				}
+				if (pa) {
+					p = pa + strlen("\nAck-preserved-at: ");
+					snprintf(prev_at_buf, sizeof(prev_at_buf), "%.*s", (int)strcspn(p, "\n"), p);
+				}
+				if (pu) {
+					p = pu + strlen("\nAck-preserved-until: ");
+					snprintf(prev_until_buf, sizeof(prev_until_buf), "%.*s", (int)strcspn(p, "\n"), p);
+				}
+
+				fprintf(output,
+					"<div class=\"alert alert-info xymon-log-ack xymon-alert-%s\">"
+					"<strong><i class=\"fa-solid fa-circle-check xymon-%s\"></i>"
+					" Previously Acknowledged</strong><br>",
+					colorname(color), colorname(color));
+				if (*prev_by_buf)    fprintf(output, "By: %s<br>",    htmlquoted(prev_by_buf));
+				if (*prev_at_buf)    fprintf(output, "At: %s<br>",    prev_at_buf);
+				if (*prev_until_buf) fprintf(output, "Until: %s<br>", prev_until_buf);
+				fprintf(output, "Reason: %s</div>\n", htmlquoted(prev_reason_buf));
+			}
+		}
+	}
+
+	/* ACK banner: rendered here so it appears alongside the disabled banner when
+	 * both conditions apply simultaneously (e.g. a test was acked then disabled). */
+	if (ackmsg) {
+		char *ackedby;
+		char untilbuf[64];
+
+		strftime(untilbuf, sizeof(untilbuf), "%a %b %d %H:%M:%S %Y", localtime(&acktime));
+
+		/* ackmsg format: "REASON\nAcked by: USER (IP)\nAcked at: DATE"
+		 * Do all pointer searches before any null-termination. */
+		ackedby = strstr(ackmsg, "\nAcked by:");
+		{
+			char *ack_by  = ackedby;
+			char *ack_at  = strstr(ackmsg, "\nAcked at:");
+			/* Extract "by" value into buffer (copy before null-termination) */
+			char bybuf[256] = "";
+			if (ack_by) {
+				const char *p = ack_by + 1;
+				if (strncmp(p, "Acked by: ", 10) == 0) p += 10;
+				snprintf(bybuf, sizeof(bybuf), "%.*s", (int)strcspn(p, "\n"), p);
+			}
+			/* Extract "at" value into buffer (copy before null-termination) */
+			char ackatabuf[64] = "";
+			if (ack_at) {
+				const char *p = ack_at + 1;
+				if (strncmp(p, "Acked at: ", 10) == 0) p += 10;
+				snprintf(ackatabuf, sizeof(ackatabuf), "%.*s", (int)strcspn(p, "\n"), p);
+			}
+			/* Null-terminate reason at the earliest tag */
+			char *first_tag = ack_by;
+			if (ack_at && (!first_tag || ack_at < first_tag)) first_tag = ack_at;
+			if (first_tag) *first_tag = '\0';
+
+			fprintf(output, "<div class=\"alert alert-info xymon-log-ack xymon-alert-%s\">"
+				"<strong><i class=\"fa-solid fa-circle-check xymon-%s\"></i> Acknowledged</strong><br>",
+				colorname(color), colorname(color));
+			if (*bybuf)      fprintf(output, "By: %s<br>",    htmlquoted(bybuf));
+			if (*ackatabuf)  fprintf(output, "At: %s<br>",    ackatabuf);
+			fprintf(output, "Until: %s<br>", untilbuf);
+			fprintf(output, "Reason: %s</div>\n", htmlquoted(ackmsg));
+
+			if (first_tag) *first_tag = '\n';
+		}
+	}
+
+	if (disabletime != 0) {
 		fprintf(output, "<p class=\"text-muted\">Current status message follows:</p>\n");
 
 		if (strlen(firstline)) {
@@ -407,30 +532,6 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		else
 			fprintf(output, "%s", htmlquoted(sender));
 		fprintf(output, "</p>\n");
-	}
-
-	if (ackmsg) {
-		char *ackedby;
-		char ackuntil[200];
-
-		MEMDEFINE(ackuntil);
-
-		strftime(ackuntil, sizeof(ackuntil)-1, xgetenv("ACKUNTILMSG"), localtime(&acktime));
-		ackuntil[sizeof(ackuntil)-1] = '\0';
-
-		ackedby = strstr(ackmsg, "\nAcked by:");
-		if (ackedby) {
-			*ackedby = '\0';
-			fprintf(output, "<div class=\"alert alert-info xymon-log-ack\"><strong>Acknowledged:</strong> %s<br>%s<br>%s</div>\n",
-				htmlquoted(ackmsg), (ackedby+1), ackuntil);
-			*ackedby = '\n';
-		}
-		else {
-			fprintf(output, "<div class=\"alert alert-info xymon-log-ack\"><strong>Acknowledged:</strong> %s<br>%s</div>\n",
-				htmlquoted(ackmsg), ackuntil);
-		}
-
-		MEMUNDEFINE(ackuntil);
 	}
 
 	if (!htmlfmt) fprintf(output, "<pre class=\"bg-dark border border-secondary xymon-log-body\">\n");

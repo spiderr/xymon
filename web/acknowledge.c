@@ -379,10 +379,14 @@ int main(int argc, char *argv[])
 		parse_query();
 		if (getenv("REMOTE_USER")) {
 			char *remaddr = getenv("REMOTE_ADDR");
+			time_t ack_now = time(NULL);
+			char acktimebuf[64];
+			strftime(acktimebuf, sizeof(acktimebuf), "%a %b %d %H:%M:%S %Y", localtime(&ack_now));
 
-			SBUF_MALLOC(acking_user, 1024 + strlen(getenv("REMOTE_USER")) + (remaddr ? strlen(remaddr) : 0));
+			SBUF_MALLOC(acking_user, 1024 + strlen(getenv("REMOTE_USER")) + (remaddr ? strlen(remaddr) : 0) + sizeof(acktimebuf));
 			snprintf(acking_user, acking_user_buflen, "\nAcked by: %s", getenv("REMOTE_USER"));
 			if (remaddr) snprintf(acking_user + strlen(acking_user), acking_user_buflen - strlen(acking_user), " (%s)", remaddr);
+			snprintf(acking_user + strlen(acking_user), acking_user_buflen - strlen(acking_user), "\nAcked at: %s", acktimebuf);
 		}
 
 		/* Load the host data (for access control) */

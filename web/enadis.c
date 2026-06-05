@@ -320,14 +320,98 @@ void do_one_host(char *hostname, char *fullmsg, char *username)
 		for (i=0; (i < disablecount); i++) {
 			if (preview) result = 0;
 			else {
-				SBUF_REALLOC(xymoncmd, 1024 + 2*strlen(hostname) + 2*strlen(disabletest[i]) + strlen(fullmsg) + strlen(username));
-				snprintf(xymoncmd, xymoncmd_buflen, "disable %s.%s %d %s", 
-					commafy(hostname), disabletest[i], duration*scale, fullmsg);
+				/*
+				 * Fix (5.0.1): Xymon treats blue/disabled as OKCOLORS, so it clears
+				 * the basic ack (ackmsg + acktime) the moment handle_status() runs with
+				 * COL_BLUE.  Query the board *before* sending the disable command so we
+				 * can embed the ack info into the dismsg for svcstatus display.
+				 */
+				char *send_fullmsg = fullmsg;
+				char *ack_supplement = NULL;
+				{
+					char qcmd[512];
+					sendreturn_t *sres;
+					time_t prev_acktime = 0;
+
+					snprintf(qcmd, sizeof(qcmd),
+						"xymondboard fields=hostname,testname,acktime,ackmsg host=^%s$ test=^%s$",
+						hostname, disabletest[i]);
+					sres = newsendreturnbuf(1, NULL);
+					if (sendmessage(qcmd, NULL, XYMON_TIMEOUT, sres) == XYMONSEND_OK) {
+						char *resp = getsendreturnstr(sres, 0);
+						if (resp) {
+							char *p;
+							p = strchr(resp, '|'); if (p) p++;  /* skip hostname */
+							p = p ? strchr(p, '|') : NULL; if (p) p++;  /* skip testname */
+							if (p && *p) {
+								prev_acktime = (time_t)atoi(p);
+								p = strchr(p, '|'); if (p) p++;  /* skip acktime */
+							}
+							if (p && *p && *p != '\n' && prev_acktime > time(NULL)) {
+								/* Active ack — extract its fields before they are lost */
+								char *eol = strchr(p, '\n'); if (eol) *eol = '\0';
+								nldecode((unsigned char *)p);
+
+								char reason_buf[512] = "";
+								char by_buf[256]     = "";
+								char at_buf[128]     = "";
+								char until_buf[64]   = "";
+
+								strftime(until_buf, sizeof(until_buf), "%a %b %d %H:%M:%S %Y",
+									localtime(&prev_acktime));
+
+								char *ack_by_ptr = strstr(p, "\nAcked by:");
+								char *ack_at_ptr = strstr(p, "\nAcked at:");
+
+								if (ack_by_ptr) {
+									int rlen = (int)(ack_by_ptr - p);
+									if (rlen > (int)sizeof(reason_buf)-1) rlen = sizeof(reason_buf)-1;
+									snprintf(reason_buf, sizeof(reason_buf), "%.*s", rlen, p);
+									/* Flatten any embedded newlines so the field stays single-line */
+									for (char *q = reason_buf; *q; q++) if (*q == '\n') *q = ' ';
+									/* Trim trailing whitespace */
+									int tlen = strlen(reason_buf);
+									while (tlen > 0 && isspace((unsigned char)reason_buf[tlen-1])) reason_buf[--tlen] = '\0';
+									const char *bp = ack_by_ptr + 1;
+									if (strncmp(bp, "Acked by: ", 10) == 0) bp += 10;
+									char *bpeol = strchr(bp, '\n');
+									snprintf(by_buf, sizeof(by_buf), "%.*s",
+										bpeol ? (int)(bpeol - bp) : (int)strlen(bp), bp);
+								} else {
+									snprintf(reason_buf, sizeof(reason_buf), "%s", p);
+								}
+								if (ack_at_ptr) {
+									const char *ap = ack_at_ptr + 1;
+									if (strncmp(ap, "Acked at: ", 10) == 0) ap += 10;
+									char *apeol = strchr(ap, '\n');
+									snprintf(at_buf, sizeof(at_buf), "%.*s",
+										apeol ? (int)(apeol - ap) : (int)strlen(ap), ap);
+								}
+
+								int asuplen = strlen(fullmsg) + strlen(reason_buf) +
+									strlen(by_buf) + strlen(at_buf) + strlen(until_buf) + 256;
+								ack_supplement = (char *)malloc(asuplen);
+								snprintf(ack_supplement, asuplen,
+									"%s\nAck-preserved-reason: %s\nAck-preserved-by: %s"
+									"\nAck-preserved-at: %s\nAck-preserved-until: %s",
+									fullmsg, reason_buf, by_buf, at_buf, until_buf);
+								send_fullmsg = ack_supplement;
+							}
+						}
+					}
+					freesendreturnbuf(sres);
+				}
+
+				SBUF_REALLOC(xymoncmd, 1024 + 2*strlen(hostname) + 2*strlen(disabletest[i]) + strlen(send_fullmsg) + strlen(username));
+				snprintf(xymoncmd, xymoncmd_buflen, "disable %s.%s %d %s",
+					commafy(hostname), disabletest[i], duration*scale, send_fullmsg);
 				result = sendmessage(xymoncmd, NULL, XYMON_TIMEOUT, NULL);
-				snprintf(xymoncmd, xymoncmd_buflen, "notify %s.%s\nMonitoring of %s:%s has been DISABLED by %s for %d minutes\n%s", 
-					commafy(hostname), disabletest[i], 
+				snprintf(xymoncmd, xymoncmd_buflen, "notify %s.%s\nMonitoring of %s:%s has been DISABLED by %s for %d minutes\n%s",
+					commafy(hostname), disabletest[i],
 					hostname, disabletest[i], username, duration*scale, fullmsg);
 				result = sendmessage(xymoncmd, NULL, XYMON_TIMEOUT, NULL);
+
+				if (ack_supplement) { free(ack_supplement); ack_supplement = NULL; }
 			}
 
 			if (preview) {
@@ -436,8 +520,14 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	SBUF_REALLOC(fullmsg, 1024 + strlen(username) + strlen(userhost) + strlen(disablemsg));
-	snprintf(fullmsg, fullmsg_buflen, "\nDisabled by: %s @ %s\nReason: %s\n", username, userhost, disablemsg);
+	{
+		time_t dis_now = time(NULL);
+		char distimebuf[64];
+		strftime(distimebuf, sizeof(distimebuf), "%a %b %d %H:%M:%S %Y", localtime(&dis_now));
+		SBUF_REALLOC(fullmsg, 1024 + strlen(username) + strlen(userhost) + strlen(disablemsg) + sizeof(distimebuf));
+		snprintf(fullmsg, fullmsg_buflen, "\nDisabled by: %s @ %s\nDisabled at: %s\nReason: %s\n",
+			username, userhost, distimebuf, disablemsg);
+	}
 
 	/*
 	 * Ready ... go build the webpage.
