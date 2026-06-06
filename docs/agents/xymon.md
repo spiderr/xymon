@@ -172,3 +172,11 @@ first) is required to redefine `RRD_CONST_ARGS`.
 
 - `docs/agents/ui.md` — Template engine detail, token reference, status icon system,
   and HTML generation conventions
+- `docs/agents/protocol.md` — Wire protocol: all message types, `sendmessage()` API,
+  `xymondboard` field reference, `nlencode`/`nldecode` encoding
+- `docs/agents/daemon.md` — `xymond` internals: in-memory state model, `handle_status()`,
+  `decide_alertstate()`, IPC channels, and all worker module roles
+- `docs/agents/cgi.md` — CGI layer: full program inventory, `cgi_request()` input parsing,
+  URL helpers, security (`csp_header()`), and the standard CGI skeleton
+- `docs/agents/config.md` — Configuration: `hosts.cfg` syntax and host tags,
+  `xymonserver.cfg` key variables, `tasks.cfg` format, `alerts.cfg` rule syntax
