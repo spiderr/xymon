@@ -183,3 +183,11 @@ Preserve all CGI query string APIs exactly — only HTML output changes.
 
 - `docs/agents/ui.md` — Template system, Bootstrap conventions, CSS architecture,
   status icon rendering, svcstatus banner system, color filter implementation
+- `docs/agents/protocol.md` — Wire protocol: all message types, `sendmessage()` API,
+  `xymondboard` field reference, `nlencode`/`nldecode` encoding
+- `docs/agents/daemon.md` — `xymond` internals: in-memory state model, `handle_status()`,
+  `decide_alertstate()`, IPC channels, and all worker module roles
+- `docs/agents/cgi.md` — CGI layer: full program inventory, `cgi_request()` input parsing,
+  URL helpers, security (`csp_header()`), and the standard CGI skeleton
+- `docs/agents/config.md` — Configuration: `hosts.cfg` syntax and host tags,
+  `xymonserver.cfg` key variables, `tasks.cfg` format, `alerts.cfg` rule syntax
