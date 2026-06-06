@@ -70,14 +70,18 @@
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold">Duration</label>
-            <div class="d-flex gap-2 align-items-center">
-              <input type="number" name="duration" value="4" min="1" class="form-control maint-duration">
-              <select name="scale" class="form-select w-auto">
+            <div class="d-flex gap-2 align-items-center" id="xymon-disable-duration-row">
+              <input type="number" name="duration" id="xymon-disable-duration" value="4" min="1" class="form-control maint-duration">
+              <select name="scale" id="xymon-disable-scale" class="form-select w-auto">
                 <option value="1">minutes</option>
                 <option value="60" selected>hours</option>
                 <option value="1440">days</option>
                 <option value="10080">weeks</option>
               </select>
+            </div>
+            <div class="form-check mt-2">
+              <input type="checkbox" name="untilok" id="xymon-disable-untilok" value="on" class="form-check-input">
+              <label class="form-check-label" for="xymon-disable-untilok">Until OK (re-enable when test recovers)</label>
             </div>
           </div>
           <div class="mb-3">
@@ -94,3 +98,20 @@
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  var modal = document.getElementById('xymon-disable-modal');
+  if (!modal) return;
+  modal.addEventListener('show.bs.modal', function() {
+    document.getElementById('xymon-disable-untilok').checked = false;
+    document.getElementById('xymon-disable-duration').disabled = false;
+    document.getElementById('xymon-disable-scale').disabled = false;
+  });
+  document.getElementById('xymon-disable-untilok').addEventListener('change', function() {
+    var on = this.checked;
+    document.getElementById('xymon-disable-duration').disabled = on;
+    document.getElementById('xymon-disable-scale').disabled = on;
+  });
+})();
+</script>
