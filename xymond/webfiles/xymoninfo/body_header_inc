@@ -1,1 +1,10 @@
 <h1>&XYMWEBHOST &mdash; Host Information</h1>
+<div class="ms-auto d-flex gap-2" id="xymon-hdr-right">
+  &XYMONACKNOWLEDGEBUTTON
+  <button type="button" class="btn btn-outline-secondary btn-sm"
+          data-bs-toggle="modal" data-bs-target="#xymon-disable-modal"
+          data-multiselect="true">
+    <i class="fa-solid fa-bell-slash xymon-blue"></i>
+    <span class="d-none d-md-inline">Disable</span>
+  </button>
+</div>

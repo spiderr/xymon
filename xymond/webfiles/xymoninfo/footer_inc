@@ -1,42 +1,230 @@
+<!-- Acknowledge Alert modal -->
+<div class="modal fade" id="xymon-ack-modal" tabindex="-1" aria-labelledby="xymon-ack-modal-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="xymon-ack-modal-label">
+          <i class="fa-solid fa-square-check xymon-&XYMWEBCOLOR"></i> Acknowledge Alert
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="&XYMONSERVERSECURECGIURL/acknowledge.sh">
+        <!--
+          NUMBER_1 is the xymond ack cookie — a per-alert integer assigned when a test
+          enters alert state.  acknowledge.c requires it to build the "xymondack COOKIE"
+          protocol message; submitting 0 causes a silent "NO ACK sent" failure.
+          The value is fetched from xymondboard at page-render time via &XYMONACKCOOKIE.
+        -->
+        <input type="hidden" name="NUMBER_1"   value="&XYMONACKCOOKIE">
+        <input type="hidden" name="HOSTNAME_1" value="&XYMWEBHOST">
+        <input type="hidden" name="TESTNAME_1" value="&XYMWEBSVC">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Host &amp; Test</label>
+            <div class="text-muted small">&XYMWEBHOST &mdash; &XYMWEBSVC</div>
+          </div>
+          <div class="mb-3">
+            <label for="xymon-ack-delay" class="form-label fw-semibold">Acknowledge for</label>
+            <div class="d-flex gap-2 align-items-center">
+              <input type="number" name="DELAY_1" id="xymon-ack-delay"
+                     value="4" min="1" class="form-control maint-duration">
+              <select name="PERIOD_1" class="form-select w-auto">
+                <option value="minute">minutes</option>
+                <option value="hour" selected>hours</option>
+                <option value="day">days</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="xymon-ack-msg" class="form-label fw-semibold">Message</label>
+            <textarea name="MESSAGE_1" id="xymon-ack-msg" class="form-control" rows="3" required
+                      placeholder="Describe what is being done about this alert"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" name="Send_1" value="Send" class="btn btn-primary btn-sm">Acknowledge</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Disable Tests modal — dual-purpose:
+     Single-service mode (default): shows current test pre-checked + "Select more tests…" collapse.
+     Multi-select mode (data-multiselect="true" on trigger, or mark4Disable()): shows all tests
+     from window.xymonHostTests (injected by svcstatus-info.c for SERVICE=info pages). -->
+<div class="modal fade" id="xymon-disable-modal" tabindex="-1" aria-labelledby="xymon-disable-modal-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="xymon-disable-modal-label">
+          <i class="fa-solid fa-bell-slash xymon-blue"></i> Disable Tests
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="&XYMONSERVERSECURECGIURL/enadis.sh">
+        <input type="hidden" name="hostname" value="&XYMWEBHOST">
+        <input type="hidden" name="go"       value="Disable now">
+        <input type="hidden" name="go2"      id="dis-go2" value="Disable for">
+        <div class="modal-body">
+          <!-- Tests section: populated by JS on show.bs.modal -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Tests</label>
+            <!-- Seed: current service name for JS — substituted at render time -->
+            <span id="dis-current-svc" data-svc="&XYMWEBSVC" hidden></span>
+            <div id="dis-single-test"><!-- JS: one pre-checked checkbox in single-service mode --></div>
+            <div class="collapse mt-1" id="dis-more-tests">
+              <div class="mt-1 border-start ps-2" id="dis-more-list"><!-- JS: additional tests --></div>
+            </div>
+            <a href="#" class="small link-secondary mt-1 d-inline-block" id="dis-more-toggle"
+               data-bs-toggle="collapse" data-bs-target="#dis-more-tests"
+               aria-expanded="false">Select more tests…</a>
+          </div>
+          <!-- Duration mode selector -->
+          <div class="mb-3">
+            <div class="btn-group w-100 mb-2" role="group" aria-label="Disable mode">
+              <input type="radio" class="btn-check" name="dis_mode" id="dis-mode-for" value="for" autocomplete="off" checked>
+              <label class="btn btn-outline-secondary btn-sm" for="dis-mode-for">For a duration</label>
+              <input type="radio" class="btn-check" name="dis_mode" id="dis-mode-until" value="until" autocomplete="off">
+              <label class="btn btn-outline-secondary btn-sm" for="dis-mode-until">Until date/time</label>
+              <input type="radio" class="btn-check" name="dis_mode" id="dis-mode-ok" value="ok" autocomplete="off">
+              <label class="btn btn-outline-secondary btn-sm" for="dis-mode-ok">Until OK</label>
+            </div>
+            <div id="dis-panel-for">
+              <div class="d-flex gap-2 align-items-center">
+                <input type="number" name="duration" id="xymon-disable-duration" value="4" min="1" class="form-control maint-duration">
+                <select name="scale" id="xymon-disable-scale" class="form-select w-auto">
+                  <option value="1">minutes</option>
+                  <option value="60" selected>hours</option>
+                  <option value="1440">days</option>
+                  <option value="10080">weeks</option>
+                </select>
+              </div>
+            </div>
+            <div id="dis-panel-until" style="display:none">
+              <div class="d-flex gap-2 align-items-center">
+                <input type="date" name="end-date" id="xymon-disable-enddate" class="form-control">
+                <input type="time" name="end-time" id="xymon-disable-endtime" value="23:59" class="form-control w-auto">
+              </div>
+            </div>
+            <div id="dis-panel-ok" style="display:none">
+              <p class="text-muted small mb-0">Will remain disabled indefinitely; re-enabled automatically when the test next reports OK.</p>
+            </div>
+            <input type="checkbox" name="untilok" id="xymon-disable-untilok" value="on" style="display:none">
+          </div>
+          <div class="mb-3">
+            <label for="xymon-disable-cause" class="form-label fw-semibold">Reason</label>
+            <textarea name="cause" id="xymon-disable-cause" class="form-control" rows="3" required
+                      placeholder="Describe why this test is being disabled"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Disable</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
-function setcheck(field, val) {
-  var len = field.length;
-  if (len) { for (var i = 0; i < len; i++) field[i].checked = val; }
-  else field.checked = val;
-}
-function mark4Disable(services) {
-  var opts = document.disableform.disabletest.options;
-  for (var i = 0; i < opts.length; i++) {
-    if (services.indexOf(',' + opts[i].value + ',') > -1)
-      opts[i].selected = !opts[i].selected;
+(function() {
+  var modal = document.getElementById('xymon-disable-modal');
+  if (!modal) return;
+
+  var currentSvc = (document.getElementById('dis-current-svc') || {dataset:{}}).dataset.svc || '';
+
+  function colorClass(c) {
+    return {red:'xymon-red',yellow:'xymon-yellow',green:'xymon-green',
+            blue:'xymon-blue',purple:'xymon-purple',clear:'xymon-clear'}[c] || '';
   }
-}
-function ispositive(v) {
-  var s = v.toString();
-  for (var i = 0; i < s.length; i++) { if (s[i] < '0' || s[i] > '9') return false; }
-  return parseInt(s, 10) >= 1;
-}
-function disableButtons(f, action) {
-  for (var i = 0; i < f.length; i++) {
-    if (f.elements[i].type.toLowerCase() === 'button') f.elements[i].disabled = action;
+
+  function makeCheckbox(name, cls, checked) {
+    var id = 'dis-cb-' + name.replace(/[^a-z0-9]/gi, '_');
+    return '<div class="form-check">'
+      + '<input class="form-check-input" type="checkbox" name="disabletest"'
+      + ' id="' + id + '" value="' + name + '"' + (checked ? ' checked' : '') + '>'
+      + '<label class="form-check-label" for="' + id + '">'
+      + (cls ? '<i class="fa-solid fa-circle ' + cls + ' me-1" style="font-size:.7em"></i>' : '')
+      + name + '</label></div>';
   }
-}
-function validateDisable(theform) {
-  if (!theform.disabletest.value) {
-    alert('You must select the Test(s) to disable!');
-    theform.disabletest.focus();
-    return false;
+
+  function setMode(mode) {
+    document.getElementById('dis-panel-for').style.display   = (mode === 'for')   ? '' : 'none';
+    document.getElementById('dis-panel-until').style.display = (mode === 'until') ? '' : 'none';
+    document.getElementById('dis-panel-ok').style.display    = (mode === 'ok')    ? '' : 'none';
+    document.getElementById('xymon-disable-untilok').checked = (mode === 'ok');
+    document.getElementById('dis-go2').value = (mode === 'until') ? 'Disable until' : 'Disable for';
   }
-  if (!theform.cause.value) {
-    alert('You must fill in the Cause field!');
-    theform.cause.focus();
-    return false;
+
+  function initTests(multiselect, pendingServices) {
+    var singleDiv  = document.getElementById('dis-single-test');
+    var moreList   = document.getElementById('dis-more-list');
+    var moreToggle = document.getElementById('dis-more-toggle');
+    var moreCollapse = document.getElementById('dis-more-tests');
+
+    if (multiselect && window.xymonHostTests && window.xymonHostTests.length) {
+      var html = '<div class="form-check border-bottom pb-1 mb-1">'
+        + '<input class="form-check-input" type="checkbox" id="dis-cb-selectall">'
+        + '<label class="form-check-label fw-semibold" for="dis-cb-selectall">Select all</label>'
+        + '</div>';
+      window.xymonHostTests.forEach(function(t) {
+        var checked = pendingServices.indexOf(',' + t.name + ',') >= 0;
+        html += makeCheckbox(t.name, colorClass(t.color), checked);
+      });
+      singleDiv.innerHTML = html;
+      document.getElementById('dis-cb-selectall').addEventListener('change', function() {
+        singleDiv.querySelectorAll('input[name="disabletest"]').forEach(function(cb) {
+          cb.checked = this.checked;
+        }, this);
+      });
+      moreList.innerHTML = '';
+      moreToggle.style.display = 'none';
+      moreCollapse.classList.remove('show');
+    } else {
+      singleDiv.innerHTML = makeCheckbox(currentSvc, '', true);
+      moreList.innerHTML = '';
+      /* Hide "Select more" when there's nothing to populate it with */
+      moreToggle.style.display = (window.xymonHostTests && window.xymonHostTests.length) ? '' : 'none';
+      moreCollapse.classList.remove('show');
+    }
   }
-  if (!ispositive(theform.duration.value)) {
-    alert('Duration must be a positive integer.');
-    return false;
-  }
-  disableButtons(theform, true);
-  theform.submit();
-}
+
+  modal.addEventListener('show.bs.modal', function(event) {
+    document.getElementById('dis-mode-for').checked = true;
+    document.getElementById('xymon-disable-enddate').value = '';
+    document.getElementById('xymon-disable-endtime').value = '23:59';
+    setMode('for');
+
+    var trigger = event.relatedTarget;
+    var multiselect = (trigger && trigger.dataset.multiselect === 'true') ||
+                      !!(modal.dataset.pendingServices);
+    var pending = modal.dataset.pendingServices || '';
+    modal.dataset.pendingServices = '';
+    initTests(multiselect, pending);
+  });
+
+  /* Lazy-populate "more tests" on first expand in single-service mode */
+  document.getElementById('dis-more-tests').addEventListener('show.bs.collapse', function() {
+    var moreList = document.getElementById('dis-more-list');
+    if (!moreList.children.length && window.xymonHostTests) {
+      var html = '';
+      window.xymonHostTests.forEach(function(t) {
+        if (t.name !== currentSvc) html += makeCheckbox(t.name, colorClass(t.color), false);
+      });
+      moreList.innerHTML = html || '<em class="text-muted small">No other tests available.</em>';
+    }
+  });
+
+  document.querySelectorAll('input[name="dis_mode"]').forEach(function(r) {
+    r.addEventListener('change', function() { setMode(this.value); });
+  });
+
+  /* Called by "Toggle tests to disable" color buttons on SERVICE=info pages */
+  window.mark4Disable = function(services) {
+    modal.dataset.pendingServices = services;
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+  };
+})();
 </script>

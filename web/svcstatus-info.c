@@ -439,6 +439,29 @@ static void generate_xymon_statuslist(char *hostname, strbuffer_t *buf)
 static void generate_xymon_disable(char *hostname, strbuffer_t *buf)
 {
 	int i;
+
+	/*
+	 * Inject the host's test list as JSON so the shared Disable modal
+	 * (in shared/footer) can populate its test-selection checkboxes.
+	 * The modal opens in multi-select mode when triggered with data-multiselect="true"
+	 * (set on the Disable button in xymoninfo/body_header_inc).
+	 */
+	addtobuffer(buf, "<script>window.xymonHostTests=[");
+	for (i = 0; (i < testcount); i++) {
+		addtobuffer(buf, "{\"name\":\"");
+		addtobuffer(buf, tnames[i].name);
+		addtobuffer(buf, "\",\"color\":\"");
+		addtobuffer(buf, colorname(tnames[i].color));
+		addtobuffer(buf, "\"}");
+		if (i < testcount - 1) addtobuffer(buf, ",");
+	}
+	addtobuffer(buf, "];</script>\n");
+}
+
+static void generate_xymon_disable_DEAD(char *hostname, strbuffer_t *buf)
+{
+#if 0
+	int i;
 	time_t now = getcurrenttime(NULL);
 	int beginyear, endyear;
 	struct tm monthtm;
@@ -730,6 +753,7 @@ static void generate_xymon_disable(char *hostname, strbuffer_t *buf)
 	addtobuffer(buf, "\">\n");
 
 	addtobuffer(buf, "</form>\n");
+#endif
 }
 
 static void generate_xymon_enable(char *hostname, strbuffer_t *buf)
