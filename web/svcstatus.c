@@ -495,7 +495,7 @@ int do_request(void)
 			color = COL_GREEN;
 
 			cmsg = newstrbuffer(0);
-			addtobuffer(cmsg, "<table width=\"80%\" summary=\"Compacted Status Info\">\n");
+			addtobuffer(cmsg, "<div class=\"table-responsive\"><table class=\"table table-sm compact-status\"><tbody>\n");
 
 			row = strtok_r(log, "\n", &p_row);
 			while (row) {
@@ -512,9 +512,9 @@ int do_request(void)
 				icolor = parse_color(itmcolor);
 				if (icolor > color) color = icolor;
 
-				addtobuffer(cmsg, "<tr><td align=left>&");
-				addtobuffer(cmsg, itmcolor);
-				addtobuffer(cmsg, "&nbsp;<a href=\"");
+				addtobuffer(cmsg, "<tr><td>");
+				addtobuffer(cmsg, coloricon(icolor, 0, 1));
+				addtobuffer(cmsg, " <a href=\"");
 				addtobuffer(cmsg, hostsvcurl(hostname, testname, 1));
 				addtobuffer(cmsg, "\">");
 				addtobuffer(cmsg, htmlquoted(testname));
@@ -523,7 +523,7 @@ int do_request(void)
 				row = strtok_r(NULL, "\n", &p_row);
 			}
 
-			addtobuffer(cmsg, "</table>\n");
+			addtobuffer(cmsg, "</tbody></table></div>\n");
 			ishtmlformatted = 1;
 
 			sethostenv(displayname, ip, service, colorname(color), hostname);

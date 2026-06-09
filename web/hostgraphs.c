@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "<div class=\"hostgraphs\">\n");
 
 		for (testi=0; (tests[testi]); testi++) {
-			fprintf(stdout, "<p><img src=\"%s/showgraph.sh?host=%s",
+			fprintf(stdout, "<p><img class=\"img-fluid d-block\" src=\"%s/showgraph.sh?host=%s",
 				xgetenv("CGIBINURL"), htmlquoted(hosts[0]));
 
 			for (hosti=1; (hosts[hosti]); hosti++) fprintf(stdout, ",%s", htmlquoted(hosts[hosti]));

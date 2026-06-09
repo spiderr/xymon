@@ -209,6 +209,18 @@ Handles both the disable/enable form (`GET` → show form, `POST` → send comma
 scheduled maintenance list. Sends `disable HOST.TEST DURATION MESSAGE` or `enable HOST.TEST`
 to xymond via `sendmessage()`. Template: `maintact` (form), `maint` (list).
 
+**Disable wire format:** `DURATION` is minutes. Two modes, mutually exclusive:
+
+| Mode | CGI params | Wire value | xymond behavior |
+|---|---|---|---|
+| Timed | `go2=Disable for` + `duration` + `scale` | `duration * scale` minutes | disabled until timestamp expires |
+| Until OK | `untilok=on` | `-1` (`DISABLED_UNTIL_OK`) | disabled indefinitely until test reports OK |
+
+`go2=Disable until` is a third UI option (end date/time picker); `do_one_host()` converts it to
+minutes (`endtime − now`) before sending — still a timed disable. `untilok=on` overrides
+`duration` to `-1` regardless of `go2`, so the end-date is ignored when both are submitted.
+There is no compound "timed + re-enable-if-OK" mode.
+
 ### `eventlog.cgi`
 
 Queries `xymondboard` with time filters. Supports server-side pagination via `OFFSET` param.

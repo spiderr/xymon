@@ -46,8 +46,11 @@ typedef struct xymond_log_t {
 
 - `enabletime == 0` — test is running normally
 - `enabletime > now` — test is disabled until that timestamp
-- `enabletime == DISABLED_UNTIL_OK` (`-1`) — test is disabled until it reports OK
+- `enabletime == DISABLED_UNTIL_OK` (`-1`) — test is disabled indefinitely until it reports OK
 - `acktime > now` — test has an active acknowledgement
+
+These two disable modes are mutually exclusive. There is no compound "disabled until time T,
+but also re-enable if OK before T" mode — `DISABLED_UNTIL_OK` carries no expiry timestamp.
 - `cookie` is a non-zero integer string while the test is in alert state; `"0"` or empty otherwise
 
 ---
