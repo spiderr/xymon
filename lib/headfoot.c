@@ -937,17 +937,18 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 			fprintf(output, "%d", ackcookie_val);
 		}
 		else if ((strcmp(t_start, "XYMWEBCOLOR") == 0) || (strcmp(t_start, "BBCOLOR") == 0))
-			fprintf(output, "%s", hostenv_color);
+			fprintf(output, "%s", hostenv_color ? hostenv_color : "");
 		else if ((strcmp(t_start, "XYMWEBSVC") == 0) || (strcmp(t_start, "BBSVC") == 0))
-			fprintf(output, "%s", hostenv_svc);
+			fprintf(output, "%s", hostenv_svc ? hostenv_svc : "");
 		else if ((strcmp(t_start, "XYMWEBHOST") == 0) || (strcmp(t_start, "BBHOST") == 0))
-			fprintf(output, "%s", hostenv_host);
+			fprintf(output, "%s", hostenv_host ? hostenv_host : "");
 		else if ((strcmp(t_start, "XYMWEBHIKEY") == 0) || (strcmp(t_start, "BBHIKEY") == 0))
-			fprintf(output, "%s", (hostenv_hikey ? hostenv_hikey : hostenv_host));
+			fprintf(output, "%s", (hostenv_hikey ? hostenv_hikey : (hostenv_host ? hostenv_host : "")));
 		else if ((strcmp(t_start, "XYMWEBIP") == 0) || (strcmp(t_start, "BBIP") == 0))
-			fprintf(output, "%s", hostenv_ip);
+			fprintf(output, "%s", hostenv_ip ? hostenv_ip : "");
 		else if ((strcmp(t_start, "XYMWEBIPNAME") == 0) || (strcmp(t_start, "BBIPNAME") == 0)) {
-			if (strcmp(hostenv_ip, "0.0.0.0") == 0)  fprintf(output, "%s", hostenv_host);
+			if (!hostenv_ip || strcmp(hostenv_ip, "0.0.0.0") == 0)
+				fprintf(output, "%s", hostenv_host ? hostenv_host : "");
 			else fprintf(output, "%s", hostenv_ip);
 		}
 		else if ((strcmp(t_start, "XYMONREPWARN") == 0) || (strcmp(t_start, "BBREPWARN") == 0))
