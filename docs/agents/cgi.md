@@ -209,17 +209,25 @@ Handles both the disable/enable form (`GET` → show form, `POST` → send comma
 scheduled maintenance list. Sends `disable HOST.TEST DURATION MESSAGE` or `enable HOST.TEST`
 to xymond via `sendmessage()`. Template: `maintact` (form), `maint` (list).
 
-**Disable wire format:** `DURATION` is minutes. Two modes, mutually exclusive:
+**Disable wire format:** `DURATION` is minutes. Three UI modes:
 
 | Mode | CGI params | Wire value | xymond behavior |
 |---|---|---|---|
-| Timed | `go2=Disable for` + `duration` + `scale` | `duration * scale` minutes | disabled until timestamp expires |
-| Until OK | `untilok=on` | `-1` (`DISABLED_UNTIL_OK`) | disabled indefinitely until test reports OK |
+| For a duration | `go2=Disable for` + `duration` + `scale` | `duration * scale` minutes | disabled until timestamp expires |
+| Until date/time | `go2=Disable until` + `end-date` + `end-time` | `(endtime − now)` minutes | still a timed disable |
+| Forever | `untilok=on` | `-1` (`DISABLED_UNTIL_OK`) | disabled indefinitely |
 
-`go2=Disable until` is a third UI option (end date/time picker); `do_one_host()` converts it to
-minutes (`endtime − now`) before sending — still a timed disable. `untilok=on` overrides
-`duration` to `-1` regardless of `go2`, so the end-date is ignored when both are submitted.
-There is no compound "timed + re-enable-if-OK" mode.
+`untilok=on` overrides `duration` to `-1` regardless of `go2`.
+
+**`disableignoreok` flag (added 5.0.2):** An optional boolean CGI param controlling whether
+a disabled test re-enables automatically when the test reports OK. When not submitted (default),
+the disable clears early if the test recovers. When `disableignoreok=on` is submitted (via a
+hidden field set by the "Re-enable on Green" checkbox), the test stays blue until the disable
+expires or is manually cleared.
+
+The flag is embedded as `"disableignoreok: yes\n"` at the start of the message body in `fullmsg`,
+parsed and stripped by `handle_enadis()`, then stored as `log->disableignoreok` on the log entry.
+See `daemon.md` for the four-combination data model table.
 
 ### `eventlog.cgi`
 

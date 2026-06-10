@@ -333,8 +333,23 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 	if (disabletime != 0) {
 		{
 			char untilbuf[64];
-			if (disabletime == -1) strncpy(untilbuf, "OK", sizeof(untilbuf));
-			else strftime(untilbuf, sizeof(untilbuf), "%a %b %d %H:%M:%S %Y", localtime(&disabletime));
+			int disableignoreok = 0;
+
+			/* Optional prefix (set by svcstatus.c from xymondboard disableignoreok field) */
+			if (dismsg && strncmp(dismsg, "disableignoreok: yes\n", 21) == 0) {
+				disableignoreok = 1;
+				dismsg += 21;
+				if (!*dismsg) dismsg = NULL;
+			}
+
+			const char *reenable_note = (!disableignoreok) ? " (re-enables if OK)" : "";
+			if (disabletime == -1) {
+				strncpy(untilbuf, disableignoreok ? "Forever" : "OK", sizeof(untilbuf));
+				untilbuf[sizeof(untilbuf)-1] = '\0';
+			}
+			else {
+				strftime(untilbuf, sizeof(untilbuf), "%a %b %d %H:%M:%S %Y", localtime(&disabletime));
+			}
 
 			/* dismsg format: "\nDisabled by: USER @ HOST\nDisabled at: DATE\nReason: TEXT\n"
 			 * Optional (5.0.1 fix): "\nAck-preserved-{reason,by,at,until}: ..." appended by enadis.c
@@ -357,7 +372,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 				"<strong><i class=\"fa-solid fa-bell-slash xymon-blue\"></i> Disabled</strong><br>");
 			if (dis_by)  fprintf(output, "By: %s<br>",    htmlquoted(dis_by));
 			if (dis_at)  fprintf(output, "At: %s<br>",    dis_at);
-			fprintf(output, "Until: %s<br>", untilbuf);
+			fprintf(output, "Until: %s%s<br>", untilbuf, reenable_note);
 			if (dis_rsn) fprintf(output, "Reason: %s</div>\n", htmlquoted(dis_rsn));
 			else if (dismsg) fprintf(output, "Reason: %s</div>\n", htmlquoted(dismsg));
 			else         fprintf(output, "</div>\n");

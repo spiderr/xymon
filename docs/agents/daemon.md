@@ -35,6 +35,7 @@ typedef struct xymond_log_t {
     time_t  logtime;                 /* last update received */
     time_t  validtime;               /* expires at this time (goes purple) */
     time_t  enabletime;              /* 0=not disabled; DISABLED_UNTIL_OK=-1; otherwise expiry */
+    int     disableignoreok;         /* 1 = stay disabled even when test reports OK */
     time_t  acktime;                 /* 0=not acked; otherwise ack expiry time */
     unsigned char *dismsg, *ackmsg;  /* reason strings (nlencode'd when on the wire) */
     char   *cookie;                  /* alert cookie string (integer) */
@@ -46,11 +47,27 @@ typedef struct xymond_log_t {
 
 - `enabletime == 0` — test is running normally
 - `enabletime > now` — test is disabled until that timestamp
-- `enabletime == DISABLED_UNTIL_OK` (`-1`) — test is disabled indefinitely until it reports OK
+- `enabletime == DISABLED_UNTIL_OK` (`-1`) — test is disabled indefinitely ("Forever")
 - `acktime > now` — test has an active acknowledgement
 
-These two disable modes are mutually exclusive. There is no compound "disabled until time T,
-but also re-enable if OK before T" mode — `DISABLED_UNTIL_OK` carries no expiry timestamp.
+`disableignoreok` is an independent boolean that modifies re-enable-on-green behavior:
+
+| `enabletime` | `disableignoreok` | Behavior |
+|---|---|---|
+| `timestamp` | `0` (default) | Timed — clears early if test reports OK |
+| `timestamp` | `1` | Timed — stays blue until clock expires |
+| `DISABLED_UNTIL_OK` | `0` (default) | Forever — re-enables on OK ← legacy behavior |
+| `DISABLED_UNTIL_OK` | `1` | Forever — stays blue no matter what |
+
+**Wire protocol:** `disableignoreok` is embedded as a parseable prefix line in the disable
+message body: `"disableignoreok: yes\n"`. `handle_enadis()` checks `txtstart` for this prefix,
+sets `log->disableignoreok = 1`, and strips the line before storing as `log->dismsg`.
+Old callers that don't send the prefix default to `disableignoreok=0`.
+
+**Behavior change (5.0.2):** Timed disables now default to re-enable on green (`disableignoreok=0`).
+Previously, timed disables always ran to expiry regardless of status. The new default is
+explicitly "re-enable early if the test recovers before the timer expires."
+
 - `cookie` is a non-zero integer string while the test is in alert state; `"0"` or empty otherwise
 
 ---
@@ -98,8 +115,10 @@ and for internally generated color transitions:
    upward (never downward).
 2. **Flap detection** — if more than `flapcount` changes occurred within `flapthreshold` seconds,
    the color is held at the most severe recent color and `log->flapping` is set.
-3. **Disable check** — if `enabletime > now`, force `newcolor = COL_BLUE`. If `enabletime ==
-   DISABLED_UNTIL_OK` and `decide_alertstate(newcolor) == A_OK`, clear the disable.
+3. **Disable check** — if `enabletime > now` or `enabletime == DISABLED_UNTIL_OK`, force
+   `newcolor = COL_BLUE`. If `!disableignoreok` and `decide_alertstate(newcolor) == A_OK`,
+   clear the disable early (applies to both timed and forever disables). If `disableignoreok`
+   is set, the test stays blue until the timer expires (or manual re-enable).
 4. **Ack check** — if `acktime > now`, suppress alerting. If `decide_alertstate(newcolor) == A_OK`
    or ack expired, clear ack fields.
 5. **Delay check** — `DELAYRED` / `DELAYYELLOW` in hosts.cfg can hold a status at its current

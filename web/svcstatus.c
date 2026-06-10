@@ -370,7 +370,7 @@ int do_request(void)
 
 			freeregex(dummy);
 			SBUF_MALLOC(xymondreq, 1024 + strlen(hostname) + strlen(service));
-			snprintf(xymondreq, xymondreq_buflen, "xymondlog host=%s test=%s fields=hostname,testname,color,flags,lastchange,logtime,validtime,acktime,disabletime,sender,cookie,ackmsg,dismsg,client,acklist,XMH_IP,XMH_DISPLAYNAME,clntstamp,flapinfo,modifiers", hostname, service);
+			snprintf(xymondreq, xymondreq_buflen, "xymondlog host=%s test=%s fields=hostname,testname,color,flags,lastchange,logtime,validtime,acktime,disabletime,sender,cookie,ackmsg,dismsg,client,acklist,XMH_IP,XMH_DISPLAYNAME,clntstamp,flapinfo,modifiers,disableignoreok", hostname, service);
 		}
 		else {
 			pcre2_code *dummy = NULL;
@@ -416,7 +416,7 @@ int do_request(void)
 
 			memset(items, 0, sizeof(items));
 			p = gettok(sumline, "|"); icount = 0;
-			while (p && (icount < 20)) {
+			while (p && (icount < 21)) {
 				items[icount++] = p;
 				p = gettok(NULL, "|");
 			}
@@ -442,6 +442,7 @@ int do_request(void)
 			 * clienttstamp         [17]
 			 * flapping		[18]
 			 * modifiers		[19]
+			 * disableignoreok	[20]
 			 */
 			color = parse_color(items[2]);
 			flags = strdup(items[3]);
@@ -482,6 +483,14 @@ int do_request(void)
 			clntstamp = ((items[17]  && *items[17]) ? atol(items[17]) : 0);
 			flapping = (items[18] ? (*items[18] == '1') : 0);
 			modifiers = (items[19] && *(items[19])) ? items[19] : NULL;
+
+			if (items[20] && *items[20] == '1' && dismsg) {
+				/* prepend flag so htmllog.c can render the correct "Until:" line */
+				char *newdismsg = (char *)malloc(22 + strlen(dismsg) + 1);
+				strcpy(newdismsg, "disableignoreok: yes\n");
+				strcat(newdismsg, dismsg);
+				dismsg = newdismsg;
+			}
 
 			sethostenv(displayname, ip, service, colorname(COL_GREEN), hostname);
 			sethostenv_refresh(60);

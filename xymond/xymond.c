@@ -130,6 +130,7 @@ typedef struct xymond_log_t {
 	time_t logtime;		/* time when last update was received */
 	time_t validtime;	/* time when status is no longer valid */
 	time_t enabletime;	/* time when test auto-enables after a disable */
+	int disableignoreok;	/* 1 = stay disabled even if test reports OK */
 	time_t acktime;		/* time when test acknowledgement expires */
 	time_t redstart, yellowstart;
 	int maxackedcolor;	/* The most severe color that has been acked */
@@ -299,8 +300,8 @@ xymond_statistics_t xymond_stats[] = {
 	{ NULL, 0 }
 };
 
-enum boardfield_t { F_NONE, F_IP, F_HOSTNAME, F_TESTNAME, F_MATCHEDTAG, F_COLOR, F_FLAGS, 
-		    F_LASTCHANGE, F_LOGTIME, F_VALIDTIME, F_ACKTIME, F_DISABLETIME,
+enum boardfield_t { F_NONE, F_IP, F_HOSTNAME, F_TESTNAME, F_MATCHEDTAG, F_COLOR, F_FLAGS,
+		    F_LASTCHANGE, F_LOGTIME, F_VALIDTIME, F_ACKTIME, F_DISABLETIME, F_DISABLEIGNOREOK,
 		    F_SENDER, F_COOKIE, F_LINE1,
 		    F_ACKMSG, F_DISMSG, F_MSG, F_CLIENT, F_CLIENTTSTAMP,
 		    F_ACKLIST,
@@ -328,6 +329,7 @@ boardfieldnames_t boardfieldnames[] = {
 	{ "validtime", F_VALIDTIME },
 	{ "acktime", F_ACKTIME },
 	{ "disabletime", F_DISABLETIME },
+	{ "disableignoreok", F_DISABLEIGNOREOK },
 	{ "sender", F_SENDER },
 	{ "cookie", F_COOKIE },
 	{ "line1", F_LINE1 },
@@ -1541,28 +1543,26 @@ void handle_status(unsigned char *msg, char *sender, char *hostname, char *testn
 		log->flapping = 0;
 	}
 
-	if (log->enabletime == DISABLED_UNTIL_OK) {
-		/* The test is disabled until we get an OK status */
-		if ((newcolor != COL_BLUE) && (decide_alertstate(newcolor) == A_OK)) {
-			/* It's OK now - clear the disable status */
+	if (log->enabletime) {
+		if (!log->disableignoreok &&
+			(newcolor != COL_BLUE) && (decide_alertstate(newcolor) == A_OK)) {
+			/* Re-enable: test is OK and ignoreok not set */
 			log->enabletime = 0;
+			log->disableignoreok = 0;
 			if (log->dismsg) { xfree(log->dismsg); log->dismsg = NULL; }
 			posttochannel(enadischn, channelnames[C_ENADIS], msg, sender, log->host->hostname, log, NULL);
 		}
-		else {
-			/* Still not OK - keep it BLUE */
+		else if (log->enabletime == DISABLED_UNTIL_OK || log->enabletime > now) {
+			/* Still disabled */
 			newcolor = COL_BLUE;
 		}
-	}
-	else if (log->enabletime > now) {
-		/* The test is currently disabled. */
-		newcolor = COL_BLUE;
-	}
-	else if (log->enabletime) {
-		/* A disable has expired. Clear the timestamp and the message buffer */
-		log->enabletime = 0;
-		if (log->dismsg) { xfree(log->dismsg); log->dismsg = NULL; }
-		posttochannel(enadischn, channelnames[C_ENADIS], msg, sender, log->host->hostname, log, NULL);
+		else {
+			/* Timed disable expired */
+			log->enabletime = 0;
+			log->disableignoreok = 0;
+			if (log->dismsg) { xfree(log->dismsg); log->dismsg = NULL; }
+			posttochannel(enadischn, channelnames[C_ENADIS], msg, sender, log->host->hostname, log, NULL);
+		}
 	}
 	else {
 		/* If we got a downcause, and the status is not disabled, use downcause as the disable text */
@@ -2036,6 +2036,7 @@ void handle_enadis(int enabled, conn_t *msg, char *sender)
 	char *hname = NULL, *tname = NULL;
 	time_t expires = 0;
 	int alltests = 0;
+	int ignoreok = 0;
 	xtreePos_t hosthandle, testhandle;
 	xymond_hostlist_t *hwalk = NULL;
 	testinfo_t *twalk = NULL;
@@ -2081,6 +2082,12 @@ void handle_enadis(int enabled, conn_t *msg, char *sender)
 		else {
 			errprintf("Invalid disable from %s - no duration specified\n", sender);
 			goto done;
+		}
+
+		if (strncmp(txtstart, "disableignoreok: yes\n", 21) == 0) {
+			ignoreok = 1;
+			txtstart += 21;
+			if (*txtstart == '\0') txtstart = "(No reason given)";
 		}
 	}
 
@@ -2153,6 +2160,7 @@ void handle_enadis(int enabled, conn_t *msg, char *sender)
 		if (alltests) {
 			for (log = hwalk->logs; (log); log = log->next) {
 				log->enabletime = expires;
+				log->disableignoreok = ignoreok;
 				log->validtime = (expires == DISABLED_UNTIL_OK) ? INT_MAX : log->validtime;
 				if (txtstart) {
 					if (log->dismsg) xfree(log->dismsg);
@@ -2167,6 +2175,7 @@ void handle_enadis(int enabled, conn_t *msg, char *sender)
 			for (log = hwalk->logs; (log && (log->test != twalk)); log = log->next) ;
 			if (log) {
 				log->enabletime = expires;
+				log->disableignoreok = ignoreok;
 				log->validtime = (expires == DISABLED_UNTIL_OK) ? INT_MAX : log->validtime;
 				if (txtstart) {
 					if (log->dismsg) xfree(log->dismsg);
@@ -3364,6 +3373,7 @@ strbuffer_t *generate_outbuf(strbuffer_t **prebuf, boardfield_t *boardfields, xy
 		  case F_VALIDTIME: snprintf(l, sizeof(l), "%d", (int)lwalk->validtime); addtobuffer(buf, l); break;
 		  case F_ACKTIME: snprintf(l, sizeof(l), "%d", (int)lwalk->acktime); addtobuffer(buf, l); break;
 		  case F_DISABLETIME: snprintf(l, sizeof(l), "%d", (int)lwalk->enabletime); addtobuffer(buf, l); break;
+		  case F_DISABLEIGNOREOK: snprintf(l, sizeof(l), "%d", (int)lwalk->disableignoreok); addtobuffer(buf, l); break;
 		  case F_SENDER: addtobuffer(buf, lwalk->sender); break;
 		  case F_COOKIE: if (lwalk->cookie) addtobuffer(buf, lwalk->cookie); break;
 
@@ -4806,6 +4816,7 @@ void save_checkpoint(void)
 			if (lwalk->ackmsg) msgstr = nlencode(lwalk->ackmsg); else msgstr = "";
 			if (iores >= 0) iores = fprintf(fd, "|%s", msgstr);
 			if (iores >= 0) iores = fprintf(fd, "|%d|%d", (int)lwalk->redstart, (int)lwalk->yellowstart);
+			if (iores >= 0) iores = fprintf(fd, "|%d", lwalk->disableignoreok);
 			if (iores >= 0) iores = fprintf(fd, "\n");
 
 			for (awalk = lwalk->acklist; (awalk && (iores >= 0)); awalk = awalk->next) {
@@ -4856,9 +4867,10 @@ void load_checkpoint(char *fn)
 	testinfo_t *t = NULL;
 	char *origin = NULL;
 	xymond_log_t *ltail = NULL;
-	char *originname, *hostname, *testname, *sender, *testflags, *statusmsg, *disablemsg, *ackmsg, *cookie; 
+	char *originname, *hostname, *testname, *sender, *testflags, *statusmsg, *disablemsg, *ackmsg, *cookie;
 	time_t logtime, lastchange, validtime, enabletime, acktime, cookieexpires, yellowstart, redstart;
 	int color = COL_GREEN, oldcolor = COL_GREEN;
+	int disableignoreok;
 	int count = 0;
 
 	fd = fopen(fn, "r");
@@ -4874,6 +4886,7 @@ void load_checkpoint(char *fn)
 	while (unlimfgets(inbuf, fd)) {
 		originname = hostname = testname = sender = testflags = statusmsg = disablemsg = ackmsg = cookie = NULL;
 		logtime = lastchange = validtime = enabletime = acktime = cookieexpires = yellowstart = redstart = 0;
+		disableignoreok = 0;
 		err = 0;
 
 		if ((strncmp(STRBUF(inbuf), "@@XYMONDCHK-V1|.task.|", 22) == 0) || (strncmp(STRBUF(inbuf), "@@HOBBITDCHK-V1|.task.|", 23) == 0)) {
@@ -4979,7 +4992,8 @@ void load_checkpoint(char *fn)
 			  case 17: ackmsg = item; break;
 			  case 18: redstart = atoi(item); break;
 			  case 19: yellowstart = atoi(item); break;
-			  default: err = 1;
+			  case 20: disableignoreok = atoi(item); break;
+			  default: break;
 			}
 
 			item = gettok(NULL, "|\n"); i++;
@@ -5061,6 +5075,7 @@ void load_checkpoint(char *fn)
 		ltail->lastchange[0] = lastchange;
 		ltail->validtime = validtime;
 		ltail->enabletime = enabletime;
+		ltail->disableignoreok = disableignoreok;
 		if (ltail->enabletime == DISABLED_UNTIL_OK) ltail->validtime = INT_MAX;
 		ltail->acktime = acktime;
 		ltail->redstart = redstart;

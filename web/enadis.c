@@ -35,6 +35,7 @@ char **enabletest = NULL;
 int duration = 0;
 int scale = 1;
 char *disablemsg = "No reason given";
+int disableignoreok = 0;
 time_t schedtime = 0;
 time_t endtime = 0;
 time_t nowtime = 0;
@@ -120,6 +121,9 @@ void parse_cgi(void)
 		}
 		else if (strcmp(pwalk->name, "cause") == 0) {
 			disablemsg = strdup(pwalk->value);
+		}
+		else if (strcmp(pwalk->name, "disableignoreok") == 0) {
+			if (strcasecmp(pwalk->value, "on") == 0) disableignoreok = 1;
 		}
 		else if (strcmp(pwalk->name, "hostname") == 0) {
 			if (hostnames == NULL) {
@@ -525,8 +529,13 @@ int main(int argc, char *argv[])
 		char distimebuf[64];
 		strftime(distimebuf, sizeof(distimebuf), "%a %b %d %H:%M:%S %Y", localtime(&dis_now));
 		SBUF_REALLOC(fullmsg, 1024 + strlen(username) + strlen(userhost) + strlen(disablemsg) + sizeof(distimebuf));
-		snprintf(fullmsg, fullmsg_buflen, "\nDisabled by: %s @ %s\nDisabled at: %s\nReason: %s\n",
-			username, userhost, distimebuf, disablemsg);
+		if (disableignoreok) {
+			snprintf(fullmsg, fullmsg_buflen, "disableignoreok: yes\nDisabled by: %s @ %s\nDisabled at: %s\nReason: %s\n",
+				username, userhost, distimebuf, disablemsg);
+		} else {
+			snprintf(fullmsg, fullmsg_buflen, "\nDisabled by: %s @ %s\nDisabled at: %s\nReason: %s\n",
+				username, userhost, distimebuf, disablemsg);
+		}
 	}
 
 	/*

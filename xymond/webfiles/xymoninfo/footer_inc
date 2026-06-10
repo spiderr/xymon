@@ -81,6 +81,16 @@
                data-bs-toggle="collapse" data-bs-target="#dis-more-tests"
                aria-expanded="false">Select more tests…</a>
           </div>
+          <!-- ACK pre-flight data: read by JS; not submitted to enadis.sh -->
+          <input type="hidden" id="dis-ack-cookie" value="&XYMONACKCOOKIE">
+          <input type="hidden" id="dis-ack-svc"    value="&XYMWEBSVC">
+          <!-- Shown only when there is an active alert cookie -->
+          <div class="mb-2" id="dis-ack-section" style="display:none">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="dis-also-ack">
+              <label class="form-check-label" for="dis-also-ack">Also acknowledge active alert</label>
+            </div>
+          </div>
           <!-- Duration mode selector -->
           <div class="mb-3">
             <div class="btn-group w-100 mb-2" role="group" aria-label="Disable mode">
@@ -88,8 +98,8 @@
               <label class="btn btn-outline-secondary btn-sm" for="dis-mode-for">For a duration</label>
               <input type="radio" class="btn-check" name="dis_mode" id="dis-mode-until" value="until" autocomplete="off">
               <label class="btn btn-outline-secondary btn-sm" for="dis-mode-until">Until date/time</label>
-              <input type="radio" class="btn-check" name="dis_mode" id="dis-mode-ok" value="ok" autocomplete="off">
-              <label class="btn btn-outline-secondary btn-sm" for="dis-mode-ok">Until OK</label>
+              <input type="radio" class="btn-check" name="dis_mode" id="dis-mode-forever" value="forever" autocomplete="off">
+              <label class="btn btn-outline-secondary btn-sm" for="dis-mode-forever">Forever</label>
             </div>
             <div id="dis-panel-for">
               <div class="d-flex gap-2 align-items-center">
@@ -108,10 +118,15 @@
                 <input type="time" name="end-time" id="xymon-disable-endtime" value="23:59" class="form-control w-auto">
               </div>
             </div>
-            <div id="dis-panel-ok" style="display:none">
-              <p class="text-muted small mb-0">Will remain disabled indefinitely; re-enabled automatically when the test next reports OK.</p>
-            </div>
+            <!-- Hidden untilok field: set by JS when mode=forever -->
             <input type="checkbox" name="untilok" id="xymon-disable-untilok" value="on" style="display:none">
+            <!-- Re-enable on Green: visible, pre-checked; inverse-maps to disableignoreok -->
+            <div class="form-check mt-2" id="dis-reenable-section">
+              <input class="form-check-input" type="checkbox" id="dis-reenable-ok" checked>
+              <label class="form-check-label" for="dis-reenable-ok">Re-enable on Green</label>
+            </div>
+            <!-- Submitted only when "Re-enable on Green" is UNCHECKED -->
+            <input type="hidden" id="dis-ignoreok" name="disableignoreok" value="on" disabled>
           </div>
           <div class="mb-3">
             <label for="xymon-disable-cause" class="form-label fw-semibold">Reason</label>
@@ -134,6 +149,8 @@
   if (!modal) return;
 
   var currentSvc = (document.getElementById('dis-current-svc') || {dataset:{}}).dataset.svc || '';
+  var reEnableOk  = document.getElementById('dis-reenable-ok');
+  var ignoreOkHidden = document.getElementById('dis-ignoreok');
 
   function colorClass(c) {
     return {red:'xymon-red',yellow:'xymon-yellow',green:'xymon-green',
@@ -151,10 +168,9 @@
   }
 
   function setMode(mode) {
-    document.getElementById('dis-panel-for').style.display   = (mode === 'for')   ? '' : 'none';
-    document.getElementById('dis-panel-until').style.display = (mode === 'until') ? '' : 'none';
-    document.getElementById('dis-panel-ok').style.display    = (mode === 'ok')    ? '' : 'none';
-    document.getElementById('xymon-disable-untilok').checked = (mode === 'ok');
+    document.getElementById('dis-panel-for').style.display   = (mode === 'for')     ? '' : 'none';
+    document.getElementById('dis-panel-until').style.display = (mode === 'until')   ? '' : 'none';
+    document.getElementById('xymon-disable-untilok').checked = (mode === 'forever');
     document.getElementById('dis-go2').value = (mode === 'until') ? 'Disable until' : 'Disable for';
   }
 
@@ -197,12 +213,22 @@
     document.getElementById('xymon-disable-endtime').value = '23:59';
     setMode('for');
 
+    /* Reset Re-enable on Green to default checked */
+    if (reEnableOk)     { reEnableOk.checked = true; }
+    if (ignoreOkHidden) { ignoreOkHidden.disabled = true; }
+
     var trigger = event.relatedTarget;
     var multiselect = (trigger && trigger.dataset.multiselect === 'true') ||
                       !!(modal.dataset.pendingServices);
     var pending = modal.dataset.pendingServices || '';
     modal.dataset.pendingServices = '';
     initTests(multiselect, pending);
+
+    var ackCookie = parseInt((document.getElementById('dis-ack-cookie') || {}).value, 10) || 0;
+    var ackSection = document.getElementById('dis-ack-section');
+    if (ackSection) ackSection.style.display = ackCookie ? '' : 'none';
+    var ackCb = document.getElementById('dis-also-ack');
+    if (ackCb) ackCb.checked = false;
   });
 
   /* Lazy-populate "more tests" on first expand in single-service mode */
@@ -221,10 +247,59 @@
     r.addEventListener('change', function() { setMode(this.value); });
   });
 
+  /* Wire up "Re-enable on Green" checkbox — toggles hidden disableignoreok field */
+  if (reEnableOk) {
+    reEnableOk.addEventListener('change', function() {
+      if (ignoreOkHidden) ignoreOkHidden.disabled = this.checked;
+    });
+  }
+
   /* Called by "Toggle tests to disable" color buttons on SERVICE=info pages */
   window.mark4Disable = function(services) {
     modal.dataset.pendingServices = services;
     bootstrap.Modal.getOrCreateInstance(modal).show();
   };
+
+  /* ACK pre-flight: when "Also acknowledge" is checked, POST to acknowledge.sh first */
+  var disForm = modal.querySelector('form');
+  if (disForm) {
+    disForm.addEventListener('submit', function(e) {
+      var ackCb = document.getElementById('dis-also-ack');
+      var ackCookie = parseInt((document.getElementById('dis-ack-cookie') || {}).value, 10) || 0;
+      if (!ackCb || !ackCb.checked || !ackCookie) return;
+
+      e.preventDefault();
+
+      var mode = (document.querySelector('input[name="dis_mode"]:checked') || {}).value || 'for';
+      var delay, period;
+      if (mode === 'for') {
+        var scale = parseInt((document.getElementById('xymon-disable-scale') || {}).value, 10) || 60;
+        delay  = (document.getElementById('xymon-disable-duration') || {}).value || '4';
+        period = scale >= 1440 ? 'day' : (scale >= 60 ? 'hour' : 'minute');
+      } else if (mode === 'until') {
+        var endDate = (document.getElementById('xymon-disable-enddate') || {}).value || '';
+        var endTime = (document.getElementById('xymon-disable-endtime') || {}).value || '23:59';
+        var ms = (endDate ? new Date(endDate + 'T' + endTime).getTime() : 0) - Date.now();
+        delay  = String(Math.max(1, Math.ceil(ms / 60000)));
+        period = 'minute';
+      } else {
+        delay  = '30';
+        period = 'day';
+      }
+
+      var body = new URLSearchParams({
+        NUMBER_1:   ackCookie,
+        HOSTNAME_1: (disForm.querySelector('[name="hostname"]') || {}).value || '',
+        TESTNAME_1: (document.getElementById('dis-ack-svc') || {}).value || '',
+        DELAY_1:    delay,
+        PERIOD_1:   period,
+        MESSAGE_1:  (document.getElementById('xymon-disable-cause') || {}).value || '',
+        Send_1:     'Send'
+      });
+
+      fetch('&XYMONSERVERSECURECGIURL/acknowledge.sh', {method: 'POST', body: body})
+        .finally(function() { disForm.submit(); });
+    });
+  }
 })();
 </script>
