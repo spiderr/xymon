@@ -347,8 +347,6 @@ static void generate_xymon_statuslist(char *hostname, strbuffer_t *buf)
 	servPurple = newstrbuffer(0);
 	servBlue = newstrbuffer(0);
 
-	addtobuffer(buf, "<tr><th>Status summary</th><td>\n");
-	addtobuffer(buf, "<form name=\"colorsel\" action=\"nosubmit\" method=\"GET\">\n");
 	addtobuffer(buf, "<div class=\"table-responsive\"><table class=\"table table-sm table-bordered svcinfo-status\">\n");
 	addtobuffer(buf, "<tr><th>Service</th><th>Since</th><th>Duration</th></tr>\n");
 
@@ -426,9 +424,7 @@ static void generate_xymon_statuslist(char *hostname, strbuffer_t *buf)
 
 	}
 
-	addtobuffer(buf,"</table></div></form>\n");
-	addtobuffer(buf, "</td></tr>\n");
-	addtobuffer(buf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
+	addtobuffer(buf,"</table></div>\n");
 
 	freestrbuffer(servRed);
 	freestrbuffer(servYellow);
@@ -825,7 +821,7 @@ static void generate_xymon_enable(char *hostname, strbuffer_t *buf)
 	addtobuffer(buf, "\">\n");
 
 	addtobuffer(buf, "<input name=\"enabletest\" type=hidden value=\"*\">\n");
-	addtobuffer(buf, "<input name=\"go\" type=submit value=\"Enable\">\n");
+	addtobuffer(buf, "<button type=\"submit\" class=\"btn btn-sm btn-success\">Enable</button>\n");
 	addtobuffer(buf, "</form>\n");
 	addtobuffer(buf, "</td>\n");
 
@@ -922,39 +918,39 @@ char *generate_info(char *hostname, char *critconfigfn)
 	/* Fetch the current host status */
 	gotstatus = (fetch_status(hostname) == 0);
 
-	addtobuffer(infobuf, "<div class=\"table-responsive\"><table class=\"table table-sm svcinfo-host\">\n");
+	addtobuffer(infobuf, "<div class=\"svcinfo-host\"><dl class=\"row svcinfo-fields\">\n");
 
 	val = xmh_item(hostwalk, XMH_DISPLAYNAME);
 	if (val && (strcmp(val, hostname) != 0)) {
-		addtobuffer(infobuf, "<tr><th>Hostname:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Hostname:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
 		addtobuffer(infobuf, " (");
 		addtobuffer(infobuf, htmlquoted(hostname));
-		addtobuffer(infobuf, ")</td></tr>\n");
+		addtobuffer(infobuf, ")</dd>\n");
 	}
 	else {
-		addtobuffer(infobuf, "<tr><th>Hostname:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Hostname:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, htmlquoted(hostname));
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_CLIENTALIAS);
 	if (val && (strcmp(val, hostname) != 0)) {
-		addtobuffer(infobuf, "<tr><th>Client alias:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Client alias:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	if (unametxt) {
-		addtobuffer(infobuf, "<tr><th>OS:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">OS:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, unametxt);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	if (clientvertxt) {
-		addtobuffer(infobuf, "<tr><th>Client S/W:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Client S/W:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, clientvertxt);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_IP);
@@ -973,30 +969,30 @@ char *generate_info(char *hostname, char *critconfigfn)
 			}
 		}
 	}
-	addtobuffer(infobuf, "<tr><th>IP:</th><td>");
+	addtobuffer(infobuf, "<dt class=\"col-sm-4\">IP:</dt><dd class=\"col-sm-8\">");
 	addtobuffer(infobuf, val);
-	addtobuffer(infobuf, "</td></tr>\n");
+	addtobuffer(infobuf, "</dd>\n");
 
 	val = xmh_item(hostwalk, XMH_DOCURL);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Documentation:</th><td><a href=\"");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Documentation:</dt><dd class=\"col-sm-8\"><a href=\"");
 		addtobuffer(infobuf, val);
 		addtobuffer(infobuf, "\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</a>\n");
+		addtobuffer(infobuf, "</a></dd>\n");
 	}
 
 	val = hostlink(hostname);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Notes:</th><td><a href=\"");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Notes:</dt><dd class=\"col-sm-8\"><a href=\"");
 		addtobuffer(infobuf, val);
 		addtobuffer(infobuf, "\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</a>\n");
+		addtobuffer(infobuf, "</a></dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_PAGEPATH);
-	addtobuffer(infobuf, "<tr><th>Page/subpage:</th><td><a href=\"");
+	addtobuffer(infobuf, "<dt class=\"col-sm-4\">Page/subpage:</dt><dd class=\"col-sm-8\"><a href=\"");
 	addtobuffer(infobuf, xgetenv("XYMONWEB"));
 	addtobuffer(infobuf, "/");
 	addtobuffer(infobuf, val);
@@ -1016,25 +1012,23 @@ char *generate_info(char *hostname, char *critconfigfn)
 		addtobuffer(infobuf, "</a>\n");
 		clonewalk = next_host(clonewalk, 1);
 	}
-	addtobuffer(infobuf, "</td></tr>\n");
-	addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
+	addtobuffer(infobuf, "</dd>\n");
 
 	val = xmh_item(hostwalk, XMH_DESCRIPTION);
 	if (val) {
 		char *delim;
 
 		delim = strchr(val, ':'); if (delim) *delim = '\0';
-		addtobuffer(infobuf, "<tr><th>Host type:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Host type:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
-		if (delim) { 
-			*delim = ':'; 
+		addtobuffer(infobuf, "</dd>\n");
+		if (delim) {
+			*delim = ':';
 			delim++;
-			addtobuffer(infobuf, "<tr><th>Description:</th><td>");
+			addtobuffer(infobuf, "<dt class=\"col-sm-4\">Description:</dt><dd class=\"col-sm-8\">");
 			addtobuffer(infobuf, delim);
-			addtobuffer(infobuf, "</td></tr>\n");
+			addtobuffer(infobuf, "</dd>\n");
 		}
-		addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
 	}
 
 	if (newcritconfig) {
@@ -1052,14 +1046,12 @@ char *generate_info(char *hostname, char *critconfigfn)
 			nkrec = get_critconfig(key, CRITCONF_FIRSTMATCH, NULL);
 			if (!nkrec) continue;
 			if (firstrec) {
-				addtobuffer(infobuf, "<tr><th>Critical alerts:</th>");
+				addtobuffer(infobuf, "<dt class=\"col-sm-4\">Critical alerts:</dt><dd class=\"col-sm-8\">");
 				firstrec = 0;
-			}
-			else {
-				addtobuffer(infobuf, "<tr><td>&nbsp;</td>");
+			} else {
+				addtobuffer(infobuf, "<br>");
 			}
 
-			addtobuffer(infobuf, "<td>");
 			addtobuffer(infobuf, tnames[i].name);
 			addtobuffer(infobuf, ":");
 
@@ -1077,15 +1069,14 @@ char *generate_info(char *hostname, char *critconfigfn)
 				addtobuffer(infobuf, " resolver group ");
 				addtobuffer(infobuf, nkrec->ttgroup);
 			}
-
-			addtobuffer(infobuf, "</td></tr>\n");
 		}
+		if (!firstrec) addtobuffer(infobuf, "</dd>\n");
 	}
 	else {
 		val = xmh_item(hostwalk, XMH_NK);
 		if (val) {
-			addtobuffer(infobuf, "<tr><th>Critical Alerts:</th><td>");
-			addtobuffer(infobuf, val); 
+			addtobuffer(infobuf, "<dt class=\"col-sm-4\">Critical Alerts:</dt><dd class=\"col-sm-8\">");
+			addtobuffer(infobuf, val);
 
 			val = xmh_item(hostwalk, XMH_NKTIME);
 			if (val) {
@@ -1095,90 +1086,86 @@ char *generate_info(char *hostname, char *critconfigfn)
 			}
 			else addtobuffer(infobuf, " (24x7)");
 
-			addtobuffer(infobuf, "</td></tr>\n");
+			addtobuffer(infobuf, "</dd>\n");
 		}
 		else {
-			addtobuffer(infobuf, "<tr><th>Critical alerts:</th><td>None</td></tr>\n");
+			addtobuffer(infobuf, "<dt class=\"col-sm-4\">Critical alerts:</dt><dd class=\"col-sm-8\">None</dd>\n");
 		}
 	}
 
 	val = xmh_item(hostwalk, XMH_DOWNTIME);
 	if (val) {
 		char *s = timespec_text(val);
-		addtobuffer(infobuf, "<tr><th>Planned downtime:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Planned downtime:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, s);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_REPORTTIME);
 	if (val) {
 		char *s = timespec_text(val);
-		addtobuffer(infobuf, "<tr><th>SLA report period:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">SLA report period:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, s);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 
 		val = xmh_item(hostwalk, XMH_WARNPCT);
 		if (val == NULL) val = xgetenv("XYMONREPWARN");
 		if (val == NULL) val = "(not set)";
 
-		addtobuffer(infobuf, "<tr><th>SLA Availability:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">SLA Availability:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n"); 
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_NOPROPYELLOW);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Suppressed warnings (yellow):</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Suppressed warnings (yellow):</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_NOPROPRED);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Suppressed alarms (red):</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Suppressed alarms (red):</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_NOPROPPURPLE);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Suppressed alarms (purple):</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Suppressed alarms (purple):</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	val = xmh_item(hostwalk, XMH_NOPROPACK);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Suppressed alarms (acked):</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Suppressed alarms (acked):</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
-	addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
 
 	val = xmh_item(hostwalk, XMH_NET);
 	if (val) {
-		addtobuffer(infobuf, "<tr><th>Tested from network:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Tested from network:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
 	if (xmh_item(hostwalk, XMH_FLAG_DIALUP)) {
-		addtobuffer(infobuf, "<tr><td colspan=2>Host downtime does not trigger alarms (dialup host)</td></tr>\n");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\"></dt><dd class=\"col-sm-8\">Host downtime does not trigger alarms (dialup host)</dd>\n");
 	}
 
-	addtobuffer(infobuf, "<tr><th>Network tests use:</th><td>");
+	addtobuffer(infobuf, "<dt class=\"col-sm-4\">Network tests use:</dt><dd class=\"col-sm-8\">");
 	addtobuffer(infobuf, (xmh_item(hostwalk, XMH_FLAG_TESTIP) ? "IP-address" : "Hostname"));
-	addtobuffer(infobuf, "</td></tr>\n");
+	addtobuffer(infobuf, "</dd>\n");
 
 	ping = 1;
 	if (xmh_item(hostwalk, XMH_FLAG_NOPING)) ping = 0;
 	if (xmh_item(hostwalk, XMH_FLAG_NOCONN)) ping = 0;
-	addtobuffer(infobuf, "<tr><th>Checked with ping:</th><td>");
+	addtobuffer(infobuf, "<dt class=\"col-sm-4\">Checked with ping:</dt><dd class=\"col-sm-8\">");
 	addtobuffer(infobuf, (ping ? "Yes" : "No"));
-	addtobuffer(infobuf, "</td></tr>\n");
-
-	/* Space */
-	addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
+	addtobuffer(infobuf, "</dd>\n");
 
 	first = 1;
 	val = xmh_item_walk(hostwalk);
@@ -1189,7 +1176,7 @@ char *generate_info(char *hostname, char *critconfigfn)
 			char *urlstring = decode_url(val, NULL);
 
 			if (first) {
-				addtobuffer(infobuf, "<tr><th>URL checks:</th><td>\n");
+				addtobuffer(infobuf, "<dt class=\"col-sm-4\">URL checks:</dt><dd class=\"col-sm-8\">\n");
 				first = 0;
 			}
 
@@ -1201,7 +1188,7 @@ char *generate_info(char *hostname, char *critconfigfn)
 		}
 		val = xmh_item_walk(NULL);
 	}
-	if (!first) addtobuffer(infobuf, "</td></tr>\n");
+	if (!first) addtobuffer(infobuf, "</dd>\n");
 
 	first = 1;
 	val = xmh_item_walk(hostwalk);
@@ -1223,7 +1210,7 @@ char *generate_info(char *hostname, char *critconfigfn)
 			char *urlstring = decode_url(val, &weburl);
 
 			if (first) {
-				addtobuffer(infobuf, "<tr><th>Content checks:</th><td>\n");
+				addtobuffer(infobuf, "<dt class=\"col-sm-4\">Content checks:</dt><dd class=\"col-sm-8\">\n");
 				first = 0;
 			}
 
@@ -1233,7 +1220,7 @@ char *generate_info(char *hostname, char *critconfigfn)
 			addtobuffer(infobuf, urlstring);
 			addtobuffer(infobuf, "</a>");
 
-			addtobuffer(infobuf, "&nbsp; ");
+			addtobuffer(infobuf, " ");
 			addtobuffer(infobuf, ((strncmp(val, "no", 2) == 0) ? "cannot" : "must"));
 			addtobuffer(infobuf, " return ");
 			addtobuffer(infobuf, ((strncmp(val, "type;", 5) == 0) ? "content-type " : ""));
@@ -1245,61 +1232,20 @@ char *generate_info(char *hostname, char *critconfigfn)
 
 		val = xmh_item_walk(NULL);
 	}
-	if (!first) addtobuffer(infobuf, "</td></tr>\n");
-	addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
-
-	if (!xmh_item(hostwalk, XMH_FLAG_DIALUP)) {
-		addtobuffer(infobuf, "<tr><th>Alerting:</th><td>\n");
-		if (gotstatus) 
-			generate_xymon_alertinfo(hostname, infobuf);
-		else
-			addtobuffer(infobuf, "Alert configuration unavailable");
-		addtobuffer(infobuf, "</td></tr>\n");
-	}
-	addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
-
-	addtobuffer(infobuf, "<tr><th>Holidays</th><td>\n");
-	generate_xymon_holidayinfo(hostname, infobuf);
-	addtobuffer(infobuf, "</td></tr>\n");
-	addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
-
-	if (gotstatus && showenadis) {
-		int i, anydisabled = 0;
-
-		generate_xymon_statuslist(hostname, infobuf);
-		addtobuffer(infobuf, "<tr><th>Disable tests</th><td>\n");
-		generate_xymon_disable(hostname, infobuf);
-		addtobuffer(infobuf, "</td></tr>\n");
-		addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
-
-		for (i=0; (i < testcount); i++) anydisabled = (anydisabled || (tnames[i].distime != 0));
-		if (anydisabled) {
-			addtobuffer(infobuf, "<tr><th>Enable tests</th><td>\n");
-			generate_xymon_enable(hostname, infobuf);
-			addtobuffer(infobuf, "</td></tr>\n");
-			addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
-		}
-
-		if (schedtasks) {
-			addtobuffer(infobuf, "<tr><th>Scheduled tasks</th><td>\n");
-			generate_xymon_scheduled(hostname, infobuf);
-			addtobuffer(infobuf, "</td></tr>\n");
-			addtobuffer(infobuf, "<tr><td colspan=2>&nbsp;</td></tr>\n");
-		}
-	}
+	if (!first) addtobuffer(infobuf, "</dd>\n");
 
 	if (NULL != (val = xmh_item(hostwalk, XMH_DELAYYELLOW))) {
-		addtobuffer(infobuf, "<tr><th>Delayed yellow updates:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Delayed yellow updates:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 	if (NULL != (val = xmh_item(hostwalk, XMH_DELAYRED))) {
-		addtobuffer(infobuf, "<tr><th>Delayed red updates:</th><td>");
+		addtobuffer(infobuf, "<dt class=\"col-sm-4\">Delayed red updates:</dt><dd class=\"col-sm-8\">");
 		addtobuffer(infobuf, val);
-		addtobuffer(infobuf, "</td></tr>\n");
+		addtobuffer(infobuf, "</dd>\n");
 	}
 
-	addtobuffer(infobuf, "<tr><th>Other tags:</th><td>");
+	addtobuffer(infobuf, "<dt class=\"col-sm-4\">Other tags:</dt><dd class=\"col-sm-8\">");
 	val = xmh_item_walk(hostwalk);
 	while (val) {
 		if (*val == '~') val++;
@@ -1322,7 +1268,49 @@ char *generate_info(char *hostname, char *critconfigfn)
 
 		val = xmh_item_walk(NULL);
 	}
-	addtobuffer(infobuf, "</td></tr>\n</table></div>\n");
+	addtobuffer(infobuf, "</dd>\n</dl>\n");
+
+	if (!xmh_item(hostwalk, XMH_FLAG_DIALUP)) {
+		addtobuffer(infobuf, "<section class=\"svcinfo-section\">\n");
+		addtobuffer(infobuf, "<h6 class=\"svcinfo-section-title\">Alerting</h6>\n");
+		if (gotstatus)
+			generate_xymon_alertinfo(hostname, infobuf);
+		else
+			addtobuffer(infobuf, "<p class=\"text-muted\">Alert configuration unavailable</p>\n");
+		addtobuffer(infobuf, "</section>\n");
+	}
+
+	addtobuffer(infobuf, "<section class=\"svcinfo-section\">\n");
+	addtobuffer(infobuf, "<h6 class=\"svcinfo-section-title\">Holidays</h6>\n");
+	generate_xymon_holidayinfo(hostname, infobuf);
+	addtobuffer(infobuf, "</section>\n");
+
+	if (gotstatus && showenadis) {
+		int i, anydisabled = 0;
+
+		addtobuffer(infobuf, "<section class=\"svcinfo-section\">\n");
+		addtobuffer(infobuf, "<h6 class=\"svcinfo-section-title\">Status summary</h6>\n");
+		generate_xymon_statuslist(hostname, infobuf);
+		generate_xymon_disable(hostname, infobuf);
+		addtobuffer(infobuf, "</section>\n");
+
+		for (i=0; (i < testcount); i++) anydisabled = (anydisabled || (tnames[i].distime != 0));
+		if (anydisabled) {
+			addtobuffer(infobuf, "<section class=\"svcinfo-section\">\n");
+			addtobuffer(infobuf, "<h6 class=\"svcinfo-section-title\">Enable tests</h6>\n");
+			generate_xymon_enable(hostname, infobuf);
+			addtobuffer(infobuf, "</section>\n");
+		}
+
+		if (schedtasks) {
+			addtobuffer(infobuf, "<section class=\"svcinfo-section\">\n");
+			addtobuffer(infobuf, "<h6 class=\"svcinfo-section-title\">Scheduled tasks</h6>\n");
+			generate_xymon_scheduled(hostname, infobuf);
+			addtobuffer(infobuf, "</section>\n");
+		}
+	}
+
+	addtobuffer(infobuf, "</div>\n");
 
 	return grabstrbuffer(infobuf);
 }

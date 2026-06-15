@@ -194,9 +194,20 @@ div[data-graph] { margin-bottom: 0.5rem; }
 .xymon-event-pagination { margin: 0.5rem 0; }
 .xymon-event-pagination .page-link { font-size: 0.85rem; }
 
+/* ── Service info+trends tabs ── */
+.svcinfo-tabs { border-bottom: 0; margin-bottom: -1px; position: relative; z-index: 1; }
+.svcinfo-tab-content { border: 1px solid var(--bs-border-color); border-radius: 0 0.375rem 0.375rem 0.375rem; padding: 1.5rem; background-color: var(--bs-secondary-bg); }
+
 /* ── Service status info ── */
+.svcinfo-host { padding: 0.25rem 0; }
+.svcinfo-fields { margin-bottom: 0.5rem; }
+.svcinfo-fields dt { font-weight: 600; padding-top: 0.2rem; }
+.svcinfo-fields dd { padding-top: 0.2rem; margin-bottom: 0; }
+.svcinfo-section { margin-top: 1.25rem; }
+.svcinfo-section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; margin-bottom: 0.4rem; }
 .svcinfo-toggles { gap: 0.5rem; margin-top: 0.5rem; }
 .svcinfo-table { width: 100%; }
+.svcinfo-toggle-label { align-self: center; font-size: 0.875rem; }
 
 /* ── History page ── */
 .xymon-hist-entry { margin-bottom: 1rem; }

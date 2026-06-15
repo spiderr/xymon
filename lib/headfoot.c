@@ -445,7 +445,7 @@ static void fetch_board(void)
 	if (haveboard) return;
 
 	sres = newsendreturnbuf(1, NULL);
-	if (sendmessage("xymondboard fields=hostname,testname,disabletime,dismsg,lastchange,line1",
+	if (sendmessage("xymondboard fields=hostname,testname,disabletime,dismsg,lastchange,disableignoreok,line1",
 			NULL, XYMON_TIMEOUT, sres) != XYMONSEND_OK) {
 		freesendreturnbuf(sres);
 		return;
@@ -689,6 +689,7 @@ typedef struct distest_t {
 	char *cause;
 	time_t until;
 	time_t disstarted;
+	int ignoreok;
 	int color;
 	struct distest_t *next;
 } distest_t;
@@ -1222,12 +1223,12 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 				if (*walk) {
 					char *buf, *hname, *tname, *dismsg, *p;
 					time_t distime, disstarted;
-					int discolor;
+					int discolor, disableignoreok;
 					xtreePos_t thandle;
 					treerec_t *rec;
 
 					buf = strdup(walk);
-					hname = tname = dismsg = NULL; distime = disstarted = 0; discolor = COL_BLUE;
+					hname = tname = dismsg = NULL; distime = disstarted = 0; discolor = COL_BLUE; disableignoreok = 0;
 
 					hname = gettok(buf, "|");
 					if (hname) tname = gettok(NULL, "|");
@@ -1235,6 +1236,9 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 					if (distime) dismsg = gettok(NULL, "|");
 					if (dismsg) { p = gettok(NULL, "|"); if (p) disstarted = atol(p); }
 					if (disstarted || dismsg) {
+						/* Parse disableignoreok field (added in 5.0.2) */
+						p = gettok(NULL, "|");
+						if (p) disableignoreok = atoi(p);
 						/* line1 is last field; not pipe-encoded, split on \n only */
 						p = gettok(NULL, "\n");
 						if (p && *p) {
@@ -1269,6 +1273,7 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 						twalk->cause = strdup(dismsg);
 						twalk->until = distime;
 						twalk->disstarted = disstarted;
+						twalk->ignoreok = disableignoreok;
 						twalk->color = discolor;
 						twalk->next = hwalk->tests;
 						hwalk->tests = twalk;
@@ -1328,11 +1333,17 @@ void output_parsed(FILE *output, char *templatedata, int bgcolor, time_t selecte
 
 						/* Format "until" (re-enable time) */
 						if (twalk->until == -1) {
-							snprintf(untilbuf, sizeof(untilbuf), "until OK");
+							snprintf(untilbuf, sizeof(untilbuf), "%s",
+								twalk->ignoreok ? "Forever" : "until OK");
 						} else {
 							char *t = ctime(&twalk->until);
 							snprintf(untilbuf, sizeof(untilbuf), "%s", t ? t : "");
 							nl = strchr(untilbuf, '\n'); if (nl) *nl = '\0';
+							if (!twalk->ignoreok) {
+								size_t ulen = strlen(untilbuf);
+								snprintf(untilbuf + ulen, sizeof(untilbuf) - ulen,
+									" (or until GREEN)");
+							}
 						}
 
 						/* Extract reason text */
@@ -1891,7 +1902,7 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 	{
 		static const struct { const char *t; const char *p; } titles[] = {
 			{"acknowledge",     "Acknowledge Alert"},
-			{"acknowledgements","Acknowledgement Log"},
+			{"acknowledgements","Acknowledgements"},
 			{"ackinfo",         "Acknowledge Alert"},
 			{"chpasswd",        "Change Password"},
 			{"columndoc",       "Column Info"},
@@ -1908,7 +1919,7 @@ void headfoot(FILE *output, char *template, char *pagepath, char *head_or_foot, 
 			{"hostlist",        "List of Hosts"},
 			{"maint",           "Maintenance"},
 			{"maintact",        "Maintenance"},
-			{"notify",          "Notification Log"},
+			{"notify",          "Notifications"},
 			{"perfdata",        "Performance Data"},
 			{"repnormal",       "Availability Report"},
 			{"report",          "Availability Report"},

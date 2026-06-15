@@ -331,7 +331,78 @@ int do_request(void)
 			}
 		}
 		else if (strcmp(service, xgetenv("INFOCOLUMN")) == 0) {
-			log = restofmsg = generate_info(hostname, critconfigfn);
+			char *infohtml, *trendshtml, *formhtml = NULL, *rawform;
+			char formfn[PATH_MAX];
+			int formfd;
+			struct stat formst;
+			int n;
+			size_t fmtsz;
+			FILE *fmtfp;
+			strbuffer_t *combined;
+
+			/* Time window — same setup as trends branch */
+			if (endtime == 0) endtime = getcurrenttime(NULL);
+			if (fromtime == 0) {
+				fromtime = endtime - backsecs;
+				sethostenv_backsecs(backsecs);
+			} else {
+				sethostenv_eventtime(fromtime, endtime);
+			}
+
+			infohtml   = generate_info(hostname, critconfigfn);
+			trendshtml = generate_trends(hostname, fromtime, endtime);
+
+			/* Expand the trends date-range form template into a string */
+			snprintf(formfn, sizeof(formfn), "%s/web/trends/form", xgetenv("XYMONHOME"));
+			formfd = open(formfn, O_RDONLY);
+			if (formfd < 0) {
+				snprintf(formfn, sizeof(formfn), "%s/web/trends_form", xgetenv("XYMONHOME"));
+				formfd = open(formfn, O_RDONLY);
+			}
+			if (formfd >= 0) {
+				fstat(formfd, &formst);
+				rawform = (char *)malloc(formst.st_size + 1);
+				n = read(formfd, rawform, formst.st_size);
+				rawform[n > 0 ? n : 0] = '\0';
+				close(formfd);
+				fmtsz = 0;
+				fmtfp = open_memstream(&formhtml, &fmtsz);
+				output_parsed(fmtfp, rawform, COL_GREEN, 0);
+				fclose(fmtfp);
+				xfree(rawform);
+			}
+
+			/* Assemble the tabbed combined page */
+			combined = newstrbuffer(0);
+			addtobuffer(combined,
+				"<ul class=\"nav nav-tabs svcinfo-tabs\" id=\"infoTabs\" role=\"tablist\">\n"
+				"<li class=\"nav-item\" role=\"presentation\">"
+				"<button class=\"nav-link active\" id=\"tab-info-btn\" data-bs-toggle=\"tab\""
+				" data-bs-target=\"#tab-info\" type=\"button\" role=\"tab\">"
+				"<i class=\"fa-solid fa-circle-info\"></i> Host Info</button></li>\n"
+				"<li class=\"nav-item\" role=\"presentation\">"
+				"<button class=\"nav-link\" id=\"tab-trends-btn\" data-bs-toggle=\"tab\""
+				" data-bs-target=\"#tab-trends\" type=\"button\" role=\"tab\">"
+				"<i class=\"fa-solid fa-chart-line\"></i> Trends</button></li>\n"
+				"</ul>\n"
+				"<div class=\"tab-content svcinfo-tab-content\">\n"
+				"<div class=\"tab-pane fade show active\" id=\"tab-info\" role=\"tabpanel\">\n");
+			if (infohtml) { addtobuffer(combined, infohtml); xfree(infohtml); }
+			addtobuffer(combined,
+				"</div>\n"
+				"<div class=\"tab-pane fade\" id=\"tab-trends\" role=\"tabpanel\">\n");
+			if (formhtml) { addtobuffer(combined, formhtml); free(formhtml); }
+			if (trendshtml) { addtobuffer(combined, trendshtml); xfree(trendshtml); }
+			else addtobuffer(combined,
+				"<p class=\"text-muted\">No RRD data available for this host.</p>\n");
+			addtobuffer(combined,
+				"</div>\n</div>\n"
+				"<script>(function(){"
+				"var m=location.search.match(/[?&]tab=([^&]+)/);"
+				"if(m){var b=document.getElementById('tab-'+m[1]+'-btn');"
+				"if(b)bootstrap.Tab.getOrCreateInstance(b).show();}"
+				"})();</script>\n");
+			log = restofmsg = grabstrbuffer(combined);
 		}
 	}
 	else if (source == SRC_XYMOND) {

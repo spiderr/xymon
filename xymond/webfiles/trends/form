@@ -3,6 +3,7 @@
   <form method="GET" action="&SCRIPT_NAME">
     <input type="hidden" name="HOST" value="&XMH_HOSTNAME">
     <input type="hidden" name="SERVICE" value="&XYMWEBSVC">
+    <input type="hidden" name="tab" value="trends">
 
     <div class="d-flex flex-wrap align-items-end xymon-date-row">
       <div>

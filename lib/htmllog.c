@@ -216,8 +216,12 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 		int formfile;
 		char formfn[PATH_MAX];
 
-		snprintf(formfn, sizeof(formfn), "%s/web/trends_form", xgetenv("XYMONHOME"));
+		snprintf(formfn, sizeof(formfn), "%s/web/trends/form", xgetenv("XYMONHOME"));
 		formfile = open(formfn, O_RDONLY);
+		if (formfile < 0) {
+			snprintf(formfn, sizeof(formfn), "%s/web/trends_form", xgetenv("XYMONHOME"));
+			formfile = open(formfn, O_RDONLY);
+		}
 
 		if (formfile >= 0) {
 			char *inbuf;

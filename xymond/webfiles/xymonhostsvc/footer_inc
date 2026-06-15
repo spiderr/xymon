@@ -303,3 +303,17 @@
   }
 })();
 </script>
+
+<script>
+/* Auto-refresh that pauses while any Bootstrap modal is open.
+   Replaces <meta http-equiv="refresh"> so the timer can be cancelled. */
+(function() {
+  var ms = parseInt('&XYMWEBREFRESH', 10) * 1000;
+  if (!ms) return;
+  var _t;
+  function schedule() { _t = setTimeout(function() { location.reload(); }, ms); }
+  document.addEventListener('show.bs.modal',   function() { clearTimeout(_t); });
+  document.addEventListener('hidden.bs.modal', function() { schedule(); });
+  schedule();
+})();
+</script>
