@@ -60,17 +60,11 @@ static char rcsid[] = "$Id$";
 
 #define DISABLED_UNTIL_OK -1
 
-/*
- * The absolute maximum size we'll grow our buffers to accommodate an incoming message.
- * This is really just an upper bound to squash the bad guys trying to data-flood us. 
- */
-#define MAX_XYMON_INBUFSZ (64*1024*1024)	/* 64 MB */
-
 /* The initial size of an input buffer. Make this large enough for most traffic. */
 #define XYMON_INBUF_INITIAL   (128*1024)
 
 /* How much the input buffer grows per re-allocation */
-#define XYMON_INBUF_INCREMENT (32*1024)
+#define XYMON_INBUF_INCREMENT (256*1024)
 
 /* How long to keep an ack after the status has recovered */
 #define ACKCLEARDELAY 720 /* 12 minutes */
