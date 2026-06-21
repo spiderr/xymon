@@ -229,6 +229,7 @@ static char *xmh_find_item(namelist_t *host, enum xmh_item_t item)
 	char *result;
 
 	if (item == XMH_LAST) return NULL;	/* Unknown item requested */
+	if (host == NULL) return NULL;	/* Unknown item requested */
 
 	xmh_item_list_setup();
 	i = 0;
