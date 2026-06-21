@@ -626,7 +626,7 @@ int main(int argc, char *argv[])
 			 * that we'll either succeed in a few milliseconds, or fail completely
 			 * and wait the full alarm-timer duration.
 			 */
-			gotalarm = 0; signal(SIGALRM, sig_handler); alarm(2); 
+			gotalarm = 0; signal(SIGALRM, sig_handler); alarm(1); 
 			do {
 				s.sem_num = GOCLIENT; s.sem_op  = 0; s.sem_flg = 0;
 				n = semop(channel->semid, &s, 1);
