@@ -669,7 +669,7 @@ void posttochannel(xymond_channel_t *channel, char *channelmarker,
 	 * (GOCLIENT goes up while a worker waits for it 
 	 *  to go to 0).
 	 */
-	gotalarm = 0; alarm(5);
+	gotalarm = 0; alarm(1);
 	do {
 		s.sem_num = BOARDBUSY; s.sem_op = 0; s.sem_flg = 0;
 		n = semop(channel->semid, &s, 1);
