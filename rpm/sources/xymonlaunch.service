@@ -1,0 +1,43 @@
+# One unit for both roles. The xymon (server) and xymon-client packages
+# conflict -- a host is either a server or a client -- and each package
+# ships this same unit. The role is decided by xymonlaunch-run, which
+# picks the server tree when it is installed and the client tree
+# otherwise, so "systemctl status xymonlaunch" means the same thing on
+# every host and no second unit ever needs guarding against this one.
+#
+# The base unit carries the CLIENT role's semantics; each package ships
+# a drop-in under xymonlaunch.service.d for what its role changes
+# (server.conf: protect xymond's children on stop; client.conf: wait
+# for the network). Drop-ins, not two unit files, because both packages
+# are built from one rpm buildroot, which can hold only one file per
+# path.
+
+[Unit]
+Description=Xymon systems and network monitor
+Documentation=man:xymon(7) man:xymonlaunch(8) man:xymon(1)
+After=network.target
+
+[Service]
+Type=simple
+User=xymon
+# xymon-client last, so a hostname or OS override set there wins. Both
+# files are optional: the server package ships only the first, the
+# client package only the second.
+EnvironmentFile=-/etc/sysconfig/xymonlaunch
+EnvironmentFile=-/etc/sysconfig/xymon-client
+ExecStart=/usr/lib/xymon/client/bin/xymonlaunch-run $XYMONLAUNCHOPTS
+# xymonlaunch propagates -HUP to its tasks as needed
+ExecReload=/bin/kill -HUP $MAINPID
+
+# The default cgroup kill is right for the client: its children are only
+# a report script and its sampling vmstat, and a wedged xymonlaunch that
+# survived stop would run alongside its replacement and report duplicate
+# data. The server package's drop-in overrides this to protect xymond's
+# children instead.
+RestartSec=6
+Restart=on-failure
+
+[Install]
+# Compatibility with upstream's unit name.
+Alias=xymon.service
+WantedBy=multi-user.target

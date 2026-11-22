@@ -1,0 +1,3 @@
+#Type Name  ID  GECOS           Home directory
+g     xymon -
+u     xymon -   "Xymon monitor" /usr/lib/xymon

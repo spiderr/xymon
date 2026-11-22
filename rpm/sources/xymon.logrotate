@@ -1,0 +1,16 @@
+#
+#       Logrotate fragment for Xymon.
+#
+#       copytruncate, because nothing shipped can make the daemons reopen
+#       their logs: the packaging is systemd-only (no init script to call),
+#       and xymonlaunch on main does not relay SIGHUP to its children --
+#       that arrives with xymon#172, at which point this switches to the
+#       upstream postrotate form.
+#
+/var/log/xymon/*.log {
+        weekly
+        compress
+        rotate 5
+        missingok
+        copytruncate
+}

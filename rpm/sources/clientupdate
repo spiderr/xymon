@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Stands in for upstream's clientupdate in both packages. A packaged
+# client is updated by the package manager, not by a tarball its server
+# pushes: that is policy, and the decision is this packaging's.
+#
+# client/xymonclient.sh calls clientupdate twice, without checking that
+# it exists. Every run asks `--level` for the installed version, and an
+# empty answer makes the script fall back to `xymon --version`. Only when
+# the server's client-local.cfg sets clientversion: for the host does it
+# exec `--update=VERSION --reexec`, as its last step, after the report
+# has been sent. Removing the program instead, as Terabithia's spec does
+# (TBT 8, which also patches both calls out of the script), would log
+# "No such file or directory" on every run here, where the script is not
+# patched.
+#
+# So: no version on --level, which is what upstream's own program prints
+# when no clientversion.cfg exists, and on --update one line saying why
+# nothing happened, then success, so the run that triggered it does not
+# end in an error.
+
+case "${1:-}" in
+--level)
+	exit 0
+	;;
+--update=*)
+	echo "clientupdate: not updating to ${1#--update=}: this client is" \
+	     "installed from a package; update it with the package manager" >&2
+	exit 0
+	;;
+*)
+	echo "usage: clientupdate --level | --update=VERSION" >&2
+	echo "(the packaged client is updated by the package manager)" >&2
+	exit 2
+	;;
+esac

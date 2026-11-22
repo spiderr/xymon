@@ -1,0 +1,24 @@
+# Settings for the Xymon client (read by xymonlaunch.service; the
+# server package does not ship this file).
+#
+# The address of the Xymon server is NOT set here: upstream's client
+# reads it from its own environment file, so set XYMSRV (one server) or
+# XYMSERVERS plus XYMSRV="0.0.0.0" (several) in
+#
+#     /etc/xymon-client/xymonclient.cfg
+#
+# which is preserved across upgrades. The XYMONSERVERS variable that
+# other distributions document here is read only by their patched
+# clients, not by this packaging.
+
+# Both names below are upstream's own: xymoncmd fills them in from
+# uname when they are unset, and honours them when they are set.
+
+# The hostname the client reports data under, when it must differ from
+# `uname -n`. It must match the name in the server's hosts.cfg:
+# MACHINEDOTS=""
+
+# The OS whose collector script runs, when it must differ from
+# `uname -s` lowercased -- Red Hat EL 3, for instance, uses a different
+# vmstat layout from every other Linux:
+# SERVEROSTYPE="rhel3"

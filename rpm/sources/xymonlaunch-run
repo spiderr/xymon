@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Role dispatcher for xymonlaunch.service. The xymon and xymon-client
+# packages conflict, so exactly one is installed and its drop-in says
+# which role to run.
+#
+# Both roles are the same call: xymoncmd loads the role's environment
+# file and execs xymonlaunch in the foreground, which is what a
+# Type=simple unit needs to supervise. xymoncmd finds the env file
+# itself (common/xymoncmd.c:145-151) and fills in MACHINEDOTS and
+# SERVEROSTYPE from uname when they are not already set (:47, :67);
+# lib/environ.c derives MACHINE from MACHINEDOTS, and
+# client/xymonclient.sh derives XYMONOSSCRIPT from SERVEROSTYPE. So
+# nothing here has to compute an environment -- an earlier version of
+# this script did, in shell, and every value it produced was one
+# upstream already had.
+#
+# Set MACHINEDOTS or SERVEROSTYPE in /etc/sysconfig/xymon-client to
+# report under a different name or run a different OS collector; the
+# unit passes them through and xymoncmd honours them.
+
+XYMONSERVERHOME=/usr/lib/xymon/server
+XYMONCLIENTHOME=/usr/lib/xymon/client
+
+# The marker is the server package's drop-in -- the same file the
+# scriptlets key their swap handling off, so the two cannot disagree.
+# Its presence means the server package is installed, so an unusable
+# server binary is a broken installation: fail loudly rather than fall
+# back to the client role, which would look healthy while the fleet's
+# monitoring is down.
+if [ -e /usr/lib/systemd/system/xymonlaunch.service.d/server.conf ]; then
+	if [ ! -x "$XYMONSERVERHOME/bin/xymond" ] ||
+	   [ ! -x "$XYMONSERVERHOME/bin/xymoncmd" ] ||
+	   [ ! -x "$XYMONSERVERHOME/bin/xymonlaunch" ]; then
+		echo "xymonlaunch-run: server role selected but $XYMONSERVERHOME/bin is incomplete" >&2
+		exit 1
+	fi
+	# The server's tasks.cfg is xymonlaunch's default config, and it
+	# includes the embedded client's own entry.
+	exec "$XYMONSERVERHOME/bin/xymoncmd" \
+	     "$XYMONSERVERHOME/bin/xymonlaunch" --no-daemon "$@"
+fi
+
+exec "$XYMONCLIENTHOME/bin/xymoncmd" \
+     "$XYMONCLIENTHOME/bin/xymonlaunch" --no-daemon \
+     --config="$XYMONCLIENTHOME/etc/clientlaunch.cfg" "$@"
