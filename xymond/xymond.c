@@ -2407,6 +2407,7 @@ void handle_enadis(int enabled, conn_t *msg, char *sender)
 		if (alltests) {
 			for (log = hwalk->logs; (log); log = log->next) {
 				log->enabletime = 0;
+				log->disableignoreok = 0;
 				if (log->dismsg) {
 					xfree(log->dismsg);
 					log->dismsg = NULL;
@@ -2418,6 +2419,7 @@ void handle_enadis(int enabled, conn_t *msg, char *sender)
 			for (log = hwalk->logs; (log && (log->test != twalk)); log = log->next) ;
 			if (log) {
 				log->enabletime = 0;
+				log->disableignoreok = 0;
 				if (log->dismsg) {
 					xfree(log->dismsg);
 					log->dismsg = NULL;
@@ -5252,7 +5254,7 @@ void save_checkpoint(void)
 			/* Xymon 5: a disable that holds even when the test reports OK. Own record,
 			 * for the same reason as the ones above: an xymond that does not know it
 			 * skips it, and the disable then falls back to re-enabling on OK. */
-			if ((iores >= 0) && lwalk->disableignoreok) {
+			if ((iores >= 0) && lwalk->enabletime && lwalk->disableignoreok) {
 				iores = fprintf(fd, "@@XYMONDCHK-V1|.disableignoreok.|%s|%s|1\n",
 						hwalk->hostname, lwalk->test->name);
 			}
