@@ -37,6 +37,11 @@ build_xymond_worker "$work" xymond_filestore \
 
 mkdir -p "$work/etc"
 cp "$ROOT/xymond/etcfiles/xymonserver.cfg.DIST" "$work/etc/xymonserver.cfg"
+# Xymon 5: the status page is rendered through the shared master template, and
+# the "unchanged for" duration is a template token there, not text printed by
+# generate_html_log(). The page needs the templates to carry it.
+mkdir -p "$work/web"
+cp -R "$ROOT/xymond/webfiles/." "$work/web/"
 
 setup() {
 	rm -rf "$work/var"
@@ -213,9 +218,9 @@ setup
 } | XYMONHOME="$work" XYMONVAR="$work/var" \
 	"$work/xymond_filestore" --env="$work/etc/xymonserver.cfg" \
 	--status --dir="$work/var/logs" --htmldir="$work/var/html" >/dev/null 2>>"$work/worker.log"
-assert_contains "Status unchanged" "$(cat "$work/var/html/realhost.oldone.html")" \
+assert_contains "xymon-status-duration" "$(cat "$work/var/html/realhost.oldone.html")" \
 	"the positive-delta page should carry the unchanged-for line"
-assert_not_contains "Status unchanged" "$(cat "$work/var/html/realhost.negdelta.html")" \
+assert_not_contains "xymon-status-duration" "$(cat "$work/var/html/realhost.negdelta.html")" \
 	"a negative delta must leave timestr empty, not print uninitialised stack into the page"
 [ ! -f "$work/var/html/conn.conn.html" ] \
 	|| fail "both name components came out as the test name in the HTML log"

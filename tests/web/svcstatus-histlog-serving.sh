@@ -41,7 +41,9 @@ export ASAN_OPTIONS="exitcode=99${ASAN_OPTIONS:+:$ASAN_OPTIONS}"
 
 # The served page is rendered through the histlog templates.
 mkdir -p "$work/web"
-cp "$ROOT/xymond/webfiles/histlog_header" "$ROOT/xymond/webfiles/histlog_footer" "$work/web/"
+# Xymon 5: templates live in per-page directories under a shared master, so
+# the whole tree is needed, not two flat files.
+cp -R "$ROOT/xymond/webfiles/." "$work/web/"
 
 # Serving a histlog needs a xymond answering "hostinfo clone=<host>"
 # (lib/loadhosts_net.c): stand up the fake responder from tests/lib on an
