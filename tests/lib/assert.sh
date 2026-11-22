@@ -37,6 +37,20 @@ pass() {
 	exit 0
 }
 
+# pass_partial CLAIM [REASON] -- what ran held, but only part of what the test
+# covers ran: no sanitizer for the half that needs one, nothing built to drive.
+# It exits 0 like any pass, so the runner cannot tell them apart -- hence the
+# self-report. Otherwise a half-checked run lands in "passed" and the number
+# says more than the suite verified.
+pass_partial() {
+	if [ -n "${XYMON_TESTS_PARTIAL_LOG:-}" ]; then
+		printf '%s\n' "$0" >>"$XYMON_TESTS_PARTIAL_LOG" 2>/dev/null || true
+	fi
+	if [ -n "${2:-}" ]; then printf 'PARTIAL: %s -- %s\n' "$1" "$2"
+	else printf 'PARTIAL: %s\n' "$1"; fi
+	exit 0
+}
+
 # ---- assertions --------------------------------------------------------------
 
 # assert_equal WANT GOT [MSG]
@@ -45,6 +59,14 @@ assert_equal() {
 	if [ "$want" != "$got" ]; then
 		fail "${msg:+$msg: }expected '$want', got '$got'"
 	fi
+}
+
+# first_line TEXT -- print TEXT's first line. For "the first match" without
+# a pipe into head: head exits after one line, and whatever is still writing
+# into the pipe then dies of SIGPIPE, which pipefail turns into a failure of
+# the whole command (the race #594 removed for grep -q).
+first_line() {
+	printf '%s' "${1%%$'\n'*}"
 }
 
 # assert_contains NEEDLE HAYSTACK [MSG]
@@ -69,6 +91,14 @@ assert_match() {
 	local re=$1 s=$2 msg=${3:-}
 	if ! [[ $s =~ $re ]]; then
 		fail "${msg:+$msg: }'$s' does not match /$re/"
+	fi
+}
+
+# assert_not_match REGEX STRING [MSG] -- the negation of assert_match
+assert_not_match() {
+	local re=$1 s=$2 msg=${3:-}
+	if [[ $s =~ $re ]]; then
+		fail "${msg:+$msg: }'$s' matches /$re/"
 	fi
 }
 
@@ -97,6 +127,11 @@ assert_file_exists() {
 __XYMON_TESTS_CLEANUP_CMDS=()
 __xymon_tests_run_cleanups() {
 	local rc=$? i
+	# Out of whatever directory the test moved into: a test that cd's into
+	# its temp dir would otherwise remove its own working directory, which
+	# Solaris refuses (rmdir: EINVAL), leaving the dir behind. Cleanups use
+	# absolute paths.
+	cd / 2>/dev/null || true
 	# Run in reverse registration order so teardown mirrors setup.
 	for (( i=${#__XYMON_TESTS_CLEANUP_CMDS[@]}-1; i>=0; i-- )); do
 		eval "${__XYMON_TESTS_CLEANUP_CMDS[i]}" || true
@@ -106,6 +141,32 @@ __xymon_tests_run_cleanups() {
 trap __xymon_tests_run_cleanups EXIT
 register_cleanup() {
 	__XYMON_TESTS_CLEANUP_CMDS+=("$*")
+}
+
+# stop_process [-SIGNAL] PID... -- signal each process (TERM by default) and
+# return only once it has exited, sending KILL after 10 seconds. A cleanup
+# that only signals returns while the process still runs -- xymond writes its
+# checkpoint as it exits -- and the temp dir removed next is written into
+# meanwhile: rm -rf fails on it and the dir is left behind. It polls rather
+# than waits, so a process that is not this shell's child, as one read from a
+# pidfile, is followed too; bash reaps its own children as they exit, so
+# they stop answering kill -0 then. Empty and dead PIDs are ignored, so a
+# cleanup can name a process that never started.
+stop_process() {
+	local sig=-TERM p n
+	case ${1:-} in -*) sig=$1; shift ;; esac
+	for p in "$@"; do
+		[ -n "$p" ] || continue
+		kill "$sig" "$p" 2>/dev/null || continue
+		n=0
+		while kill -0 "$p" 2>/dev/null && [ "$n" -le 110 ]; do
+			n=$((n + 1))
+			[ "$n" -eq 100 ] && kill -KILL "$p" 2>/dev/null
+			sleep 0.1
+		done
+		wait "$p" 2>/dev/null || true
+	done
+	return 0
 }
 
 # mktempdir -- create a temp dir and arrange its removal on EXIT. Prints the
@@ -125,12 +186,279 @@ __XYMON_TESTS_TMPROOT=${__XYMON_TESTS_TMPROOT%/}
 # real dir (or worse). Shell-escape the fixed prefix with printf %q and
 # append the literal glob unquoted, so the path survives eval intact while
 # the trailing * still expands.
-__xymon_tests_tmpglob=$(printf '%q' "${__XYMON_TESTS_TMPROOT}/xymon-test.$$.")
+__xymon_tests_tmpglob=$(printf '%q' "${__XYMON_TESTS_TMPROOT}/xt.$$.")
 register_cleanup "rm -rf -- ${__xymon_tests_tmpglob}*"
 mktempdir() {
 	local d
-	d=$(mktemp -d "${__XYMON_TESTS_TMPROOT}/xymon-test.$$.XXXXXX") || fail "mktemp -d failed"
+	# "xt", not "xymon-test". This path becomes $XYMONTMP, and a test that
+	# starts xymond_rrd puts its cache-control socket under it -- which has to
+	# fit in sizeof(sun_path), 104 bytes on macOS. The runner nests this
+	# directory inside a per-run root, so on macOS, where TMPDIR is already a
+	# 49-character /var/folders path, the longer name put XYMONTMP at 93 bytes
+	# against a limit of 90 and the socket could not be bound. Six tests failed
+	# on it, and only in a full run: run one alone and the per-run level is not
+	# there. CI never saw it -- Linux allows 108 bytes and TMPDIR is /tmp.
+	d=$(mktemp -d "${__XYMON_TESTS_TMPROOT}/xt.$$.XXXXXX") || fail "mktemp -d failed"
 	printf '%s' "$d"
+}
+
+# ---- C harness scaffolding ---------------------------------------------------
+
+# Without CC, tests compile with cc -- but a system may have gcc or clang and
+# no cc (Solaris 11.4 has only gcc), and then every harness test skipped as
+# if there were no compiler at all. Name the one that is there.
+if [ -z "${CC:-}" ] && ! command -v cc >/dev/null 2>&1; then
+	for __xymon_tests_cc in gcc clang; do
+		if command -v "$__xymon_tests_cc" >/dev/null 2>&1; then
+			CC=$__xymon_tests_cc
+			export CC
+			break
+		fi
+	done
+fi
+
+# require_cc -- skip unless a C compiler is present. Sets/keeps CC (default
+# cc). For tests that compile a standalone harness with no in-tree libraries.
+require_cc() {
+	CC=${CC:-cc}
+	command -v "$CC" >/dev/null 2>&1 || skip "no C compiler available (CC=$CC)"
+}
+
+# asan_usable -- true when $CC can build a sanitized binary AND the result
+# runs. Compiling is not the question: distros that ship the sanitizer
+# runtime in its own package (Amazon Linux 2023 and the other RPM families,
+# where it is libasan/libubsan) link -fsanitize=address happily, and only
+# the finished binary fails, at startup, with
+#
+#     error while loading shared libraries: libasan.so.6: ...
+#
+# and exit 127. A caller that gated on the compile alone then reads that as
+# a crash in the code under test -- the symptom this helper exists to stop.
+# So the probe is executed, not just built.
+#
+# Callers use it to pick between a sanitized build and a plain one, or to
+# skip outright when the sanitizer is the point of the test. The verdict
+# cannot change inside one test process, so it is computed once.
+#
+# The probe directory is removed here rather than left to the EXIT trap
+# registered at the top of this file: several callers install a trap of
+# their own for their work dir, which replaces that one, and the probe
+# would then survive the run. A helper cannot assume the shared cleanup is
+# still armed by the time it is called, so it cleans up after itself.
+asan_usable() {
+	if [ -z "${__xymon_tests_asan_usable:-}" ]; then
+		local probe
+		__xymon_tests_asan_usable=no
+		probe=$(mktempdir)
+		printf 'int main(void){return 0;}\n' >"$probe/probe.c"
+		if "${CC:-cc}" -fsanitize=address,undefined -o "$probe/probe" \
+					"$probe/probe.c" 2>/dev/null \
+				&& "$probe/probe" >/dev/null 2>&1; then
+			__xymon_tests_asan_usable=yes
+		fi
+		rm -rf "$probe"
+	fi
+	[ "$__xymon_tests_asan_usable" = yes ]
+}
+
+# require_gnu_make -- resolve GNU make into $XYMON_MAKE, or skip.
+#
+# Every Makefile in the tree is GNU make: lib/Makefile opens with an `ifeq`,
+# build/Makefile.rules uses pattern rules. On the BSDs /usr/bin/make is BSD
+# make, which stops at the first conditional --
+#
+#     make: lib/Makefile:10: Invalid line "ifeq ($(LOCALCLIENT),yes)"
+#
+# -- so a test that ran `make` there hard-failed on a tree that builds
+# perfectly well with gmake, which is what the build itself uses.
+#
+# Resolution order: $MAKE if the caller exported one (autopkgtest, a distro
+# build), then gmake, then make. Each candidate must identify itself as GNU
+# make; a candidate that exists but is not GNU make is passed over rather
+# than trusted, because "a program named make is on PATH" is the assumption
+# that produced the failure above.
+#
+# No GNU make at all is a missing host dependency, so it skips -- same
+# contract as a missing compiler (tests/README.md). Resolved once: PATH
+# cannot change inside one test process.
+require_gnu_make() {
+	[ -n "${XYMON_MAKE:-}" ] && return 0
+	local candidate
+	for candidate in ${MAKE:-} gmake make; do
+		command -v "$candidate" >/dev/null 2>&1 || continue
+		# Matched on the whole banner rather than `--version | head -1`:
+		# every test runs under `set -o pipefail`, and head exiting after
+		# the first line can SIGPIPE the writer, failing the pipeline for
+		# a candidate that answered correctly.
+		case $("$candidate" --version 2>/dev/null) in
+			"GNU Make"*) XYMON_MAKE=$candidate; return 0 ;;
+		esac
+	done
+	skip "GNU make not found (the tree's Makefiles are GNU make -- install gmake)"
+}
+
+# require_c_buildenv ROOT -- skip unless a C compiler, GNU make, and a
+# configured tree (include/config.h) are present. The shared baseline for every
+# test that compiles a harness against the in-tree libraries, so a new shared
+# skip condition lands in one place; a test may still add stricter
+# conditions of its own (e.g. "tree already built") next to its call.
+require_c_buildenv() {
+	require_cc
+	require_gnu_make
+	[ -f "$1/include/config.h" ] || skip "tree not configured (no include/config.h)"
+}
+
+# build_xymon_libs ROOT LOGFILE ARCHIVE... -- build the named archives in
+# ROOT/lib, dumping the build log on stderr and failing if the build breaks.
+build_xymon_libs() {
+	local root=$1 log=$2
+	shift 2
+	require_gnu_make
+	"$XYMON_MAKE" -C "$root/lib" "$@" >"$log" 2>&1 \
+		|| { cat "$log" >&2; fail "cannot build $*"; }
+}
+
+# pcre_cflags ROOT -- print the compile flags a harness needs to reach
+# <pcre2.h>, or nothing when the header is already on the default search
+# path.
+#
+# Every harness that includes libxymon.h needs this whether or not it uses
+# PCRE: libxymon.h pulls in lib/loadalerts.h, which includes <pcre2.h>. The
+# harnesses resolved the PCRE *libraries* and assumed the *header*, which
+# holds on Linux (/usr/include/pcre2.h) and fails wherever PCRE lives under
+# a prefix -- on FreeBSD, /usr/local/include:
+#
+#     lib/loadalerts.h:20:10: fatal error: 'pcre2.h' file not found
+#
+# Resolution mirrors the PCRELIBS order already used for the link, most
+# specific first: an explicit override, then the configured tree (whose
+# PCREINCDIR is by definition what the library being linked was built
+# against, and already carries its -I), then pkg-config, then nothing.
+pcre_cflags() {
+	local root=$1 flags=${PCRECFLAGS:-}
+	[ -n "$flags" ] || [ ! -f "$root/Makefile" ] \
+		|| flags=$(sed -n 's/^PCREINCDIR *= *//p' "$root/Makefile")
+	if [ -z "$flags" ] && command -v pkg-config >/dev/null 2>&1; then
+		flags=$(pkg-config --cflags libpcre2-8 2>/dev/null || true)
+	fi
+	printf '%s' "$flags"
+}
+
+# xymon_cflags ROOT -- the include flags a harness compiled against the
+# in-tree libraries needs: the tree's own headers, and wherever <pcre2.h>
+# lives. Callers add whatever else they need after it (the harness's own
+# -iquote ROOT/web or ROOT/xymond, -DSTANDALONE, the RRD defines).
+#
+# The tree's directories go on the *quoted* path and the PCRE directory on
+# the angle-bracket one, because that is how each is included: every in-tree
+# header is reached through #include "...", while loadalerts.h asks for
+# <pcre2.h>. Putting the tree on the angle-bracket path is what makes
+# lib/availability.h answer the macOS SDK's #include <Availability.h> on a
+# case-insensitive filesystem (#328).
+#
+# Bundled into one helper rather than offered as separate flags on purpose.
+# Neither mistake here was a wrong flag: each was a flag that every harness
+# had to remember for itself. The PCRE path had to be remembered fourteen
+# times and eleven compile lines did not remember it; -iquote has to be
+# remembered at forty-two flags across nineteen files, and the next harness
+# written will have to remember it again. A compile line can no longer say
+# where the tree's headers are without also saying how to reach them and
+# where pcre2.h is.
+#
+# It also carries the tree's own CLIENTONLY and LOCALCLIENT defines, asked of
+# make the way xymon_ldflags() asks for the link flags: build/Makefile.rules
+# adds -DCLIENTONLY=1 to a client tree's CFLAGS, and -DLOCALCLIENT=1 to a
+# localclient one. Headers branch on them -- lib/loadalerts.h includes
+# <pcre2.h> only for a server or localclient build -- so a harness compiled
+# without them on a client tree asks for a header the client build never
+# needs, and fails where PCRE is not installed. Only those two: they are what
+# a variant changes, and taking every -D would alter a server tree's compile
+# lines, which need nothing.
+xymon_cflags() {
+	local root=$1 probe tok defines=
+
+	if [ -f "$root/Makefile" ]; then
+		require_gnu_make
+		# shellcheck disable=SC2016  # $(CFLAGS) is make's to expand, not the shell's
+		probe='__xymon_cflags:
+	@printf "%s\n" "$(CFLAGS)"
+'
+		for tok in $(printf '%s' "$probe" | "$XYMON_MAKE" -s -C "$root" -f Makefile -f - __xymon_cflags 2>/dev/null); do
+			case $tok in -DCLIENTONLY|-DCLIENTONLY=*|-DLOCALCLIENT|-DLOCALCLIENT=*) defines="$defines $tok" ;; esac
+		done
+	fi
+	printf '%s' "-iquote $root/include -iquote $root/lib $(pcre_cflags "$root")$defines"
+}
+
+# xymon_ldflags ROOT -- the configured link flags for a harness built against
+# the in-tree libraries: the library search path, the runtime path, and the
+# libraries libxymoncomm.a itself needs (XYMONCOMMLIBS in xymond/Makefile).
+#
+# The counterpart to xymon_cflags(), and bundled for the same reason: the
+# product build gets all of this from $(CFLAGS) and $(RPATHOPT) on its link
+# line, while each harness spells its own and so far none carried any of it.
+# On the BSDs that costs a link (`ld: cannot find -lpcre2-8`, because
+# build/Makefile.FreeBSD keeps -L/usr/local/lib inside CFLAGS) or a run
+# (`Shared object "libpcre2-8.so.0" not found`, no rpath).
+#
+# Asked of make rather than sed'd out of the Makefile: NETLIBS, ZLIBLIBS and
+# LIBRTDEF live in the per-OS file the toplevel Makefile includes, and the
+# search path has no variable of its own at all - it is embedded in CFLAGS,
+# so the -L tokens are picked out of it.
+xymon_ldflags() {
+	local root=$1 probe out cflags rpath libs tok search=
+
+	[ -f "$root/Makefile" ] || return 0
+	require_gnu_make
+	# shellcheck disable=SC2016  # $(CFLAGS) etc. are make's to expand, not the shell's
+	probe='__xymon_ldflags:
+	@printf "%s\n" "$(CFLAGS)" "$(RPATHOPT)" "$(ZLIBLIBS) $(SSLLIBS) $(NETLIBS) $(LIBRTDEF)"
+'
+	out=$(printf '%s' "$probe" | "$XYMON_MAKE" -s -C "$root" -f Makefile -f - __xymon_ldflags 2>/dev/null) || return 0
+
+	cflags=$(printf '%s\n' "$out" | sed -n 1p)
+	rpath=$(printf '%s\n' "$out" | sed -n 2p)
+	libs=$(printf '%s\n' "$out" | sed -n 3p)
+
+	# Only the search path is wanted from CFLAGS; its -I/-D/-W belong to the
+	# compile side, which xymon_cflags() already covers.
+	for tok in $cflags; do
+		case $tok in -L*) search="$search $tok" ;; esac
+	done
+
+	# RPATHOPT is $(RPATH)$(RPATHVAL); with no RPATHVAL configured it is a bare
+	# "-Wl,--rpath," with nothing after the comma, so drop it rather than hand
+	# the linker a dangling flag.
+	case $rpath in *,) rpath= ;; esac
+
+	printf '%s' "$search $rpath $libs"
+}
+
+# require_shm_segments N -- skip unless one process may attach N SysV
+# shared-memory segments. xymond attaches one per channel, and macOS ships
+# kern.sysv.shmseg=8 against the nine channels xymond sets up, so a stock Mac
+# cannot start xymond at all.
+#
+# Worth a named check rather than letting the run fail: shmat() reports the
+# limit as EMFILE, which strerror() renders "Too many open files", so the
+# error points at file descriptors and says nothing about the sysctl actually
+# responsible. The skip names the knob and the value so it is actionable.
+#
+# Linux has no comparable per-process cap (SHMSEG is effectively unlimited)
+# and exposes no such sysctl, so an absent knob means "no limit to check".
+require_shm_segments() {
+	local want=$1 have knob found=
+
+	for knob in kern.sysv.shmseg kern.ipc.shmseg; do
+		have=$(sysctl -n "$knob" 2>/dev/null) || continue
+		case $have in ''|*[!0-9]*) continue ;; esac
+		found=$knob
+		break
+	done
+	[ -n "$found" ] || return 0
+	[ "$have" -ge "$want" ] && return 0
+
+	skip "$found is $have, need >= $want (xymond attaches one shared-memory segment per channel) -- raise it with: sudo sysctl -w $found=$want"
 }
 
 # ---- repo location -----------------------------------------------------------
@@ -148,6 +476,92 @@ find_root() {
 
 # ---- binary discovery --------------------------------------------------------
 
+# ---- build products, by variant ---------------------------------------------
+
+# variant_products -- one row per build variant: the products a test may ask
+# for, keyed by role, and the path this variant puts each at.
+#
+# The same program lives at different paths depending on what was built:
+# a server build puts the local data analyser at xymond/xymond_client, a
+# localclient build at client/xymond_client. A test that hardcodes one path
+# skips in the other build even though the program is right there. Stating the
+# paths once, here, is what lets one test run against whichever variant a leg
+# happens to have built.
+#
+# A server build carries both common/xymongrep and client/xymongrep; the server
+# row names common/, which is what the server package ships.
+variant_products() {
+	cat <<-'EOF'
+		server       XYMONGREP=common/xymongrep XYMOND_CLIENT=xymond/xymond_client XYMOND_RRD=xymond/xymond_rrd SVCSTATUS_CGI=web/svcstatus.cgi
+		localclient  XYMONGREP=client/xymongrep XYMOND_CLIENT=client/xymond_client
+		client       XYMONGREP=client/xymongrep
+	EOF
+}
+
+# An unknown XYMON_VARIANT is indistinguishable from a variant that declares no
+# products: product_path returns nothing, the caller skips, and
+# `XYMON_VARIANT=sever ./tests/testsuite` finishes green having quietly dropped
+# the binary coverage the variant exists to select. Checked where the variant is
+# read, so a typo fails the tests it would have silently removed.
+validate_variant() {
+	[ -n "${XYMON_VARIANT:-}" ] || return 0
+	# Checked once per test: require_bin is called for each product a test
+	# needs, and the answer cannot change within a run.
+	[ -n "${XYMON_VARIANT_CHECKED:-}" ] && return 0
+	# Not grep -q: it exits at the first match, the writer can then die of
+	# SIGPIPE, and under pipefail a known variant reads as unknown.
+	known_variants | grep -xF "$XYMON_VARIANT" >/dev/null \
+		|| fail "XYMON_VARIANT='$XYMON_VARIANT' is not a known variant -- expected one of: $(known_variants | tr '\n' ' ' | sed 's/ $//')"
+	XYMON_VARIANT_CHECKED=1
+}
+
+# known_variants -- the variant names the table above declares, one per line.
+# Read from the table rather than written again, so the two cannot disagree.
+known_variants() {
+	local line
+	while read -r line; do
+		# shellcheck disable=SC2086  # deliberate: split the row into fields
+		set -- $line
+		[ -n "${1:-}" ] && printf '%s\n' "$1"
+	done <<<"$(variant_products)"
+}
+
+# product_declared ROLE -- true when any row mentions ROLE.
+#
+# Absent from every row is not the same as absent from this variant's row. The
+# first means the table says nothing about this product -- so the caller's
+# DEFAULT still decides, exactly as it does with no variant declared. The
+# second means this variant genuinely does not build it. Collapsing the two
+# makes every role the table has not learned yet report as "this build does not
+# produce it", which is a confident answer to a question nothing asked.
+product_declared() {
+	local want_r=$1 line kv
+	while read -r line; do
+		# shellcheck disable=SC2086
+		set -- $line
+		shift
+		for kv; do [ "${kv%%=*}" = "$want_r" ] && return 0; done
+	done <<<"$(variant_products)"
+	return 1
+}
+
+# product_path VARIANT ROLE -- where VARIANT builds ROLE. Empty when that
+# variant does not build it at all, which is a different thing from "the build
+# should have produced it and did not" and is reported differently.
+product_path() {
+	local want_v=$1 want_r=$2 line kv
+	while read -r line; do
+		# shellcheck disable=SC2086
+		set -- $line
+		[ "${1:-}" = "$want_v" ] || continue
+		shift
+		for kv; do
+			[ "${kv%%=*}" = "$want_r" ] && { printf '%s\n' "${kv#*=}"; return 0; }
+		done
+		return 0
+	done <<<"$(variant_products)"
+}
+
 # require_bin VAR DEFAULT -- ensure $VAR (or DEFAULT if unset) points to an
 # executable; export VAR with the resolved path. Skip if the in-tree DEFAULT
 # is absent (the binary just wasn't built in this configuration), but FAIL if
@@ -161,7 +575,7 @@ find_root() {
 #     require_bin XYMONGREP common/xymongrep
 #     "$XYMONGREP" --hosts=...
 #
-# First consumer: tests/server/xymongrep-filter.sh. This helper is what lets
+# First consumer: tests/common/xymongrep-filter.sh. This helper is what lets
 # the same test run against an in-tree build (the DEFAULT path, resolved from
 # the repo root), a CMake out-of-source build, or an installed package under
 # Debian autopkgtest (both export an absolute $VAR). It is also what makes the
@@ -178,9 +592,22 @@ require_bin() {
 	# wrong path and skip with 77 even when the binary exists. An explicit env
 	# override (absolute path from CMake/autopkgtest) is used verbatim.
 	if [ -z "$cur" ]; then
-		case $default in
-			/*) cur=$default ;;
-			*)  cur=$(find_root)/$default ;;
+		local rel=$default
+		# A declared variant knows better than the caller's default: it says
+		# which build this is, and the table says where that build puts the
+		# product. Without one -- a developer run, a release tarball, the
+		# build-free tests.yml lane -- the default stands.
+		# Checked for every product, not only those the table declares: a test
+		# run on its own then refuses a misspelt variant as the runner does.
+		validate_variant
+		if [ -n "${XYMON_VARIANT:-}" ] && product_declared "$var"; then
+			rel=$(product_path "$XYMON_VARIANT" "$var")
+			[ -n "$rel" ] \
+				|| skip "the ${XYMON_VARIANT} build does not produce $var"
+		fi
+		case $rel in
+			/*) cur=$rel ;;
+			*)  cur=$(find_root)/$rel ;;
 		esac
 	fi
 	if [ ! -x "$cur" ]; then
@@ -188,6 +615,30 @@ require_bin() {
 			fail "$var explicitly set to '$cur' but no executable is there -- broken build or package layout, not a skip"
 		fi
 		skip "$var ($cur) not built or not executable"
+	fi
+	# shellcheck disable=SC2163
+	export "$var"="$cur"
+}
+
+# require_cfg VAR DEFAULT -- ensure $VAR (or DEFAULT if unset) points to a
+# config file; export VAR with the resolved path. Same override contract as
+# require_bin: a missing in-tree default is a skip, but a missing explicit
+# override is a failure because the caller asserted that installed layout.
+require_cfg() {
+	local var=$1 default=$2
+	local cur=${!var:-}
+	local explicit=$cur
+	if [ -z "$cur" ]; then
+		case $default in
+			/*) cur=$default ;;
+			*)  cur=$(find_root)/$default ;;
+		esac
+	fi
+	if [ ! -f "$cur" ]; then
+		if [ -n "$explicit" ]; then
+			fail "$var explicitly set to '$cur' but no file is there -- broken build or package layout, not a skip"
+		fi
+		skip "$var ($cur) not found"
 	fi
 	# shellcheck disable=SC2163
 	export "$var"="$cur"

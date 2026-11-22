@@ -39,18 +39,32 @@ mkdir -p "$SRC"
 # probe scripts and the small Makefile.test-* helpers they invoke).
 # Skip everything else -- we don't want to drag in the whole source
 # tree or any build artefacts.
-cp -p "$ROOT/configure" "$ROOT/configure.server" "$SRC/"
-cp -rp "$ROOT/build" "$SRC/build"
+cp "$ROOT/configure" "$ROOT/configure.server" "$SRC/"
+cp -R "$ROOT/build" "$SRC/build"
 
 # configure.client is referenced by configure (dispatcher) for the
 # --help path; copy it if present, but don't require it.
-[ -f "$ROOT/configure.client" ] && cp -p "$ROOT/configure.client" "$SRC/"
+[ -f "$ROOT/configure.client" ] && cp "$ROOT/configure.client" "$SRC/"
 
 cat > "$SRC/build/rrd.sh" <<'EOF'
 # Stub for tests/buildsystem/configure-no-rrd.sh -- force RRDOK=NO so
 # we can assert that configure.server exits cleanly on a failed probe.
 echo "Checking for RRDtool ... (mocked: forcing RRDOK=NO)"
 RRDOK="NO"
+EOF
+
+# configure.server sources build/c-ares.sh before build/rrd.sh, and since
+# c-ares became a hard requirement (#18, #138) a host without the c-ares
+# dev package aborts configure right there -- the RRD stub below would
+# never run and the assertion would see the wrong abort path. Stub the
+# probe to succeed so this test stays pinned to the RRD probe regardless
+# of host c-ares state (same isolation as USEXYMONPING below for fping).
+cat > "$SRC/build/c-ares.sh" <<'EOF'
+# Stub for tests/buildsystem/configure-no-rrd.sh -- pretend the system
+# c-ares probe succeeded so configure proceeds to the RRD probe.
+echo "Checking for C-ARES library ... (mocked: forcing success)"
+CARESINC=""
+CARESLIB=""
 EOF
 
 cd "$SRC"
@@ -62,6 +76,22 @@ cd "$SRC"
 # Force the non-interactive xymonping path so this test is pinned to
 # the RRD probe regardless of host fping state.
 export USEXYMONPING=y
+
+# configure.server bails when its make-utility is not GNU make, which on the
+# BSDs it never is: make(1) is BSD make there and GNU make is gmake. The run
+# then aborts before the RRD probe and this test skips for a dependency the
+# host has. Hand it the MAKE= configure.server prints when it bails, detected
+# the way configure.server detects it so the two cannot drift.
+make_is_gnu() {
+	local version
+	version=$(first_line "$("$1" -version 2>&1 || true)")
+	[ "$(awk '{print $1 " " $2}' <<<"$version")" = "GNU Make" ]
+}
+if [ -z "${MAKE:-}" ] && ! make_is_gnu make; then
+	if command -v gmake >/dev/null 2>&1 && make_is_gnu gmake; then
+		export MAKE=gmake
+	fi
+fi
 
 LOG="$TMP/configure.log"
 set +e
@@ -103,3 +133,5 @@ if ! grep -q "RRDtool probe failed" "$LOG"; then
 	dump_log
 	fail "configure --server exited $rc but not via the RRD abort path (regression of #84)"
 fi
+
+pass "configure --server aborts through the RRD probe when RRDtool is missing (#84)"

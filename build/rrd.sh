@@ -92,19 +92,15 @@
 	# inferring it from the RRDtool version (which is unreliable: e.g. some
 	# 1.8 backports already use the "const char **" prototype). We try to
 	# redeclare rrd_update() both ways and keep the one that matches.
+	# Compiled through build/Makefile.test-rrd, as every other configure
+	# check is, so with the compiler build/Makefile.$(OS) chooses -- the one
+	# the build uses. They used to call ${CC:-cc} themselves, and on a system
+	# whose compiler is gcc and that has no cc (Solaris 11.4) both failed.
 	probe_rrd_const_args() {
-		${CC:-cc} ${INCOPT} -x c -c -o /dev/null - >/dev/null 2>&1 <<'PROBE'
-#include <rrd.h>
-int rrd_update(int, const char **);
-int main(void) { return 0; }
-PROBE
+		(cd build && OS=`uname -s | sed -e's@/@_@g'` RRDINC="$INCOPT" $MAKE -f Makefile.test-rrd test-argv-const) >/dev/null 2>&1
 	}
 	probe_rrd_mutable_args() {
-		${CC:-cc} ${INCOPT} -x c -c -o /dev/null - >/dev/null 2>&1 <<'PROBE'
-#include <rrd.h>
-int rrd_update(int, char **);
-int main(void) { return 0; }
-PROBE
+		(cd build && OS=`uname -s | sed -e's@/@_@g'` RRDINC="$INCOPT" $MAKE -f Makefile.test-rrd test-argv-mutable) >/dev/null 2>&1
 	}
 
 	if test "$RRD_CONST_ARGS" != ""; then
@@ -170,6 +166,18 @@ PROBE
 		fi
 	else
 		echo "ERROR: Linking with RRDtool fails"
+		if test "`uname -s`" = "NetBSD" -a ! -f /usr/X11R7/lib/libfontconfig.so.2
+		then
+			echo ""
+			echo "NOTE: On NetBSD, the pre-built rrdtool package links against the base"
+			echo "X11 sets in /usr/X11R7 (e.g. libfontconfig.so.2). These are not present"
+			echo "on systems installed without X11, and pkg_add cannot provide them."
+			echo "Install the xbase set - no reinstall needed:"
+			echo "  ftp https://cdn.netbsd.org/pub/NetBSD/NetBSD-`uname -r`/`uname -m`/binary/sets/xbase.tar.xz"
+			echo "  tar -xJpf xbase.tar.xz -C /"
+			echo "See https://github.com/xymon-monitoring/xymon/issues/70 for details."
+			echo ""
+		fi
 		RRDOK="NO"
 	fi
 	OS=`uname -s | sed -e's@/@_@g'` $MAKE -f Makefile.test-rrd clean

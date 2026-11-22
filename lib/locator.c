@@ -206,7 +206,7 @@ char *locator_cmd(char *cmd)
 	static char pingbuf[512];
 	int res;
 
-	strncpy(pingbuf, cmd, sizeof(pingbuf));
+	snprintf(pingbuf, sizeof(pingbuf), "%s", cmd);
 	res = call_locator(pingbuf, sizeof(pingbuf));
 
 	return (res == 0) ? pingbuf : NULL;
@@ -423,8 +423,13 @@ int main(int argc, char *argv[])
 	int done = 0;
 	char *res;
 
-	if (argc < 2) {
+	if ((argc > 1) && (strcmp(argv[1], "--help") == 0)) {
 		printf("Usage: %s IP:PORT\n", argv[0]);
+		printf("Talks to the xymond_locator at IP:PORT, then prompts for its commands.\n");
+		return 0;
+	}
+	if (argc < 2) {
+		fprintf(stderr, "Usage: %s IP:PORT\n", argv[0]);
 		return 1;
 	}
 

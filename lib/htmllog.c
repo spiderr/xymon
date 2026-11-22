@@ -152,7 +152,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 	char xymontpl[32];
 	char pagetitle[512];
 	SBUF_DEFINE(graphs);
-	char *graphsenv;
+	char *graphsenv = NULL;
 	char *graphsptr;
 	time_t now = getcurrenttime(NULL);
 
@@ -324,10 +324,20 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 					  service, rrd->xymonrrdname);
 			}
 		}
+
+		/* GRAPHS_<service> custom graphs render even when the service has no
+		 * default graph (issue #31) - but never for reverse tests, which
+		 * collect no RRD data. */
+		SBUF_MALLOC(graphs, 7 + strlen(service) + 1);
+		snprintf(graphs, graphs_buflen, "GRAPHS_%s", service);
+		graphsenv = getenv(graphs);
+		if (graphsenv && (*graphsenv == '\0')) graphsenv = NULL;	/* set-but-empty = not set */
+		if (flags && strchr(flags, 'R')) graphsenv = NULL;
+		xfree(graphs);
 	}
 
 	fprintf(output, "<div class=\"row xymon-log-cards\">\n");
-	fprintf(output, "<div class=\"%s\">\n", (rrd && graph) ? "col-sm-12 col-md-6" : "col-12");
+	fprintf(output, "<div class=\"%s\">\n", ((rrd && graph) || graphsenv) ? "col-sm-12 col-md-6" : "col-12");
 
 	if (wantserviceid) {
 		fprintf(output, "<h5 class=\"fw-semibold\">%s &mdash; %s</h5><hr class=\"xymon-section-hr\">\n",
@@ -375,7 +385,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 			fprintf(output, "<div class=\"alert alert-info xymon-log-alert xymon-alert-blue\">"
 				"<strong><i class=\"fa-solid fa-bell-slash xymon-blue\"></i> Disabled</strong><br>");
 			if (dis_by)  fprintf(output, "By: %s<br>",    htmlquoted(dis_by));
-			if (dis_at)  fprintf(output, "At: %s<br>",    dis_at);
+			if (dis_at)  fprintf(output, "At: %s<br>",    htmlquoted(dis_at));
 			fprintf(output, "Until: %s%s<br>", untilbuf, reenable_note);
 			if (dis_rsn) fprintf(output, "Reason: %s</div>\n", htmlquoted(dis_rsn));
 			else if (dismsg) fprintf(output, "Reason: %s</div>\n", htmlquoted(dismsg));
@@ -425,8 +435,8 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 					" Previously Acknowledged</strong><br>",
 					colorname(color), colorname(color));
 				if (*prev_by_buf)    fprintf(output, "By: %s<br>",    htmlquoted(prev_by_buf));
-				if (*prev_at_buf)    fprintf(output, "At: %s<br>",    prev_at_buf);
-				if (*prev_until_buf) fprintf(output, "Until: %s<br>", prev_until_buf);
+				if (*prev_at_buf)    fprintf(output, "At: %s<br>",    htmlquoted(prev_at_buf));
+				if (*prev_until_buf) fprintf(output, "Until: %s<br>", htmlquoted(prev_until_buf));
 				fprintf(output, "Reason: %s</div>\n", htmlquoted(prev_reason_buf));
 			}
 		}
@@ -469,7 +479,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 				"<strong><i class=\"fa-solid fa-circle-check xymon-%s\"></i> Acknowledged</strong><br>",
 				colorname(color), colorname(color));
 			if (*bybuf)      fprintf(output, "By: %s<br>",    htmlquoted(bybuf));
-			if (*ackatabuf)  fprintf(output, "At: %s<br>",    ackatabuf);
+			if (*ackatabuf)  fprintf(output, "At: %s<br>",    htmlquoted(ackatabuf));
 			fprintf(output, "Until: %s<br>", untilbuf);
 			fprintf(output, "Reason: %s</div>\n", htmlquoted(ackmsg));
 
@@ -559,7 +569,7 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 
 	fprintf(output, "</div>\n"); /* end message column */
 
-	if (rrd && graph) {
+	if ((rrd && graph) || graphsenv) {
 		fprintf(output, "<div class=\"col-sm-12 col-md-6\">\n");
 		int may_have_rrd = 1;
 
@@ -573,7 +583,8 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 
 			if (multigraphs == NULL) multigraphs = ",disk,inode,qtree,quotas,snapshot,TblSpace,if_load,";
 
-			if (strncmp(rrd->xymonrrdname,"devmon",6) == 0) may_have_rrd=0;
+			/* Not all devmon statuses have graphs, so try to avoid generating graph links unless there is one */
+			if (rrd && (strncmp(rrd->xymonrrdname,"devmon",6) == 0)) may_have_rrd=0;
 
 			SBUF_MALLOC(multikey, strlen(service) + 3);
 			snprintf(multikey, multikey_buflen, ",%s,", service);
@@ -615,23 +626,35 @@ void generate_html_log(char *hostname, char *displayname, char *service, char *i
 			fprintf(output, "<!-- linecount=%d -->\n", linecount);
 			fprintf(output, "<a name=\"begingraph\">&nbsp;</a>\n");
 
-			SBUF_MALLOC(graphs, 7 + strlen(service) + 1);
-			snprintf(graphs, graphs_buflen, "GRAPHS_%s", service);
-			graphsenv=getenv(graphs);
 			if (graphsenv) {
-				fprintf(output, "<!-- GRAPHS_%s: %s -->\n", service, graphsenv);
-				graphsptr = strtok(graphsenv,",");
+				/* strtok on a copy - the getenv() result is the live environment */
+				char *graphscopy = strdup(graphsenv);
+
+				fprintf(output, "<!-- GRAPHS_%s: %s -->\n", service, htmlquoted(graphsenv));
+				graphsptr = strtok(graphscopy,",");
 				while (graphsptr != NULL) {
-					graph->xymonrrdname = strdup(graphsptr);
-					fprintf(output, "%s\n", xymon_graph_data(hostname, displayname, graphsptr, color, graph, linecount, HG_WITHOUT_STALE_RRDS, HG_PLAIN_LINK, locatorbased, now-graphtime, now));
+					xymongraph_t localgraph, *owngdef;
+
+					/*
+					 * A stack-local gdef keeps the entry verbatim in the link
+					 * (a prefix-matched table entry would rewrite it to its
+					 * base name) and leaves the shared table unwritten - the
+					 * legacy strdup() into it leaked and corrupted later
+					 * lookups. maxinstancesperimage: the entry's own GRAPHS record, else
+					 * the service's default graph.
+					 */
+					owngdef = find_xymon_graph(graphsptr);
+					memset(&localgraph, 0, sizeof(localgraph));
+					localgraph.xymonrrdname = graphsptr;
+					localgraph.maxinstancesperimage = (owngdef ? owngdef->maxinstancesperimage : (graph ? graph->maxinstancesperimage : 0));
+					fprintf(output, "%s\n", xymon_graph_data(hostname, displayname, graphsptr, color, &localgraph, linecount, HG_WITHOUT_STALE_RRDS, HG_PLAIN_LINK, locatorbased, now-graphtime, now));
 					graphsptr = strtok(NULL,",");
 				}
-
+				xfree(graphscopy);
 			}
 			else {
 				fprintf(output, "%s\n", xymon_graph_data(hostname, displayname, service, color, graph, linecount, HG_WITHOUT_STALE_RRDS, HG_PLAIN_LINK, locatorbased, now-graphtime, now));
 			}
-			xfree(graphs);
 		}
 		fprintf(output, "</div>\n"); /* end graph column */
 	}

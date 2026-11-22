@@ -27,39 +27,39 @@ COMMONTOOLS=xymon xymoncmd xymongrep xymoncfg xymondigest
 all: $(PROGRAMS) $(COMMONTOOLS) xymonclient.cfg clientlaunch.cfg $(EXTRATOOLS)
 
 xymonclient.cfg: xymonclient.cfg.DIST
-	cat xymonclient.cfg.DIST | sed -e 's!@XYMONHOSTIP@!$(XYMONHOSTIP)!g' >xymonclient.cfg
+	cat xymonclient.cfg.DIST | sed -e 's!@XYMONHOSTIP@!$(XYMONHOSTIP)!g' | sed -e 's!@XYMONHOME@!$(XYMONHOME)!g' >xymonclient.cfg
 	../build/bb-commands.sh >>xymonclient.cfg
 
 clientlaunch.cfg: clientlaunch.cfg.DIST
 ifeq ($(LOCALCLIENT),yes)
-	cat clientlaunch.cfg.DIST | sed -e 's!@CLIENTFLAGS@!--local!g' >clientlaunch.cfg
+	cat clientlaunch.cfg.DIST | sed -e 's!@CLIENTFLAGS@!--local!g' | sed -e 's!@XYMONHOME@!$(XYMONHOME)!g' >clientlaunch.cfg
 else
-	cat clientlaunch.cfg.DIST | sed -e 's!@CLIENTFLAGS@!!g' >clientlaunch.cfg
+	cat clientlaunch.cfg.DIST | sed -e 's!@CLIENTFLAGS@!!g' | sed -e 's!@XYMONHOME@!$(XYMONHOME)!g' >clientlaunch.cfg
 endif
 
 logfetch: logfetch.c $(XYMONCLIENTLIB)
-	$(CC) $(CFLAGS) -o $@ logfetch.c $(XYMONCLIENTLIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ logfetch.c $(XYMONCLIENTLIBS)
 
 clientupdate: clientupdate.c $(XYMONCLIENTCOMMLIB) $(XYMONCLIENTLIB)
-	$(CC) $(CFLAGS) -o $@ clientupdate.c $(XYMONCLIENTCOMMLIBS) $(XYMONCLIENTLIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ clientupdate.c $(XYMONCLIENTCOMMLIBS) $(XYMONCLIENTLIBS)
 
 orcaxymon: orcaxymon.c $(XYMONCLIENTCOMMLIB) $(XYMONCLIENTLIB)
-	$(CC) $(CFLAGS) -o $@ orcaxymon.c $(XYMONCLIENTCOMMLIBS) $(XYMONCLIENTLIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ orcaxymon.c $(XYMONCLIENTCOMMLIBS) $(XYMONCLIENTLIBS)
 
 msgcache: msgcache.c $(XYMONCLIENTLIB)
-	$(CC) $(CFLAGS) -o $@ msgcache.c $(XYMONCLIENTCOMMLIBS) $(XYMONCLIENTLIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ msgcache.c $(XYMONCLIENTCOMMLIBS) $(XYMONCLIENTLIBS)
 
 hpux-meminfo: hpux-meminfo.c
-	$(CC) -o $@ hpux-meminfo.c
+	$(CC) $(LDFLAGS) -o $@ hpux-meminfo.c
 
 freebsd-meminfo: freebsd-meminfo.c
-	$(CC) -o $@ freebsd-meminfo.c
+	$(CC) $(LDFLAGS) -o $@ freebsd-meminfo.c
 
 openbsd-meminfo: openbsd-meminfo.c
-	$(CC) -o $@ openbsd-meminfo.c
+	$(CC) $(LDFLAGS) -o $@ openbsd-meminfo.c
 
 netbsd-meminfo: netbsd-meminfo.c
-	$(CC) -o $@ netbsd-meminfo.c
+	$(CC) $(LDFLAGS) -o $@ netbsd-meminfo.c
 
 install:
 	if test ! -d $(INSTALLROOT)$(XYMONHOME)       ; then mkdir -p $(INSTALLROOT)$(XYMONHOME)       ; chmod 755 $(INSTALLROOT)$(XYMONHOME)      ; fi

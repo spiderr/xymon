@@ -3,6 +3,7 @@ name: build
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 # Both workflows check out and run pull-request code; the token needs
 # nothing beyond reading the repo. Same grant as tests.yml.
@@ -12,6 +13,15 @@ permissions:
 jobs:
   build:
     name: build (${{ matrix.name }})
+    # In this repository a pull request already builds its branch, so a push
+    # builds only main, release branches and tags; a fork builds every branch it
+    # pushes, for a contributor testing before opening a pull request.
+    if: >-
+      github.event_name != 'push' ||
+      github.repository != 'xymon-monitoring/xymon' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     # A regression test that blocks (e.g. a configure probe growing an
     # interactive prompt) would otherwise hang the job for the runner's
@@ -21,20 +31,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # testvariant: the suite's name for what the two configure axes
+          # produce -- --client + CONFTYPE=client writes LOCALCLIENT=yes, the
+          # localclient build. The runner checks the label against the tree.
           - name: server
             variant: server
+            testvariant: server
 
           - name: client, CT=client
             variant: client
             conftype: client
+            testvariant: localclient
 
           - name: client CT=server
             variant: client
             conftype: server
+            testvariant: client
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install build dependencies
         run: |
@@ -87,18 +103,25 @@ jobs:
       # there. Run it here too, where the binaries this variant produced are on
       # disk, so those tests actually execute against the build.
       #
-      # First such test: tests/server/xymongrep-filter.sh, which drives the
-      # common/xymongrep this leg just built. This step is the only place in
-      # CI where it executes instead of skipping.
+      # First such test: tests/common/xymongrep-filter.sh, which drives the
+      # xymongrep this leg just built, resolved per variant by the products
+      # table in tests/lib/assert.sh. This step is the only place in CI where
+      # it executes instead of skipping.
       #
-      # Gated to the server leg only: it produces the broadest binary set
-      # (including common/xymongrep). Widen the gate when a test needs a
-      # binary this leg doesn't build.
+      # Every leg, not just the server one: each leg names the build it made
+      # (testvariant), the runner checks that label against the configured
+      # tree and leaves out the areas that build has none of. A client leg
+      # verifies the client it just built -- which no leg did while gated.
       - name: Run regression tests against the build
-        if: matrix.variant == 'server'
+        env:
+          XYMON_VARIANT: ${{ matrix.testvariant }}
+          # Dependencies installed and the full variant built: a skip in a
+          # provided area is a hole, so hold the run to the coverage floor.
+          XYMON_TESTS_STRICT: 1
         run: |
-          # Mirror tests.yml: this step checks out and builds full source, so
-          # every test finds the code it guards. The runner's all-skip exit 77
+          # Mirror tests.yml: this step builds this leg's variant, so every
+          # test the filter keeps finds the binaries it drives (unbuilt areas
+          # are filtered, not skipped). The runner's all-skip exit 77
           # ("nothing verified") can therefore only mean broken discovery, not a
           # legitimate skip -- map it to a hard failure. Actions has no neutral
           # state, so 77 would otherwise surface as a bare nonzero failure with
@@ -111,3 +134,84 @@ jobs:
             exit 1
           fi
           exit "$rc"
+
+  # The 69 HTML manual pages under docs/manpages/ are generated from the roff
+  # sources and committed alongside them, and nothing ever checked that the two
+  # agree. They drifted for seven years: the last full regeneration is the
+  # 4.3.30 release of September 2019 - all 69 pages still carry its two
+  # generation timestamps, one second apart - while the sources changed eleven
+  # times since. The pages that did follow were patched by hand, keeping that
+  # 2019 footer, and eleven others were simply left behind.
+  #
+  # That was rational while regenerating cost 69 files: man2html restamped
+  # every footer from the clock, so a one-line fix produced a 69-file diff.
+  # mandoc is reproducible and makehtml.sh now takes a single page, so the
+  # correct gesture is finally cheaper than the wrong one - and this job is
+  # what keeps it that way.
+  #
+  # It fails rather than warns, but it uploads what it generated: a contributor
+  # without mandoc downloads the artifact instead of installing anything.
+  manpages:
+    name: manual pages match their sources
+    # The same push filter as the build job above.
+    if: >-
+      github.event_name != 'push' ||
+      github.repository != 'xymon-monitoring/xymon' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04   # pinned: the converter's output is version-sensitive (see #52)
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # python3 as well as mandoc: makehtml.sh pipes through
+      # build/manpage-html.py. The runner image happens to carry python3, but
+      # relying on that leaves the dependency invisible until an image change
+      # removes it.
+      - name: Install the documentation toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mandoc python3
+
+      - name: Regenerate and compare
+        run: |
+          set -euo pipefail
+          before=$(mktemp -d)
+          cp -R docs/manpages/. "$before/"
+          ./build/makehtml.sh
+          if diff -ru "$before" docs/manpages >/tmp/manpages.diff; then
+            echo "docs/manpages is up to date with the roff sources"
+            exit 0
+          fi
+          {
+            echo "The HTML under docs/manpages/ is out of date with the man-page"
+            echo "sources (the .1/.5/.8 roff files). Update it to match the sources"
+            echo "and commit."
+            echo
+            echo "Out-of-date pages:"
+            git status --porcelain -- docs/manpages | sed 's/^/  /'
+            echo
+            echo "  1. With mandoc + python3, rebuild each changed page's HTML from its source:"
+            echo "         build/makehtml.sh common/hosts.cfg.5"
+            echo
+            echo "  2. Without any toolchain, download the HTML this run already built from"
+            echo "     the sources -- this overwrites the stale pages under docs/manpages/:"
+            echo "         gh run download $GITHUB_RUN_ID -n manpages-regenerated -D docs/manpages"
+            echo "     run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "Then commit:  git add docs/manpages && git commit"
+            echo
+            echo "Diff (first 200 lines):"
+            sed -n '1,200p' /tmp/manpages.diff
+          } >&2
+          echo "::error::docs/manpages is out of date - see the job log and the manpages-regenerated artifact"
+          exit 1
+
+      - name: Upload the regenerated pages
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manpages-regenerated
+          path: docs/manpages/

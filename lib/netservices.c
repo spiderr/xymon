@@ -38,7 +38,7 @@ static svcinfo_t default_svcinfo[] = {
 	{ "ssh1",    NULL,                0,                  "SSH",	0, 0,	(TCP_GET_BANNER), 22 },
 	{ "ssh2",    NULL,                0,                  "SSH",	0, 0,	(TCP_GET_BANNER), 22 },
 	{ "telnet",  NULL,                0,                  NULL,	0, 0,	(TCP_GET_BANNER|TCP_TELNET), 23 },
-	{ "smtp",    "mail\r\nquit\r\n",  0,                  "220",	0, 0,	(TCP_GET_BANNER), 25 }, /* Send "MAIL" to avoid sendmail NOQUEUE logs */
+	{ "smtp",    NULL,                0,                  "220",	0, 0,	(TCP_GET_BANNER), 25 }, /* No send: speaking before the 220 is an RFC 5321/2920 violation */
 	{ "pop",     "quit\r\n",          0,                  "+OK",	0, 0,	(TCP_GET_BANNER), 110 },
 	{ "pop2",    "quit\r\n",          0,                  "+OK",	0, 0,	(TCP_GET_BANNER), 109 },
 	{ "pop-2",   "quit\r\n",          0,                  "+OK",	0, 0,	(TCP_GET_BANNER), 109 },
@@ -54,7 +54,7 @@ static svcinfo_t default_svcinfo[] = {
 	{ "bbd",     "dummy",             0,                  NULL,	0, 0,	(0), 1984 },
 	{ "ftps",    "quit\r\n",          0,                  "220",	0, 0,	(TCP_GET_BANNER|TCP_SSL), 990 },
 	{ "telnets", NULL,                0,                  NULL, 	0, 0,	(TCP_GET_BANNER|TCP_TELNET|TCP_SSL), 992 },
-	{ "smtps",   "mail\r\nquit\r\n",  0,                  "220",	0, 0,	(TCP_GET_BANNER|TCP_SSL), 0 }, /* Non-standard - IANA */
+	{ "smtps",   NULL,                0,                  "220",	0, 0,	(TCP_GET_BANNER|TCP_SSL), 0 }, /* Non-standard port - IANA. No send, as for smtp */
 	{ "pop3s",   "quit\r\n",          0,                  "+OK",	0, 0,	(TCP_GET_BANNER|TCP_SSL), 995 },
 	{ "imaps",   "ABC123 LOGOUT\r\n", 0,                  "* OK",	0, 0,	(TCP_GET_BANNER|TCP_SSL), 993 },
 	{ "nntps",   "quit\r\n",          0,                  "200",	0, 0,	(TCP_GET_BANNER|TCP_SSL), 563 },
@@ -293,11 +293,12 @@ char *init_tcp_services(void)
 	/* Free the temp. svclist list */
 	while (head) {
 		/*
-		 * Note: Don't free the strings inside the records, 
-		 * as they are now owned by the svcinfo records.
+		 * Note: free the record struct itself, but NOT the strings
+		 * inside it - those are now owned by the svcinfo records.
 		 */
 		walk = head;
 		head = head->next;
+		xfree(walk->rec);
 		xfree(walk);
 	}
 

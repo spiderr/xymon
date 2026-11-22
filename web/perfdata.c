@@ -112,7 +112,6 @@ int oneset(char *hostname, char *rrdname, char *starttime, char *endtime, char *
 	rrdargs[6] = "-e"; rrdargs[7] = endtimedate; rrdargs[8] = endtimehm;
 	rrdargs[9] = NULL;
 
-	optind = opterr = 0; rrd_clear_error();
 	result = xymon_rrd_fetch(9, rrdargs, &start, &end, &step, &dscount, &dsnames, &data);
 
 	if (result != 0) {
@@ -404,7 +403,7 @@ int main(int argc, char **argv)
 
 	for (hwalk = first_host(); (hwalk); hwalk = next_host(hwalk, 0)) {
 		hostname = xmh_item(hwalk, XMH_HOSTNAME);
-		pagename = xmh_item(hwalk, XMH_PAGEPATH);
+		pagename = pagepath_matchname(xmh_item(hwalk, XMH_PAGEPATH));
 
 		dbgprintf("Processing host %s\n", hostname);
 

@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# tests/lib/xymond-daemon.sh
+#
+# Starting a real xymond on a loopback port, for the tests that need one.
+#
+# Three tests carried a byte-identical copy of this, and the logic is subtle
+# enough that three copies is how one of them drifts: the port has to be
+# chosen without the kernel handing it to someone else first, and that is not
+# something any probe can guarantee.
+#
+# Source after tests/lib/assert.sh. The caller provides $XYMOND, $XYMONCLIENT
+# (require_bin), $work (a scratch directory holding xymond.log), and defines
+# xymond_launch(); start_xymond() drives it and exports PORT and XYMOND_PID.
+
+# ephemeral_port_floor -- where the kernel starts handing out ephemeral ports,
+# or nothing when this kernel does not say. Purely an optimization input: see
+# free_port().
+#
+# Asked by knob rather than by OS: the names do not overlap between the BSDs
+# (FreeBSD and macOS spell it portrange.first, OpenBSD portfirst, NetBSD
+# anonportmin), so whichever one answers identifies the kernel by itself and
+# no uname test is needed. /sbin/sysctl as well as sysctl, since NetBSD does
+# not put it on a non-root PATH.
+ephemeral_port_floor() {
+	local v knob s
+
+	v=$(cut -f1 /proc/sys/net/ipv4/ip_local_port_range 2>/dev/null || true)
+	case "$v" in ''|*[!0-9]*) ;; *) printf '%s' "$v"; return 0 ;; esac
+
+	for knob in net.inet.ip.portrange.first net.inet.ip.portfirst net.inet.ip.anonportmin; do
+		for s in sysctl /sbin/sysctl; do
+			v=$("$s" -n "$knob" 2>/dev/null || true)
+			case "$v" in ''|*[!0-9]*) continue ;; esac
+			printf '%s' "$v"
+			return 0
+		done
+	done
+	return 1
+}
+
+# free_port -- a loopback port nothing answers a Xymon ping on.
+#
+# This does NOT make the port safe to bind, and cannot: the probe only sees a
+# listener that answers a ping, so a socket held by anything else reads as
+# free, and the port can be taken in the window before the caller binds it
+# anyway. Correctness lives in start_xymond's bind retry.
+#
+# What this does is make a collision rare, by drawing from just below the
+# kernel's ephemeral range where the kernel will say where that starts. Where
+# it will not, or where there is no unprivileged room below it, no window is
+# invented -- an invented one is how this went wrong before: assuming 32768
+# puts every draw *inside* the ephemeral range on OpenBSD (starts at 1024) and
+# FreeBSD (10000). The historical span is used instead and the retry carries it.
+free_port() {
+	local p tries=0 lo hi
+
+	hi=$(ephemeral_port_floor || true)
+	case "$hi" in ''|*[!0-9]*) hi= ;; esac
+	if [ -n "$hi" ] && [ "$hi" -gt 9216 ]; then
+		lo=$(( hi - 8192 ))
+	else
+		# No usable window below the range: draw from the historical span and
+		# let the bind retry deal with a collision.
+		lo=20000
+		hi=40000
+	fi
+
+	while [ "$tries" -lt 50 ]; do
+		p=$(( lo + (RANDOM % (hi - lo)) ))
+		"$XYMONCLIENT" "127.0.0.1:$p" "ping" >/dev/null 2>&1 || { printf '%s' "$p"; return 0; }
+		tries=$((tries+1))
+	done
+	return 1
+}
+
+# start_xymond [extra xymond arguments] -- pick a port, hand it to the test's
+# xymond_launch(), and wait for the daemon to answer. Sets PORT and XYMOND_PID.
+#
+# A port that turned out to be taken is the one startup failure worth retrying,
+# and the budget is per call: a script that starts the daemon a dozen times must
+# not arrive at its last startup with the retries already spent. Every other
+# failure fails at once, so a xymond that cannot bind anywhere still fails
+# instead of looping.
+# XYMOND_START_TIMEOUT bounds the whole call, retries included, in seconds.
+# A count of probe attempts does not: each one costs whatever the client costs,
+# and on NetBSD and OpenBSD that is about two seconds rather than nothing, so
+# the old budget of six attempts times a hundred probes came to twenty minutes
+# of silence before anything was reported. Wall-clock is what the reader cares
+# about, and checking it needs no timeout(1), which the BSDs do not all ship.
+start_xymond() {
+	local attempt=0 deadline now alive= state stop
+	deadline=$(( $(date +%s) + ${XYMOND_START_TIMEOUT:-120} ))
+
+	while :; do
+		PORT=$(free_port) || fail "no free port for xymond"
+		xymond_launch "$PORT" "$@"
+
+		# An answered ping only counts while our own child is alive: the probe
+		# cannot tell this xymond from any other Xymon-speaking listener that
+		# holds the port, and a dead child with a stranger on its port would
+		# otherwise read as a successful startup.
+		#
+		# XYMON_TIMEOUT, because a probe that has to wait is the normal case
+		# here, not the exception. A port held by a socket that is bound but
+		# not listening is refused at once on Linux, and on the BSDs the SYN
+		# is dropped instead -- so the client sits out its compiled 15s
+		# default, per phase, and one collision costs 47 seconds. Three of
+		# those exhausted the budget before the retry could reach a free port.
+		while :; do
+			XYMON_TIMEOUT=${XYMOND_PING_TIMEOUT:-2} \
+				"$XYMONCLIENT" "127.0.0.1:$PORT" "ping" >/dev/null 2>&1 &&
+				kill -0 "$XYMOND_PID" 2>/dev/null && return 0
+			kill -0 "$XYMOND_PID" 2>/dev/null || break
+			now=$(date +%s)
+			[ "$now" -lt "$deadline" ] || break
+			sleep 0.1
+		done
+
+		kill -0 "$XYMOND_PID" 2>/dev/null && break
+		now=$(date +%s)
+		[ "$now" -lt "$deadline" ] || break
+		grep -q 'Cannot bind to listen socket' "$work/xymond.log" 2>/dev/null || break
+		[ "$attempt" -lt 5 ] || break
+		attempt=$((attempt+1))
+	done
+
+	# Stop the daemon this call started before failing. The test exits on
+	# fail, and a xymond left running keeps its semaphore sets, one per
+	# channel: NetBSD allows ten sets in all, so the next xymond the suite
+	# starts cannot set up its channels. TERM is what xymond answers by
+	# closing them; KILL, after five seconds, only so that a daemon ignoring
+	# TERM cannot hang the test.
+	if kill -0 "$XYMOND_PID" 2>/dev/null; then
+		alive=1
+		kill "$XYMOND_PID" 2>/dev/null
+		stop=$(( $(date +%s) + 5 ))
+		while kill -0 "$XYMOND_PID" 2>/dev/null && [ "$(date +%s)" -lt "$stop" ]; do
+			sleep 0.1
+		done
+		if kill -0 "$XYMOND_PID" 2>/dev/null; then
+			printf 'xymond pid %s ignored TERM for 5s; killing it, which leaves its IPC behind\n' "$XYMOND_PID" >&2
+			kill -9 "$XYMOND_PID" 2>/dev/null
+		fi
+		wait "$XYMOND_PID" 2>/dev/null
+	fi
+
+	cat "$work/xymond.log" >&2
+	if [ -n "$alive" ]; then
+		state="it was running but never answered a ping, and has been stopped"
+	else
+		state="it exited"
+	fi
+	now=$(date +%s)
+	[ "$now" -lt "$deadline" ] ||
+		fail "xymond did not start within ${XYMOND_START_TIMEOUT:-120}s (last port 127.0.0.1:$PORT, $((attempt + 1)) launch(es); $state) -- see the xymond log above"
+	[ -n "$alive" ] &&
+		fail "xymond did not answer on 127.0.0.1:$PORT, and has been stopped" ||
+		fail "xymond exited during startup"
+}

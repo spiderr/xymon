@@ -349,7 +349,7 @@ static ruleset_t *ruleset(char *hostname, char *pagename, char *classname)
 	xtreePos_t handle;
 	c_rule_t *rwalk;
 	ruleset_t *head, *tail, *itm;
-	char *pagenamecopy, *pgtok;
+	char *pagenames;
 	int pgmatchres, pgexclres;
 
 	handle = xtreeFind(ruletree, hostname);
@@ -358,7 +358,19 @@ static ruleset_t *ruleset(char *hostname, char *pagename, char *classname)
 		return (ruleset_t *)xtreeData(ruletree, handle);
 	}
 
-	pagenamecopy = strdup(pagename);
+	/*
+	 * The top-level page has no pagepath of its own - it is the empty string -
+	 * so the tokeniser below yields no token at all and the comparison never
+	 * happens: not a failed match, no match. That is what used to let every
+	 * PAGE= rule onto a front-page host, so the page needs a name before the
+	 * loop, not a verdict after it.
+	 *
+	 * "/" is the name analysis.cfg(5) gives it and the one criteriamatch()
+	 * matches it under in lib/loadalerts.c. XMH_ALLPAGEPATHS now emits it too,
+	 * so this covers what is left: the callers that pass XMH_PAGEPATH, and
+	 * localhostinfo(), which pins every host to the top page in local mode.
+	 */
+	pagenames = strdup((pagename && *pagename) ? pagename : "/");
 
 	/* We must build the list of rules for this host */
 	head = tail = NULL;
@@ -371,18 +383,41 @@ static ruleset_t *ruleset(char *hostname, char *pagename, char *classname)
 		if (rwalk->dgexp && !namematch(hostname, rwalk->dgexp->pattern, rwalk->dgexp->exp)) continue;
 
 		pgmatchres = pgexclres = -1;
-		pgtok = strtok(pagenamecopy, ",");
-		while (pgtok) {
-			if (rwalk->pageexp && (pgmatchres != 1))
-				pgmatchres = (namematch(pgtok, rwalk->pageexp->pattern, rwalk->pageexp->exp) ? 1 : 0);
+		if (rwalk->pageexp || rwalk->expageexp) {
+			/*
+			 * Tokenise a copy that lives no longer than this rule: strtok()
+			 * writes NULs over the separators, so walking the shared list
+			 * would leave every rule after the first one seeing only the
+			 * first pagepath of a host that is on several pages.
+			 */
+			char *pgcopy = strdup(pagenames);
+			char *pgtok, *pgsave;
 
-			if (rwalk->expageexp && (pgexclres != 1))
-				pgexclres = (namematch(pgtok, rwalk->expageexp->pattern, rwalk->expageexp->exp) ? 1 : 0);
+			pgtok = strtok_r(pgcopy, ",", &pgsave);
+			while (pgtok) {
+				if (rwalk->pageexp && (pgmatchres != 1))
+					pgmatchres = (namematch(pgtok, rwalk->pageexp->pattern, rwalk->pageexp->exp) ? 1 : 0);
 
-			pgtok = strtok(NULL, ",");
+				if (rwalk->expageexp && (pgexclres != 1))
+					pgexclres = (namematch(pgtok, rwalk->expageexp->pattern, rwalk->expageexp->exp) ? 1 : 0);
+
+				pgtok = strtok_r(NULL, ",", &pgsave);
+			}
+			xfree(pgcopy);
 		}
 		if (pgexclres == 1) continue;
-		if (pgmatchres == 0) continue;
+		/*
+		 * A PAGE= rule has to find its page. Testing for a failed match instead
+		 * let every state that is not a failure through, including "not compared
+		 * at all" - which is how a front-page host used to collect every
+		 * PAGE=-qualified rule in the file.
+		 *
+		 * Now that the page always has a name the list is never empty, so
+		 * pgmatchres is always 0 or 1 here and this is the same test as before.
+		 * Keep it in this form anyway: it is the half that does not depend on
+		 * every caller remembering to name the page, and no test can reach it.
+		 */
+		if (rwalk->pageexp && (pgmatchres != 1)) continue;
 
 		/* All criteria match - add this rule to the list of rules for this host */
 		itm = (ruleset_t *)calloc(1, sizeof(ruleset_t));
@@ -400,10 +435,14 @@ static ruleset_t *ruleset(char *hostname, char *pagename, char *classname)
 	/* Add the list to the tree */
 	xtreeAdd(ruletree, strdup(hostname), head);
 
-	xfree(pagenamecopy);
+	xfree(pagenames);
 
 	return head;
 }
+
+/* Line currently being parsed by load_client_config(), so pattern-compile
+ * errors can report where the bad pattern came from. */
+static int curparseline = 0;
 
 static exprlist_t *setup_expr(char *ptn, int multiline)
 {
@@ -411,10 +450,43 @@ static exprlist_t *setup_expr(char *ptn, int multiline)
 
 	newitem->pattern = strdup(ptn);
 	if (*ptn == '%') {
-		if (multiline)
-			newitem->exp = multilineregex(ptn+1);
-		else
-			newitem->exp = compileregex(ptn+1);
+		/* Same flags as compileregex()/multilineregex(), but we ask for the
+		 * pcre2 error code so a truncated pattern can be told apart from one
+		 * that is simply wrong. */
+		int errcode = 0;
+		int truncated;
+
+		newitem->exp = compileregex_ext(ptn+1, PCRE2_CASELESS | (multiline ? PCRE2_MULTILINE : 0),
+						&errcode, NULL);
+		if (newitem->exp == NULL) {
+			/* compileregex_ext() logged the pcre error, but without saying
+			 * where the pattern came from. A common cause is a pattern
+			 * containing a space: the config is tokenized on whitespace, so
+			 * the pattern is silently truncated at the space - and when the
+			 * cut lands inside a group or a character class, pcre2 reports
+			 * exactly one of these two errors. Any other failure is the
+			 * pattern's own doing, so it gets the location only. */
+			/*
+			 * Both names are absent from the pcre2 headers on some older
+			 * distributions -- CentOS 7 and Amazon Linux 2 among them --
+			 * where naming them stops the build outright. Their numeric
+			 * codes are deliberately not hard-coded in their place: nothing
+			 * here can confirm what those headers assign 106 and 114 to, and
+			 * a hint pointing at whitespace for an unrelated failure is worse
+			 * than no hint. Where the codes cannot be named, the pattern and
+			 * its config line are still reported, without the hint.
+			 */
+#if defined(PCRE2_ERROR_MISSING_CLOSING_PARENTHESIS) && defined(PCRE2_ERROR_MISSING_SQUARE_BRACKET)
+			truncated = ((errcode == PCRE2_ERROR_MISSING_CLOSING_PARENTHESIS) ||
+				     (errcode == PCRE2_ERROR_MISSING_SQUARE_BRACKET));
+#else
+			truncated = 0;
+#endif
+
+			errprintf("Invalid pattern '%s' at line %d%s\n", ptn, curparseline,
+				  (truncated ?
+				   " (hint: if the pattern contains a space, the config splits tokens on whitespace - write [[:space:]] instead)" : ""));
+		}
 	}
 	newitem->next = exprhead;
 	exprhead = newitem;
@@ -627,6 +699,7 @@ int load_client_config(char *configfn)
 		int unknowntok = 0;
 
 		cfid++;
+		curparseline = cfid;
 		sanitize_input(inbuf, 1, 0); if (STRBUFLEN(inbuf) == 0) continue;
 
 		newhost = newpage = newexhost = newexpage = newclass = newexclass = newdg = newexdg = NULL;
@@ -3085,9 +3158,11 @@ strbuffer_t *check_rrdds_thresholds(char *hostname, char *classname, char *pagep
 	rrdtplnames_t *tpl;
 	double val;
 	void *hinfo;
+	strbuffer_t *seen;
 
 	if (!resbuf) resbuf = newstrbuffer(0);
 	clearstrbuffer(resbuf);
+	seen = newstrbuffer(0);
 
 	hinfo = hostinfo(hostname);
 	rule = getrule(hostname, pagepaths, classname, hinfo, C_RRDDS);
@@ -3122,6 +3197,20 @@ strbuffer_t *check_rrdds_thresholds(char *hostname, char *classname, char *pagep
 
 		if (vallist[tpl->idx] == NULL) goto nextrule;
 		val = atof(vallist[tpl->idx]);
+
+		/*
+		 * First match wins per (column, dataset, severity). Once a rule of a
+		 * given colour applies to this target, later rules for the same target
+		 * and colour are shadowed - even if this rule's threshold does not
+		 * trigger - matching the top-to-bottom first-match semantics documented
+		 * for analysis.cfg (put the specific settings first, the generic ones
+		 * last). Different colours are kept, so a yellow and a red threshold on
+		 * one dataset both still apply. Issue #32.
+		 */
+		snprintf(msgline, sizeof(msgline), "\001%s\002%s\002%s\001",
+			 rule->rule.rrdds.column, rule->rule.rrdds.rrdds, colorname(rule->rule.rrdds.color));
+		if (strstr(STRBUF(seen), msgline)) goto nextrule;
+		addtobuffer(seen, msgline);
 
 		/* Do the checks */
 		if (rule->flags & RRDDSCHK_INTVL) {
@@ -3214,6 +3303,7 @@ nextrule:
 
 	if (valscopy) xfree(valscopy);
 	if (vallist) xfree(vallist);
+	freestrbuffer(seen);
 
 	return (STRBUFLEN(resbuf) > 0) ? resbuf : NULL;
 }

@@ -19,20 +19,17 @@
 
 extern pcre2_code *compileregex(const char *pattern);
 extern pcre2_code *compileregex_opts(const char *pattern, uint32_t flags);
-#ifdef PCRE_FIRSTLINE
-#define firstlineregex(P) compileregex_opts(P, PCRE_FIRSTLINE);
-#define firstlineregexnocase(P) compileregex_opts(P, PCRE_CASELESS|PCRE_FIRSTLINE);
-#else
-#define firstlineregex(P) compileregex_opts(P, 0);
-#define firstlineregexnocase(P) compileregex_opts(P, PCRE_CASELESS);
-#endif
+extern pcre2_code *compileregex_ext(const char *pattern, uint32_t flags, int *errcode, PCRE2_SIZE *erroffset);
+#define firstlineregex(P) compileregex_opts(P, PCRE2_FIRSTLINE)
+#define firstlineregexnocase(P) compileregex_opts(P, PCRE2_CASELESS|PCRE2_FIRSTLINE)
 extern pcre2_code *multilineregex(const char *pattern);
 extern int matchregex(const char *needle, pcre2_code *pcrecode);
 extern void freeregex(pcre2_code *pcrecode);
+extern char *pagepath_matchname(char *pagepath);
 extern int namematch(const char *needle, char *haystack, pcre2_code *pcrecode);
 extern int patternmatch(char *datatosearch, char *pattern, pcre2_code *pcrecode);
 extern pcre2_code **compile_exprs(char *id, const char **patterns, int count);
-extern int pickdata(char *buf, pcre2_code *expr, int dupok, ...);
+extern int pickdata(char *buf, pcre2_code *expr, int dupok, int nargs, ...);
 extern int timematch(char *holidaykey, char *tspec);
 #endif
 

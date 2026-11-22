@@ -66,7 +66,7 @@ static tcptest_t *thead = NULL;
 int shuffletests = 0;
 int sslincludecipherlist = 1;
 int sslshowallciphers = 0;
-int snienabled = 0;	/* SNI disabled by default */
+int snienabled = 1;	/* Set by --sni; nothing reads it now (an https test always sends the URL's host) -- see hosts.cfg(5) */
 
 static svcinfo_t svcinfo_http  = { "http", NULL, 0, NULL, 0, 0, (TCP_GET_BANNER|TCP_HTTP), 80 };
 static svcinfo_t svcinfo_https = { "https", NULL, 0, NULL, 0, 0, (TCP_GET_BANNER|TCP_HTTP|TCP_SSL), 443 };
@@ -564,8 +564,17 @@ static void setup_ssl(tcptest_t *item)
 		SSL_CTX_set_quiet_shutdown(item->sslctx, 1);
 
 		/* Limit set of ciphers, if user wants to */
-		if (item->ssloptions->cipherlist) 
-			SSL_CTX_set_cipher_list(item->sslctx, item->ssloptions->cipherlist);
+		if (item->ssloptions->cipherlist && !SSL_CTX_set_cipher_list(item->sslctx, item->ssloptions->cipherlist)) {
+			char sslerrmsg[256];
+
+			ERR_error_string(ERR_get_error(), sslerrmsg);
+			errprintf("Cannot set cipher list '%s' - IP %s, service %s: %s\n",
+				   item->ssloptions->cipherlist, inet_ntoa(item->addr.sin_addr), item->svcinfo->svcname, sslerrmsg);
+			item->sslrunning = 0;
+			SSL_CTX_free(item->sslctx);
+			item->errcode = CONTEST_ESSL;
+			return;
+		}
 
 		/* Set ALPN protocols if specified */
 		/* First check service definition for ALPN, then fallback to ssloptions */
@@ -629,6 +638,7 @@ static void setup_ssl(tcptest_t *item)
 				errprintf("Cannot load SSL client certificate/key %s: %s\n", 
 					  item->ssloptions->clientcert, sslerrmsg);
 				item->sslrunning = 0;
+				SSL_CTX_free(item->sslctx);
 				item->errcode = CONTEST_ESSL;
 				return;
 			}
@@ -663,6 +673,8 @@ static void setup_ssl(tcptest_t *item)
 			if (!SSL_CTX_check_private_key(item->sslctx)) {
 				errprintf("Private/public key mismatch for certificate %s\n", item->ssloptions->clientcert);
 				item->sslrunning = 0;
+				SSL_free(item->ssldata);
+				SSL_CTX_free(item->sslctx);
 				item->errcode = CONTEST_ESSL;
 				return;
 			}
@@ -793,7 +805,9 @@ static void setup_ssl(tcptest_t *item)
 	if (sslincludecipherlist) {
 		int b1, b2;
 		b1 = SSL_get_cipher_bits(item->ssldata, &b2);
-		certsigalg = OBJ_nid2ln(X509_get_signature_type(peercert));
+		/* The signature algorithm is reported in the certificate block above.
+		   Recomputing it here read the certificate back after this function had
+		   released its reference to it, and the result was never used. */
 		snprintf(msglin, sizeof(msglin), "\nCipher used: %s (%d bits)\n", SSL_get_cipher_name(item->ssldata), b1);
 		addtobuffer(sslinfo, msglin);
 		item->mincipherbits = b1; 
@@ -1506,12 +1520,25 @@ int tcp_got_expected(tcptest_t *test)
 
 #ifdef STANDALONE
 
+static void usage(FILE *f, char *pgm)
+{
+	fprintf(f, "Usage: %s [--debug] [--timeout=N] [--concurrency=N] IP/PORT/TESTSPEC[@SOURCEIP]...\n", pgm);
+	fprintf(f, "Runs each network test once, the way xymonnet does, and prints the result.\n");
+	fprintf(f, "TESTSPEC is a service from protocols.cfg, e.g. %s --debug 172.16.10.2/25/smtp\n", pgm);
+	fprintf(f, "Run it under xymoncmd, so that it finds protocols.cfg.\n");
+}
+
 int main(int argc, char *argv[])
 {
 	int argi;
 	char *argp, *p;
 	int timeout = 0;
 	int concurrency = 0;
+	int ntests = 0;
+
+	for (argi=1; (argi<argc); argi++) {
+		if (strcmp(argv[argi], "--help") == 0) { usage(stdout, argv[0]); return 0; }
+	}
 
 	if (xgetenv("XYMONNETSVCS") == NULL) putenv("XYMONNETSVCS=");
 	init_tcp_services();
@@ -1530,17 +1557,13 @@ int main(int argc, char *argv[])
 			concurrency = atoi(p+1);
 			if (concurrency < 0) concurrency = 0;
 		}
-		else if (strcmp(argv[argi], "--help") == 0) {
-			printf("Run with\n~xymon/server/bin/xymoncmd ./contest --debug 172.16.10.2/25/smtp\n");
-			printf("I.e. IP/PORTNUMBER/TESTSPEC\n");
-			return 0;
-		}
 		else {
 			char *ip;
 			char *port;
 			char *srcip;
 			char *testspec;
 
+			ntests++;
 			argp = argv[argi]; ip = port = srcip = testspec = NULL;
 
 			ip = argp;
@@ -1614,6 +1637,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	if (ntests == 0) { usage(stderr, argv[0]); return 1; }
 
 	do_tcp_tests(timeout, concurrency);
 	show_tcp_test_results();

@@ -7,17 +7,13 @@ XYMONCOMMLIBS = $(XYMONCOMMLIB) $(ZLIBLIBS) $(SSLLIBS) $(NETLIBS) $(LIBRTDEF)
 XYMONTIMELIB = ../lib/libxymontime.a
 XYMONTIMELIBS = $(XYMONTIMELIB) $(LIBRTDEF)
 
-# ARES settings. c-ares is included
-ifeq ($(SYSTEMCARES),no)
-	CARESINC = -I./c-ares
-	CARESLIBS = libcares.a
-	LOCALCARES = libcares.a
-endif
+# c-ares (async DNS) is a required system dependency; the formerly-bundled
+# copy has been removed. configure provides CARESINCDIR and CARESLIBS.
 
 PROGRAMS = xymonnet xymonping beastat
 EXTENSIONS = xymonnet-again.sh
 SNMPPROGRAMS = xymon-snmpcollect
-DBGTOOLS = contest
+DBGTOOLS = xymonnetprobe
 
 
 ifeq ($(DOSNMP),yes)
@@ -25,18 +21,20 @@ PROGRAMS += $(SNMPPROGRAMS)
 endif
 all: $(PROGRAMS) $(EXTENSIONS) $(DBGTOOLS)
 
-NETTESTOBJS = xymonnet.o contest.o httptest.o httpresult.o ldaptest.o dns.o dns2.o httpcookies.o
+NETTESTOBJS = xymonnet.o contest.o httptest.o httpresult.o ldaptest.o dns.o dns2.o httpcookies.o udpquery.o
 PINGTESTOBJS = xymonping.o
 BEASTATOBJS = beastat.o
 
 xymonnet: $(NETTESTOBJS) $(XYMONCOMMLIB) $(XYMONTIMELIB) $(XYMONLIBS)
-	$(CC) $(CFLAGS) -o $@ $(RPATHOPT) $(NETTESTOBJS) $(CARESLIBS) $(LDAPLIBS) $(XYMONTIMELIBS) $(XYMONCOMMLIBS) $(XYMONLIBS) $(PCRELIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(RPATHOPT) $(NETTESTOBJS) $(CARESLIBS) $(LDAPLIBS) $(XYMONTIMELIBS) $(XYMONCOMMLIBS) $(XYMONLIBS) $(PCRELIBS)
 
 xymonping: $(PINGTESTOBJS) $(XYMONTIMELIB) ../lib/libxymon.a
-	$(CC) $(CFLAGS) -o $@ $(PINGTESTOBJS) $(XYMONTIMELIBS) $(XYMONCOMMLIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(PINGTESTOBJS) $(XYMONTIMELIBS) $(XYMONCOMMLIBS)
 
-xymonnet.o: xymonnet.c
+xymonnet.o: xymonnet.c ntpprobe.c udpquery.h
 	$(CC) $(CFLAGS) $(SSLFLAGS) $(LDAPFLAGS) $(SSLINCDIR) $(LDAPINCDIR) -c -o $@ xymonnet.c
+
+udpquery.o: udpquery.c udpquery.h
 
 ldaptest.o: ldaptest.c
 	$(CC) $(CFLAGS) $(LDAPFLAGS) $(LDAPINCDIR) -c -o $@ ldaptest.c
@@ -50,44 +48,46 @@ httpresult.o: httpresult.c
 contest.o: contest.c
 	$(CC) $(CFLAGS) $(SSLFLAGS) $(SSLINCDIR) -c -o $@ contest.c
 
-dns.o: $(LOCALCARES) dns.c
-	$(CC) $(CFLAGS) $(CARESINC) -c -o $@ dns.c
+dns.o: dns.c
+	$(CC) $(CFLAGS) $(CARESINCDIR) -c -o $@ dns.c
 
 dns2.o: dns2.c
-	$(CC) $(CFLAGS) $(CARESINC) -c -o $@ dns2.c
-
-libcares.a: c-ares/.libs/libcares.a
-	ranlib c-ares/.libs/libcares.a || echo "ranlib failure - ignored"
-	cp c-ares/.libs/libcares.a .
-
-c-ares/.libs/libcares.a: c-ares/Makefile
-	(cd c-ares && $(MAKE))
-
-c-ares/Makefile: c-ares/configure
-	(cd c-ares && ../c-ares-shim.sh ./configure --disable-shared)
-
-c-ares/configure: c-ares-$(ARESVER).tar.gz
-	gzip -dc $< | tar xf -
-	mv c-ares-$(ARESVER) c-ares
-	# Must touch "configure", or it will trigger a rebuild because it is older than the tar.gz file.
-	touch c-ares/configure
+	$(CC) $(CFLAGS) $(CARESINCDIR) -c -o $@ dns2.c
 
 beastat: $(BEASTATOBJS) $(XYMONCOMMLIB) $(XYMONTIMELIB)
-	$(CC) $(CFLAGS) -o $@ $(RPATHOPT) $(BEASTATOBJS) $(XYMONCOMMLIBS) $(XYMONTIMELIBS) $(PCRELIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(RPATHOPT) $(BEASTATOBJS) $(XYMONCOMMLIBS) $(XYMONTIMELIBS) $(PCRELIBS)
 
 beastat.o: beastat.c
 	$(CC) $(CFLAGS) $(PCREINCDIR) -c -o $@ beastat.c
 
 
-contest: contest.c httptest.o dns.o dns2.o httpcookies.o $(XYMONCOMMLIB) $(XYMONTIMELIB)
-	$(CC) $(CFLAGS) -o contest -I../include $(CARESINC) -DSTANDALONE contest.c httptest.o dns.o dns2.o httpcookies.o $(CARESLIBS) $(XYMONCOMMLIBS) $(XYMONTIMELIBS)
+xymonnetprobe: contest.c httptest.o dns.o dns2.o httpcookies.o $(XYMONCOMMLIB) $(XYMONTIMELIB)
+	$(CC) $(LDFLAGS) $(CFLAGS) $(SSLFLAGS) $(SSLINCDIR) -o $@ -I../include $(CARESINCDIR) -DSTANDALONE contest.c httptest.o dns.o dns2.o httpcookies.o $(CARESLIBS) $(XYMONCOMMLIBS) $(XYMONTIMELIBS)
 
+
+# net-snmp-config exports the distro's full build policy along with the
+# interface: -Werror=declaration-after-statement (newer net-snmp), the EL9
+# hardened-ld -specs (forces PIE links against our non-PIC objects), LTO,
+# fortify options, and more. Keep only what we actually need from it:
+# for compiling, include dirs and defines; for linking, library names,
+# dirs and runtime paths.
+SNMPCFLAGS := $(shell for flag in `net-snmp-config --cflags 2>/dev/null`; do \
+		case $$flag in \
+			(-I*|-D*|-U*|-pthread) echo $$flag ;; \
+		esac; \
+	done)
+
+SNMPLIBS := $(shell for flag in `net-snmp-config --libs 2>/dev/null`; do \
+		case $$flag in \
+			(-l*|-L*|-Wl,-rpath*|-Wl,-R*|-pthread) echo $$flag ;; \
+		esac; \
+	done)
 
 xymon-snmpcollect: xymon-snmpcollect.o $(XYMONCOMMLIB) $(XYMONTIMELIB)
-	$(CC) $(LDFLAGS) -o $@ xymon-snmpcollect.o `net-snmp-config --libs` ../lib/libxymon.a $(XYMONCOMMLIBS) $(XYMONTIMELIBS)
+	$(CC) $(LDFLAGS) -o $@ xymon-snmpcollect.o $(SNMPLIBS) ../lib/libxymon.a $(XYMONCOMMLIBS) $(XYMONTIMELIBS)
 
 xymon-snmpcollect.o: xymon-snmpcollect.c
-	$(CC) $(CFLAGS) -I. `net-snmp-config --cflags` -c -o $@ xymon-snmpcollect.c
+	$(CC) $(CFLAGS) -I. $(SNMPCFLAGS) -c -o $@ xymon-snmpcollect.c
 
 ################################################
 # Default compilation rules
@@ -121,8 +121,21 @@ ifndef PKGBUILD
 endif
 	cp -fp $(EXTENSIONS) $(INSTALLROOT)$(INSTALLEXTDIR)/
 
+# The debug tool "all" builds, xymonnetprobe -- contest.c built standalone,
+# to run one of xymonnet's network tests by hand -- is otherwise discarded:
+# nothing installs it, exactly like lib/'s diagnostics. Reached from the
+# top-level "make install-tools"; deliberately not part of "install".
+install-tools: $(DBGTOOLS)
+	@mkdir -p $(INSTALLROOT)$(INSTALLBINDIR)
+	cp -fp xymonnetprobe $(INSTALLROOT)$(INSTALLBINDIR)/xymonnetprobe
+	chmod 755 $(INSTALLROOT)$(INSTALLBINDIR)/xymonnetprobe
+ifndef PKGBUILD
+	chown $(XYMONUSER) $(INSTALLROOT)$(INSTALLBINDIR)/xymonnetprobe
+	chgrp `$(IDTOOL) -g $(XYMONUSER)` $(INSTALLROOT)$(INSTALLBINDIR)/xymonnetprobe
+endif
+
 install-config:
-	../build/convert-bbservices $(INSTALLROOT)$(INSTALLETCDIR)/protocols.cfg
+	../build/convert-bbservices.sh $(INSTALLROOT)$(INSTALLETCDIR)/protocols.cfg
 	../build/merge-sects protocols.cfg $(INSTALLROOT)$(INSTALLETCDIR)/protocols.cfg
 ifndef PKGBUILD
 	chown $(XYMONUSER) $(INSTALLROOT)$(INSTALLETCDIR)/protocols.cfg

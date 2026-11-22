@@ -173,7 +173,7 @@ static void xmh_item_list_setup(void)
 	xmh_item_key[XMH_NOFLAP]               = "NOFLAP";
 	xmh_item_name[XMH_NOFLAP]              = "XMH_NOFLAP";
 	xmh_item_key[XMH_FLAG_MULTIHOMED]      = "MULTIHOMED";
-	xmh_item_name[XMH_FLAG_MULTIHOMED]     = "XMH_MULTIHOMED";
+	xmh_item_name[XMH_FLAG_MULTIHOMED]     = "XMH_FLAG_MULTIHOMED";
 	xmh_item_key[XMH_FLAG_HTTP_HEADER_MATCH]             = "headermatch";
 	xmh_item_name[XMH_FLAG_HTTP_HEADER_MATCH]            = "XMH_FLAG_HTTP_HEADER_MATCH";
 	xmh_item_key[XMH_FLAG_SNI]             = "sni";			// Enable SNI (Server name Indication) for TLS requests
@@ -200,7 +200,6 @@ static void xmh_item_list_setup(void)
 	xmh_item_name[XMH_ACCEPT_ONLY]         = "XMH_ACCEPT_ONLY";
 
 	xmh_item_name[XMH_IP]                  = "XMH_IP";
-	xmh_item_name[XMH_CLIENTALIAS]         = "XMH_CLIENTALIAS";
 	xmh_item_name[XMH_HOSTNAME]            = "XMH_HOSTNAME";
 	xmh_item_name[XMH_PAGENAME]            = "XMH_PAGENAME";
 	xmh_item_name[XMH_PAGEPATH]            = "XMH_PAGEPATH";
@@ -375,7 +374,12 @@ char *knownhost(char *hostname, char *hostip, enum ghosthandling_t ghosthandling
 			result = (strcasecmp(hivals[XMH_CLIENTALIAS], hostname) == 0) ? strdup(hivalhost) : NULL;
 		}
 
-		if (result && hivals[XMH_IP]) strcpy(hostip, hivals[XMH_IP]);
+		/* hivals[XMH_IP] is off the network (a "hostinfo clone=" reply);
+		   hostip is IP_ADDR_STRLEN at every caller, so bound the copy. */
+		if (result && hivals[XMH_IP]) {
+			strncpy(hostip, hivals[XMH_IP], IP_ADDR_STRLEN - 1);
+			hostip[IP_ADDR_STRLEN - 1] = '\0';
+		}
 
 		return result;
 	}
@@ -398,7 +402,8 @@ char *knownhost(char *hostname, char *hostip, enum ghosthandling_t ghosthandling
 		/*
 		 * Force our version of the hostname. Done here so CLIENT works always.
 		 */
-		strcpy(hostip, walk->ip);
+		strncpy(hostip, walk->ip, IP_ADDR_STRLEN - 1);
+		hostip[IP_ADDR_STRLEN - 1] = '\0';
 		result = strdup(walk->hostname);
 	}
 	else {
@@ -555,11 +560,28 @@ char *xmh_item(void *hostin, enum xmh_item_t item)
 		  return intbuf;
 
 	  case XMH_ALLPAGEPATHS:
+		  /*
+		   * The top-level page's pagepath is the empty string, and an empty
+		   * element in a comma-separated list cannot be told from no element:
+		   * appended raw it either vanishes ("" then "home" gives "home",
+		   * because the separator is only written for a non-empty buffer) or
+		   * leaves a trailing comma that a tokeniser drops. Either way a host
+		   * listed on the front page *and* a named page lost its front-page
+		   * membership here, before any consumer could match on it.
+		   *
+		   * "/" is the name analysis.cfg(5) and alerts.cfg(5) give that page,
+		   * so emit it. Consumers that already mapped "" to "/" themselves
+		   * (criteriamatch in lib/loadalerts.c) see the string they were
+		   * constructing, and webaccess.c truncates it at the first "/" to the
+		   * same empty top-level element it had before.
+		   */
 		  if (rawtxt) clearstrbuffer(rawtxt);
 		  hwalk = host;
 		  while (hwalk && (strcmp(hwalk->hostname, host->hostname) == 0)) {
+			char *pgpath = hwalk->page->pagepath;
+
 			if (STRBUFLEN(rawtxt) > 0) addtobuffer(rawtxt, ",");
-			addtobuffer(rawtxt, hwalk->page->pagepath);
+			addtobuffer(rawtxt, ((pgpath && *pgpath) ? pgpath : "/"));
 			hwalk = hwalk->next;
 		  }
 		  return STRBUF(rawtxt);
@@ -791,11 +813,24 @@ char *xmh_item_multi(void *hostin, enum xmh_item_t item)
 
 #ifdef STANDALONE
 
+static void usage(FILE *f, char *pgm)
+{
+	fprintf(f, "Usage: %s HOSTSFILE HOSTNAME [HOSTNAME...]\n", pgm);
+	fprintf(f, "       %s @ HOSTNAME\n", pgm);
+	fprintf(f, "Prints each host's entry as loaded from HOSTSFILE, or as xymond holds it\n");
+	fprintf(f, "with @, then prompts: an item name prints its value, '>' the page paths,\n");
+	fprintf(f, "'set TEXT' sets the host's data item, '!' reloads HOSTSFILE, and an empty\n");
+	fprintf(f, "line moves on to the next host.\n");
+}
+
 int main(int argc, char *argv[])
 {
 	int argi;
 	namelist_t *h;
 	char *val;
+
+	if ((argc > 1) && (strcmp(argv[1], "--help") == 0)) { usage(stdout, argv[0]); return 0; }
+	if (argc < 3) { usage(stderr, argv[0]); return 1; }
 
 	if (strcmp(argv[1], "@") == 0) {
 		load_hostinfo(argv[2]);

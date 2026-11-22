@@ -224,12 +224,12 @@ void do_acknowledgementslog(FILE *output,
 		    p = strrchr(host, '.');
 		    if (p) {
                         *p = '\0';
-			strncpy(svc,p+1,  sizeof(svc));
+			snprintf(svc, sizeof(svc), "%s", p+1);
                     }
 		    /* Xymon uses \n in the ack message, for the "acked by" data. Cut it off. */
 		    p = strstr(message, "\\nAcked by:");
 		    if (p) {
-			strncpy(recipient,p+12, sizeof(recipient));
+			snprintf(recipient, sizeof(recipient), "%s", p+12);
                         *(p-1) = '\0';
 		    }
 		    else {
@@ -256,7 +256,9 @@ void do_acknowledgementslog(FILE *output,
 			pagename = xmh_item_multi(eventhost, XMH_PAGEPATH);
 			pagematch = 0;
 			while (!pagematch && pagename) {
-			pagematch = (pcre2_match(pageregexp, pagename, strlen(pagename), 0, 0,
+				char *matchname = pagepath_matchname(pagename);
+
+				pagematch = (pcre2_match(pageregexp, matchname, strlen(matchname), 0, 0,
 					ovector, NULL) >= 0);
 				pagename = xmh_item_multi(NULL, XMH_PAGEPATH);
 			}
@@ -271,7 +273,9 @@ void do_acknowledgementslog(FILE *output,
 			pagename = xmh_item_multi(eventhost, XMH_PAGEPATH);
 			pagematch = 0;
 			while (!pagematch && pagename) {
-			pagematch = (pcre2_match(expageregexp, pagename, strlen(pagename), 0, 0,
+			char *matchname = pagepath_matchname(pagename);
+
+			pagematch = (pcre2_match(expageregexp, matchname, strlen(matchname), 0, 0,
 					ovector, NULL) >= 0);
 				pagename = xmh_item_multi(NULL, XMH_PAGEPATH);
 			}

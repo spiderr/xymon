@@ -204,11 +204,11 @@ FILE *stackfopen(char *filename, char *mode, void **v_listhead)
 
 		stackfd_mode = strdup(mode);
 
-		strncpy(stackfd_filename, filename, sizeof(stackfd_filename));
+		snprintf(stackfd_filename, sizeof(stackfd_filename), "%s", filename);
 	}
 	else {
 		if (*filename == '/')
-			strncpy(stackfd_filename, filename, sizeof(stackfd_filename));
+			snprintf(stackfd_filename, sizeof(stackfd_filename), "%s", filename);
 		else
 			snprintf(stackfd_filename, sizeof(stackfd_filename), "%s/%s", stackfd_base, filename);
 	}
@@ -335,7 +335,10 @@ static void addtofnlist(char *dirname, int is_optional, void **v_listhead)
 	int fnsz = 0;
 	int i;
 
-	if (*dirname == '/') strncpy(dirfn, dirname, sizeof(dirfn)); else snprintf(dirfn, sizeof(dirfn), "%s/%s", stackfd_base, dirname);
+	if (*dirname == '/')
+		snprintf(dirfn, sizeof(dirfn), "%s", dirname);
+	else
+		snprintf(dirfn, sizeof(dirfn), "%s/%s", stackfd_base, dirname);
 
 	if ((dirfd = opendir(dirfn)) == NULL) {
 		if (!is_optional) errprintf("WARNING: Cannot open directory %s\n", dirfn);
@@ -433,13 +436,27 @@ char *stackfgets(strbuffer_t *buffer, char *extraincl)
 		if (strncmp(bufpastwhitespace, "optional", 8) == 0) { optional = 1; bufpastwhitespace += 8 + strspn(bufpastwhitespace+8, " \t"); }
 
 		if ( (strncmp(bufpastwhitespace, "include ", 8) == 0) || (strncmp(bufpastwhitespace, "include\t", 8) == 0) ||
-		     (extraincl && (strncmp(bufpastwhitespace, extraincl, strlen(extraincl)) == 0)) ) {
-			char *newfn, *eol, eolchar = '\0';
+		     /* "source FILE" and ". FILE" are accepted as aliases for "include",
+		        so a shell-syntax config file (e.g. xymonserver.cfg) can use the
+		        shell's own include directives and still be followed by xymon.
+		        Note: there is no shell equivalent for the "directory" directive. */
+		     (strncmp(bufpastwhitespace, "source ", 7) == 0) || (strncmp(bufpastwhitespace, "source\t", 7) == 0) ||
+		     (strncmp(bufpastwhitespace, ". ", 2) == 0) || (strncmp(bufpastwhitespace, ".\t", 2) == 0) ||
+		     (extraincl && (strncmp(bufpastwhitespace, extraincl, strlen(extraincl)) == 0) &&
+		      ((*(bufpastwhitespace+strlen(extraincl)) == ' ') || (*(bufpastwhitespace+strlen(extraincl)) == '\t'))) ) {
+			char *newfn, *nameend, *eol, eolchar = '\0', endchar;
 
 			eol = bufpastwhitespace + strcspn(bufpastwhitespace, "\r\n"); if (eol) { eolchar = *eol; *eol = '\0'; }
 			newfn = bufpastwhitespace + strcspn(bufpastwhitespace, " \t");
 			newfn += strspn(newfn, " \t");
-			while (*newfn && isspace(*(newfn + strlen(newfn) - 1))) *(newfn + strlen(newfn) -1) = '\0';
+			/*
+			 * End the name rather than blank the whitespace after it: a failed
+			 * include returns this line, and a caller that copies the buffer by
+			 * length would carry every blanked byte as a NUL.
+			 */
+			nameend = newfn + strlen(newfn);
+			while ((nameend > newfn) && isspace(*(nameend - 1))) nameend--;
+			endchar = *nameend; *nameend = '\0';
 
 			if (*newfn && (stackfopen(newfn, "r", (void **)fdhead->listhead) != NULL))
 				return stackfgets(buffer, extraincl);
@@ -447,17 +464,21 @@ char *stackfgets(strbuffer_t *buffer, char *extraincl)
 				if (!optional) errprintf("WARNING: Cannot open include file '%s', line was: %s\n", newfn, STRBUF(buffer));
 				else dbgprintf("stackfgets(): Cannot open include file '%s', line was: %s\n", newfn, STRBUF(buffer));
 
+				*nameend = endchar;
 				if (eol) *eol = eolchar;
 				return result;
 			}
 		}
 		else if ((strncmp(bufpastwhitespace, "directory ", 10) == 0) || (strncmp(bufpastwhitespace, "directory\t", 10) == 0)) {
-			char *dirfn, *eol, eolchar = '\0';
+			char *dirfn, *nameend, *eol, eolchar = '\0', endchar;
 
 			eol = bufpastwhitespace + strcspn(bufpastwhitespace, "\r\n"); if (eol) { eolchar = *eol; *eol = '\0'; }
 			dirfn = bufpastwhitespace + 9;
 			dirfn += strspn(dirfn, " \t");
-			while (*dirfn && isspace(*(dirfn + strlen(dirfn) - 1))) *(dirfn + strlen(dirfn) -1) = '\0';
+			/* Ended, not blanked, for the same reason as an include's name. */
+			nameend = dirfn + strlen(dirfn);
+			while ((nameend > dirfn) && isspace(*(nameend - 1))) nameend--;
+			endchar = *nameend; *nameend = '\0';
 
 			if (*dirfn) addtofnlist(dirfn, optional, (void **)fdhead->listhead);
 			if (fnlist && (stackfopen(fnlist->name, "r", (void **)fdhead->listhead) != NULL)) {
@@ -475,13 +496,21 @@ char *stackfgets(strbuffer_t *buffer, char *extraincl)
 
 				fnlist = fnlist->next;
 				xfree(tmp->name); xfree(tmp);
+				*nameend = endchar;
 				if (eol) *eol = eolchar;
 				return result;
 			}
 			else {
-				/* Empty directory include - return a blank line */
+				/*
+				 * Empty directory include - return a blank line. Empty the
+				 * buffer, not only the string: a caller that copies by
+				 * length, as xymond's "config" reply does, would otherwise
+				 * copy the whole directive line with a NUL in its first byte
+				 * and another where the newline was, and a reader of that
+				 * reply stops at the first NUL.
+				 */
 				dbgprintf("stackfgets(): Directory %s was empty\n", dirfn);
-				*result = '\0'; 
+				clearstrbuffer(buffer);
 				return result;
 			}
 		}
@@ -519,6 +548,14 @@ char *stackfgets(strbuffer_t *buffer, char *extraincl)
 
 
 #ifdef STANDALONE
+static void usage(FILE *f, char *pgm)
+{
+	fprintf(f, "Usage: %s FILENAME\n", pgm);
+	fprintf(f, "Prints FILENAME with its include and directory lines expanded, then\n");
+	fprintf(f, "prompts: '!' reads it again, '?' lists the files read and whether any\n");
+	fprintf(f, "changed since, '.' quits, and anything else is read as a new FILENAME.\n");
+}
+
 int main(int argc, char *argv[])
 {
 	char *fn, *p;
@@ -528,6 +565,9 @@ int main(int argc, char *argv[])
 	void *listhead = NULL;
 	int done, linenum;
 
+	if ((argc > 1) && (strcmp(argv[1], "--help") == 0)) { usage(stdout, argv[0]); return 0; }
+	if (argc < 2) { usage(stderr, argv[0]); return 1; }
+
 	fn = strdup(argv[1]);
 	strncpy(cmd, "!", sizeof(cmd));
 	done = 0;
@@ -535,13 +575,15 @@ int main(int argc, char *argv[])
 		if (*cmd == '!') {
 			fd = stackfopen(fn, "r", &listhead);
 			linenum = 1;
-			if (!fd) { errprintf("Cannot open file %s\n", fn); continue; }
-
-			while (stackfgets(inbuf, NULL)) {
-				linenum++;
-				printf("%s", STRBUF(inbuf));
+			/* Fall through to the prompt: a "continue" here retries the same file forever. */
+			if (!fd) errprintf("Cannot open file %s\n", fn);
+			else {
+				while (stackfgets(inbuf, NULL)) {
+					linenum++;
+					printf("%s", STRBUF(inbuf));
+				}
+				stackfclose(fd);
 			}
-			stackfclose(fd);
 		}
 		else if (*cmd == '?') {
 			filelist_t *walk = (filelist_t *)listhead;

@@ -585,7 +585,7 @@ void unix_disk_report(char *hostname, char *clientclass, enum ostype_t os,
 		}
 		else {
 			char *fsname = NULL, *levelstr = NULL;
-			int abswarn, abspanic;
+			int abswarn, abspanic, unmeasured = 0;
 			long levelpct = -1, levelabs = -1, warnlevel, paniclevel;
 
 			p = strdup(bol);
@@ -600,7 +600,11 @@ void unix_disk_report(char *hostname, char *clientclass, enum ostype_t os,
 						    &ignored, &group);
 
 				strcpy(p, bol);
-				levelstr = getcolumn(p, freecol); if (levelstr) levelabs = atol(levelstr);
+				levelstr = getcolumn(p, freecol);
+				if (levelstr) {
+					unmeasured = (strcmp(levelstr, "-") == 0);
+					levelabs = atol(levelstr);
+				}
 				strcpy(p, bol);
 				levelstr = getcolumn(p, capacol); if (levelstr) levelpct = atol(levelstr);
 
@@ -610,6 +614,17 @@ void unix_disk_report(char *hostname, char *clientclass, enum ostype_t os,
 
 				if (ignored) {
 					/* Forget about this one */
+				}
+				else if (unmeasured && (levelpct == 100)) {
+					/* The client's unavailable-mount marker: "-" sizes because
+					 * nothing measured them, 100% so the column still goes red
+					 * on a server without this check. An all-dash row (AIX
+					 * /proc) has no 100% and stays out. */
+					if (diskcolor < COL_RED) diskcolor = COL_RED;
+
+					sprintf(msgline, "&red %s is unreachable (not measured)\n", fsname);
+					addtobuffer(monmsg, msgline);
+					addalertgroup(group);
 				}
 				else if ( (abspanic && (levelabs <= paniclevel)) || 
 				     (!abspanic && (levelpct >= paniclevel)) ) {
@@ -765,7 +780,7 @@ void unix_inode_report(char *hostname, char *clientclass, enum ostype_t os,
 		}
 		else {
 			char *fsname = NULL, *levelstr = NULL;
-			int abswarn, abspanic;
+			int abswarn, abspanic, unmeasured = 0;
 			long levelpct = -1, levelabs = -1, warnlevel, paniclevel;
 
 			p = strdup(bol);
@@ -780,7 +795,11 @@ void unix_inode_report(char *hostname, char *clientclass, enum ostype_t os,
 						    &ignored, &group);
 
 				strcpy(p, bol);
-				levelstr = getcolumn(p, freecol); if (levelstr) levelabs = atol(levelstr);
+				levelstr = getcolumn(p, freecol);
+				if (levelstr) {
+					unmeasured = (strcmp(levelstr, "-") == 0);
+					levelabs = atol(levelstr);
+				}
 				strcpy(p, bol);
 				levelstr = getcolumn(p, capacol); if (levelstr) levelpct = atol(levelstr);
 
@@ -790,6 +809,16 @@ void unix_inode_report(char *hostname, char *clientclass, enum ostype_t os,
 
 				if (ignored) {
 					/* Forget about this one */
+				}
+				else if (unmeasured && (levelpct == 100)) {
+					/* The unavailable-mount marker, passed through by the
+					 * clients' inode reformatters -- same shape as in the
+					 * disk report. */
+					if (inodecolor < COL_RED) inodecolor = COL_RED;
+
+					sprintf(msgline, "&red <!-- ID=%s --> %s is unreachable (not measured)\n", fsname, fsname);
+					addtobuffer(monmsg, msgline);
+					addalertgroup(group);
 				}
 				else if ( (abspanic && (levelabs <= paniclevel)) || 
 				     (!abspanic && (levelpct >= paniclevel)) ) {
@@ -1876,7 +1905,8 @@ void testmode(char *configfn)
 		oldhinfo = hinfo;
 
 		printf("Test (cpu, mem, disk, proc, log, port): "); fflush(stdout); 
-		if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+		if (!fgets(s, sizeof(s), stdin)) return;
+		clean_instr(s);
 		if (strcmp(s, "cpu") == 0) {
 			float loadyellow, loadred;
 			int recentlimit, ancientlimit, uptimecolor;
@@ -1904,7 +1934,8 @@ void testmode(char *configfn)
 			char *groups;
 
 			printf("Filesystem: "); fflush(stdout);
-			if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+			if (!fgets(s, sizeof(s), stdin)) return;
+			clean_instr(s);
 			get_disk_thresholds(hinfo, clientclass, s, &warnlevel, &paniclevel, 
 						   &abswarn, &abspanic, &ignored, &groups);
 			if (ignored) 
@@ -1929,7 +1960,8 @@ void testmode(char *configfn)
 			printf("To read 'ps' data from a file, enter '@FILENAME' at the prompt\n");
 			do {
 				printf("ps command string: "); fflush(stdout);
-				if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+				if (!fgets(s, sizeof(s), stdin)) return;
+				clean_instr(s);
 				if (*s == '@') {
 					fd = fopen(s+1, "r");
 					while (fd && fgets(s, sizeof(s), fd)) {
@@ -1955,7 +1987,8 @@ void testmode(char *configfn)
 			int logcolor;
 
 			printf("log filename: "); fflush(stdout);
-			if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+			if (!fgets(s, sizeof(s), stdin)) return;
+			clean_instr(s);
 			sectname = (char *)malloc(strlen(s) + 20);
 			sprintf(sectname, "msgs:%s", s);
 
@@ -1965,7 +1998,8 @@ void testmode(char *configfn)
 			printf("To read log data from a file, enter '@FILENAME' at the prompt\n");
 			do {
 				printf("log line: "); fflush(stdout);
-				if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+				if (!fgets(s, sizeof(s), stdin)) return;
+				clean_instr(s);
 				if (*s == '@') {
 					fd = fopen(s+1, "r");
 					while (fd && fgets(s, sizeof(s), fd)) {
@@ -1999,13 +2033,15 @@ void testmode(char *configfn)
 
 			printf("Need to know netstat columns for 'Local address', 'Remote address' and 'State'\n");
 			printf("Enter columns [%d %d %d]: ", localcol, remotecol, statecol); fflush(stdout);
-			if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+			if (!fgets(s, sizeof(s), stdin)) return;
+			clean_instr(s);
 			if (*s) sscanf(s, "%d %d %d", &localcol, &remotecol, &statecol);
 
 			printf("To read 'netstat' data from a file, enter '@FILENAME' at the prompt\n");
 			do {
 				printf("netstat line: "); fflush(stdout);
-				if (!fgets(s, sizeof(s), stdin)) return; clean_instr(s);
+				if (!fgets(s, sizeof(s), stdin)) return;
+				clean_instr(s);
 				if (*s == '@') {
 					FILE *fd;
 
@@ -2129,6 +2165,8 @@ int main(int argc, char *argv[])
 		}
 		else if (strcmp(argv[argi], "--local") == 0) {
 			localmode = 1;
+			/* The client data comes from a file, not a channel: read it whole, up to what xymond accepts. */
+			set_xymond_message_growlimit(64*1024*1024);
 		}
 		else if (strcmp(argv[argi], "--test") == 0) {
 			testmode(configfn);

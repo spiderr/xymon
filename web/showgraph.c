@@ -104,6 +104,29 @@ int firstidx = -1;
 int idxcount = -1;
 int lastidx = 0;
 
+/* Quote a value for safe inclusion as a single word in a /bin/sh command
+ * line: wrap it in single quotes and render each embedded single quote as
+ * '\'' (close, escaped quote, reopen). The result contains no shell-active
+ * character outside the admin's own command, so a CGI-supplied value
+ * cannot break out. Caller frees. */
+static char *shellquote(const char *s)
+{
+	strbuffer_t *b = newstrbuffer(0);
+	const char *p;
+	char *result;
+
+	addtobuffer(b, "'");
+	for (p = (s ? s : ""); (*p); p++) {
+		if (*p == '\'') addtobuffer(b, "'\\''");
+		else addtobufferraw(b, (char *)p, 1);
+	}
+	addtobuffer(b, "'");
+	result = strdup(STRBUF(b));
+	freestrbuffer(b);
+
+	return result;
+}
+
 void errormsg(char *msg)
 {
 	printf("Content-type: %s\n\n", xgetenv("HTMLCONTENTTYPE"));
@@ -625,25 +648,55 @@ char *expand_tokens(char *tpl)
 	return STRBUF(result);
 }
 
+/* Sort mode for rrd_name_compare, decided ONCE for the whole set before
+ * qsort. Deciding per pair (numeric only when BOTH keys of that pair were
+ * numeric) made the comparator intransitive on mixed sets - 9 < 10 < "1a"
+ * yet "1a" < 9 - which is undefined behaviour for qsort(3): the resulting
+ * display (and paging) order depended on readdir() order. */
+static int rrd_keys_all_numeric = 0;
+
 int rrd_name_compare(const void *v1, const void *v2)
 {
 	rrddb_t *r1 = (rrddb_t *)v1;
 	rrddb_t *r2 = (rrddb_t *)v2;
-	char *endptr;
-	long numkey1, numkey2;
-	int key1isnumber, key2isnumber;
 
-	/* See if the keys are all numeric; if yes, then do a numeric sort */
-	numkey1 = strtol(r1->key, &endptr, 10); key1isnumber = (*endptr == '\0');
-	numkey2 = strtol(r2->key, &endptr, 10); key2isnumber = (*endptr == '\0');
+	if (rrd_keys_all_numeric) {
+		long numkey1 = atol(r1->key);
+		long numkey2 = atol(r2->key);
 
-	if (key1isnumber && key2isnumber) {
 		if (numkey1 < numkey2) return -1;
 		else if (numkey1 > numkey2) return 1;
-		else return 0;
+		/* Distinct keys must never compare equal ("007" vs "7"), or
+		 * their relative order is unspecified: break ties on the text. */
 	}
 
 	return strcmp(r1->key, r2->key);
+}
+
+/* Decide the sort mode ONCE for the whole set, before qsort. Numeric only when
+ * every key is numeric, which is what the comparator always intended. A named
+ * function rather than a block inside the caller so that the regression test
+ * drives this decision instead of a copy of it: a copy keeps passing after the
+ * real one goes back to pairwise or lexical-only. */
+static void rrd_set_sort_mode(rrddb_t *dbs, int count)
+{
+	int i;
+
+	rrd_keys_all_numeric = (count > 0);
+	for (i = 0; (i < count) && rrd_keys_all_numeric; i++) {
+		char *endptr;
+
+		strtol(dbs[i].key, &endptr, 10);
+		rrd_keys_all_numeric = ((endptr != dbs[i].key) && (*endptr == '\0'));
+	}
+}
+
+static int rrd_param_matches_service(const char *param, const char *svc)
+{
+	if ((param == NULL) || (svc == NULL) || (*svc == '\0')) return 0;
+
+	/* For bundle fall-backs, FNPATTERN group 1 is exactly the service component */
+	return (strcmp(param, svc) == 0);
 }
 
 void graph_link(FILE *output, char *uri, char *grtype, time_t seconds)
@@ -769,6 +822,8 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 {
 	gdef_t *gdef = NULL, *gdefuser = NULL;
 	int wantsingle = 0;
+	int rrdparamisservice = 0;
+	int svcrejects = 0, staledrops = 0;
 	DIR *dir;
 	time_t now = getcurrenttime(NULL);
 
@@ -816,6 +871,7 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 		char *realservice;
 
 		*delim = '\0';
+		if (*(delim+1) == '\0') errormsg("Missing graph service name");
 		realservice = strdup(delim+1);
 
 		/* The requested gdef only acts as a fall-back solution so don't set gdef here. */
@@ -835,12 +891,14 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 	if (gdef == NULL) {
 		if (gdefuser) {
 			gdef = gdefuser;
+			rrdparamisservice = 1;
 		}
 		else {
 			xymonrrd_t *ldef = find_xymon_rrd(service, NULL);
 			if (ldef) {
 				for (gdef = gdefs; (gdef && strcmp(ldef->xymonrrdname, gdef->name)); gdef = gdef->next) ;
 				wantsingle = 1;
+				rrdparamisservice = 1;
 			}
 		}
 	}
@@ -931,7 +989,6 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 		int err, result;
 		PCRE2_SIZE errofs;
 		pcre2_match_data *ovector;
-		struct stat st;
 		time_t now = getcurrenttime(NULL);
 
 		/* Scan the directory to see what RRD files are there that match */
@@ -969,6 +1026,7 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 			char *ext;
 			char param[PATH_MAX];
 			PCRE2_SIZE l = sizeof(param);
+			int haveparam;
 
 			/* Ignore dot-files and files with names shorter than ".rrd" */
 			if (*(d->d_name) == '.') continue;
@@ -986,23 +1044,55 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 			result = pcre2_match(pat, d->d_name, strlen(d->d_name), 0, 0,
 					     ovector, NULL);
 			if (result < 0) continue;
+			haveparam = (pcre2_substring_copy_bynumber(ovector, 1, param, &l) == 0);
 
-			if (wantsingle) {
-				/* "Single" graph, i.e. a graph for a service normally included in a bundle (tcp) */
-				if (strstr(d->d_name, service) == NULL) continue;
+			if (rrdparamisservice && haveparam) {
+				/* Single service out of a bundle (tcp): match against the FNPATTERN
+				 * capture, not an unanchored substring - "conn" must not pick up
+				 * tcp.proxyconn.rrd (issue #20). */
+				if (!rrd_param_matches_service(param, service)) { svcrejects++; continue; }
+			}
+			else if (wantsingle) {
+				/* Resolved to its own gdef (tcp.http -> [http], ncv:slab -> [slab]),
+				 * where the capture is a subitem rather than the service - or a
+				 * fall-back without a capture group: keep the substring match. */
+				if (strstr(d->d_name, service) == NULL) { svcrejects++; continue; }
 			}
 
-			/* 
-			 * Has it been updated recently (within the past 24 hours) ? 
-			 * We don't want old graphs to mess up multi-displays.
+			/*
+			 * Drop RRDs not updated for a day from multi-displays.
+			 * Ask the RRD, not the filesystem: mmap writes do not move
+			 * the mtime everywhere (tests/web/showgraph-stale-filter.sh).
+			 * The argv form: the wrappers own the "char **" versus
+			 * "const char **" divergence. The "./" prefix keeps a
+			 * "-"-prefixed filename out of option parsing while staying
+			 * a plain operand for a legacy rrd_last() that opens argv[1]
+			 * directly rather than parsing options (RRDtool < 1.4). We
+			 * are chdir'd into the RRD directory, so "./name" resolves
+			 * identically to the bare name.
 			 */
-			if (ignorestalerrds && (stat(d->d_name, &st) == 0) && ((now - st.st_mtime) > 86400)) {
-				continue;
+			if (ignorestalerrds) {
+				char dotpath[PATH_MAX];
+				xymon_rrd_argv_item_t lastargv[] = { "last", dotpath, NULL };
+				time_t lastupd;
+
+				snprintf(dotpath, sizeof(dotpath), "./%s", d->d_name);
+				lastupd = xymon_rrd_last(2, lastargv);
+
+				if (lastupd == (time_t)-1) {
+					/* Unreadable: rrd_graph would fail the whole image
+					 * on it. Drop it and say so; without nostale the
+					 * error still reaches the page. */
+					errprintf("nostale filter drops %s: rrd_last: %s\n", d->d_name, rrd_get_error());
+					staledrops++;
+					continue;
+				}
+				if ((now - lastupd) > 86400) { staledrops++; continue; }
 			}
 
 			/* We have a matching file! */
 			rrddbs[rrddbcount].rrdfn = strdup(d->d_name);
-			if (pcre2_substring_copy_bynumber(ovector, 1, param, &l) == 0) {
+			if (haveparam) {
 				/*
 				 * This is ugly, but I cannot find a pretty way of un-mangling
 				 * the disk- and http-data that has been molested by the back-end.
@@ -1047,33 +1137,55 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 	}
 	rrddbs[rrddbcount].key = rrddbs[rrddbcount].rrdfn = rrddbs[rrddbcount].rrdparam = NULL;
 
-	/* Sort them so the display looks prettier */
+	if (rrddbcount == 0) {
+		/* Name the real reason (#377): a stale drop is neither silence
+		 * nor an FNPATTERN problem. */
+		if (staledrops)
+			errprintf("showgraph: no RRD for service '%s' - %d matching file(s) dropped by the nostale filter\n", service, staledrops);
+		else if (svcrejects) {
+			if (rrdparamisservice)
+				errprintf("showgraph: no RRD file matched service '%s' - check that FNPATTERN group 1 captures the service component\n", service);
+			else
+				errprintf("showgraph: no RRD file matched service '%s'\n", service);
+		}
+	}
+
+	/* Sort them so the display looks prettier. */
+	rrd_set_sort_mode(rrddbs, rrddbcount);
 	qsort(&rrddbs[0], rrddbcount, sizeof(rrddb_t), rrd_name_compare);
 
 	/* Setup the title */
 	if (!gdef->title) gdef->title = strdup("");
 	if (strncmp(gdef->title, "exec:", 5) == 0) {
-		char *pcmd;
-		int i, pcmdlen = 7;
+		strbuffer_t *cmd = newstrbuffer(0);
 		FILE *pfd;
 		char *p;
-		char *param_str = "%s \"%s\" %s \"%s\"";
+		int i;
 
-		pcmdlen += (strlen(gdef->title+5) + strlen(displayname) + strlen(service) + strlen(glegend));
-		for (i=0; (i<rrddbcount); i++) pcmdlen += (strlen(rrddbs[i].rrdfn) + 3);
-
-		p = pcmd = (char *)malloc(pcmdlen+1);
-		p += snprintf(p, pcmdlen+1, param_str, gdef->title+5, displayname, service, glegend);
+		/* The admin's command line (gdef->title+5, from graphs.cfg)
+		 * runs verbatim - it is trusted and may carry its own options
+		 * or pipes on purpose. Every value appended after it, however,
+		 * is CGI- or filename-derived (displayname from the "disp="
+		 * parameter, the matched RRD filenames), so each is shell-quoted
+		 * and reaches the command as one literal argument, whatever
+		 * characters it contains. */
+		addtobuffer(cmd, gdef->title+5);
+		p = shellquote(displayname); addtobuffer(cmd, " "); addtobuffer(cmd, p); xfree(p);
+		p = shellquote(service);     addtobuffer(cmd, " "); addtobuffer(cmd, p); xfree(p);
+		p = shellquote(glegend);     addtobuffer(cmd, " "); addtobuffer(cmd, p); xfree(p);
 		for (i=0; (i<rrddbcount); i++) {
 			if ((firstidx == -1) || ((i >= firstidx) && (i <= lastidx))) {
-				p += snprintf(p, (pcmdlen - (p - pcmd) + 1), " \"%s\"", rrddbs[i].rrdfn);
+				p = shellquote(rrddbs[i].rrdfn);
+				addtobuffer(cmd, " "); addtobuffer(cmd, p); xfree(p);
 			}
 		}
-		pfd = popen(pcmd, "r");
+
+		pfd = popen(STRBUF(cmd), "r");
 		if (pfd) {
 			if (fgets(graphtitle, sizeof(graphtitle), pfd) == NULL) *graphtitle = '\0';
 			pclose(pfd);
 		}
+		freestrbuffer(cmd);
 
 		/* Drop any newline at end of the title */
 		p = strchr(graphtitle, '\n'); if (p) *p = '\0';
@@ -1199,8 +1311,6 @@ void generate_graph(char *gdeffn, char *rrddir, char *graphfn)
 	}
 
 	/* All set - generate the graph */
-	rrd_clear_error();
-
 	result = xymon_rrd_graph(rrdargcount, rrdargs, &calcpr, &xsize, &ysize, NULL, &ymin, &ymax);
 
 	/*
@@ -1313,4 +1423,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-
